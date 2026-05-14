@@ -1,0 +1,6 @@
+{
+  "name": "F.R.E.S.H Platform",
+  "description": "Food Rescue Â ESG Â Smart Hyperlocal Platform",
+  "requestFramePermissions": ["geolocation", "camera"],
+  "majorCapabilities": []
+}

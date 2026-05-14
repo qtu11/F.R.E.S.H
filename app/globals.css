@@ -1,0 +1,71 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-emerald-900: #022c22;
+  --color-emerald-800: #064e3b;
+  --color-emerald-700: #047857;
+  --color-emerald-600: #059669;
+  --color-emerald-500: #10b981;
+  --color-emerald-400: #34d399;
+  --color-mint-100: #d1fae5;
+  --color-mint-50: #ecfdf5;
+  --color-navy-900: #0f172a;
+  --color-navy-800: #1e293b;
+  --color-orange-500: #f97316;
+  --color-orange-400: #fb923c;
+  
+  --font-sans: 'Inter', sans-serif;
+  --font-heading: 'Space Grotesk', sans-serif;
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)];
+  }
+  .glass-dark {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)];
+  }
+  .glass-emerald {
+    @apply bg-emerald-900/40 backdrop-blur-lg border border-emerald-500/30 shadow-[0_8px_32px_0_rgba(16,185,129,0.15)];
+  }
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-mint-100;
+  }
+  .text-gradient-orange {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-orange-400 to-amber-300;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+body {
+  @apply bg-[#f0f2f5] dark:bg-slate-950 text-gray-900 dark:text-slate-100 antialiased overflow-x-hidden transition-colors duration-300;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-slate-800 rounded-full border-2 border-transparent bg-clip-content;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-slate-700;
+}
