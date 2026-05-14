@@ -1,7 +1,7 @@
 # 🥗 F.R.E.S.H Platform
 ### **Food Rescue – ESG – Smart Hyperlocal**
 
-![F.R.E.S.H Banner](https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1200)
+<img src="https://files.catbox.moe/ku0gzy.png" alt="QTusdev">
 
 **F.R.E.S.H** là một hệ sinh thái Logistics & ESG thế hệ mới, vận hành bằng trí tuệ nhân tạo (Enterprise AI) nhằm giải quyết vấn đề lãng phí thực phẩm toàn cầu bằng cách kết nối hàng tồn dư với nhu cầu người dùng trong thời gian thực tại địa phương.
 
