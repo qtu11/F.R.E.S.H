@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useGlobal } from '@/app/providers';
 import { motion } from 'framer-motion';
 
-export default function ProductDetail({ params }: { params: { id: string } }) {
+import { use } from 'react';
+
+export default function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
   const { t } = useGlobal();
 
