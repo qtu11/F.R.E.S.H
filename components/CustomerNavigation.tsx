@@ -1,17 +1,28 @@
 'use client';
 
-import { motion } from 'motion/react';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Map, ShoppingBag, Leaf, User } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Map, ShoppingBag, Leaf, User, Search, ShoppingCart, Award, Bell, Heart, Ticket, Store, Wallet, Menu, ArrowLeft, X } from 'lucide-react';
 import { useGlobal } from '@/app/providers';
 
 export function CustomerNavigation() {
   const pathname = usePathname();
+  const router = useRouter();
   const { t } = useGlobal();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const navItems = [
     { icon: Map, label: t('explore'), href: '/customer' },
+    { icon: Search, label: t('search'), href: '/customer/search' },
+    { icon: ShoppingCart, label: t('cart'), href: '/customer/cart' },
+    { icon: Heart, label: t('favorites'), href: '/customer/favorites' },
+    { icon: Ticket, label: t('vouchers'), href: '/customer/vouchers' },
+    { icon: Wallet, label: t('wallet'), href: '/customer/wallet' },
+    { icon: Store, label: t('stores'), href: '/customer/stores' },
+    { icon: Award, label: t('rewards'), href: '/customer/gamification' },
+    { icon: Bell, label: t('notifications'), href: '/customer/notifications' },
     { icon: ShoppingBag, label: t('orders'), href: '/customer/orders' },
     { icon: Leaf, label: t('impact'), href: '/customer/impact' },
     { icon: User, label: t('profile'), href: '/customer/profile' },
@@ -19,21 +30,67 @@ export function CustomerNavigation() {
 
   return (
     <>
-      {/* Mobile Bottom Nav */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 h-20 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 flex items-center justify-around px-4 z-40 rounded-t-3xl shadow-[0_-5px_30px_rgba(0,0,0,0.05)] transition-colors duration-300">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link key={item.href} href={item.href} className="flex flex-col items-center gap-1 relative w-16 group">
-              {isActive && (
-                <motion.div layoutId="mobileNavIndicator" className="absolute -top-4 w-12 h-1 bg-[#057A42] dark:bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(5,122,66,0.2)] dark:shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-              )}
-              <item.icon className={`w-6 h-6 transition-colors ${isActive ? 'text-[#057A42] dark:text-emerald-400' : 'text-gray-400 dark:text-slate-500 group-hover:text-gray-600 dark:group-hover:text-slate-300'}`} />
-              <span className={`text-[10px] font-medium transition-colors ${isActive ? 'text-[#057A42] dark:text-emerald-400' : 'text-gray-400 dark:text-slate-500 group-hover:text-gray-600 dark:group-hover:text-slate-300'}`}>{item.label}</span>
-            </Link>
-          );
-        })}
+      {/* Mobile Top Bar */}
+      <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-b border-gray-200/50 dark:border-slate-800/50 flex items-center justify-between px-4 z-[60]">
+        <div className="flex items-center gap-2">
+          <button onClick={() => setMenuOpen(true)} className="p-2 -ml-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" aria-label="Open menu">
+            <Menu className="w-5 h-5 text-gray-700 dark:text-slate-300" />
+          </button>
+          <button onClick={() => router.back()} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" aria-label="Go back">
+            <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-slate-300" />
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 bg-[#057A42] rounded-lg flex items-center justify-center">
+            <span className="text-sm font-black text-white italic">F</span>
+          </div>
+          <span className="font-bold text-sm text-gray-900 dark:text-white">F.R.E.S.H.</span>
+        </div>
+        <div className="w-10" />
       </div>
+
+      {/* Mobile Slide-out Menu */}
+      <AnimatePresence>
+        {menuOpen && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMenuOpen(false)} className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[60]" />
+            <motion.div initial={{ x: -300 }} animate={{ x: 0 }} exit={{ x: -300 }} transition={{ type: 'spring', damping: 25, stiffness: 300 }} className="md:hidden fixed top-0 left-0 bottom-0 w-72 bg-white dark:bg-slate-900 z-[70] shadow-2xl flex flex-col">
+              <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-[#057A42] rounded-lg flex items-center justify-center">
+                    <span className="text-lg font-black text-white italic">F</span>
+                  </div>
+                  <span className="font-bold text-lg text-gray-900 dark:text-white">F.R.E.S.H.</span>
+                </div>
+                <button onClick={() => setMenuOpen(false)} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" aria-label="Close menu">
+                  <X className="w-5 h-5 text-gray-500 dark:text-slate-400" />
+                </button>
+              </div>
+              <nav className="flex-1 overflow-y-auto px-4 py-3 space-y-1">
+                {navItems.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive ? 'bg-[#e8f5e9] dark:bg-emerald-500/10 text-[#057A42] dark:text-emerald-400 font-semibold' : 'text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}>
+                      <item.icon className="w-5 h-5" />
+                      <span className="text-sm">{item.label}</span>
+                      {isActive && <div className="ml-auto w-2 h-2 rounded-full bg-[#057A42] dark:bg-emerald-400" />}
+                    </Link>
+                  );
+                })}
+              </nav>
+              <div className="p-4 border-t border-gray-100 dark:border-slate-800">
+                <div className="flex items-center gap-3 bg-gray-50 dark:bg-slate-800 p-3 rounded-2xl">
+                  <div className="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center text-yellow-700 dark:text-yellow-500 font-bold text-lg">JD</div>
+                  <div>
+                    <div className="text-sm font-bold text-gray-900 dark:text-white">John Doe</div>
+                    <div className="text-xs font-semibold text-[#057A42] dark:text-emerald-400">{t('gold_member')}</div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Desktop Sidebar */}
       <div className="hidden md:flex fixed top-0 left-0 bottom-0 w-64 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 flex-col z-40 shadow-sm transition-colors duration-300">

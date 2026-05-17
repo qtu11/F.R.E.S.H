@@ -52,27 +52,27 @@ export default function AdminLogin() {
             )}
             
             <div className="space-y-2">
-              <label className="block text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest ml-1">Admin Email</label>
+              <label className="block text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest ml-1">{t('your_email')}</label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300 dark:text-slate-600" />
                 <input 
                   type="email" required
                   value={email} onChange={e => setEmail(e.target.value)}
                   className="w-full bg-gray-50 dark:bg-slate-950 border border-gray-100 dark:border-slate-800 rounded-2xl py-4 pl-12 pr-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#057A42] transition-all font-bold"
-                  placeholder="freshadmin@gmail.com"
+                  placeholder={t('email_placeholder')}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="block text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest ml-1">Master Password</label>
+              <label className="block text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest ml-1">{t('password')}</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300 dark:text-slate-600" />
                 <input 
                   type="password" required
                   value={password} onChange={e => setPassword(e.target.value)}
                   className="w-full bg-gray-50 dark:bg-slate-950 border border-gray-100 dark:border-slate-800 rounded-2xl py-4 pl-12 pr-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#057A42] transition-all font-bold"
-                  placeholder="••••••••••"
+                  placeholder={t('password_placeholder')}
                 />
               </div>
             </div>

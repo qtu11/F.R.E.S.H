@@ -16,30 +16,47 @@
   --color-navy-800: #1e293b;
   --color-orange-500: #f97316;
   --color-orange-400: #fb923c;
-  
   --font-sans: 'Inter', sans-serif;
   --font-heading: 'Space Grotesk', sans-serif;
+  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
+  --shadow-glass-dark: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  --shadow-glass-emerald: 0 8px 40px 0 rgba(0, 168, 107, 0.08);
 }
 
 @layer utilities {
   .glass {
-    @apply bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)];
+    background-color: rgb(255 255 255 / 0.1);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgb(255 255 255 / 0.2);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
   }
+
   .glass-dark {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)];
+    background-color: rgb(255 255 255 / 0.05);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgb(255 255 255 / 0.1);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
   }
+
   .glass-emerald {
-    @apply bg-emerald-900/40 backdrop-blur-lg border border-emerald-500/30 shadow-[0_8px_32px_0_rgba(16,185,129,0.15)];
+    background-color: rgb(2 44 34 / 0.4);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgb(16 185 129 / 0.3);
+    box-shadow: 0 8px 32px 0 rgba(16, 185, 129, 0.15);
   }
+
   .text-gradient {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-mint-100;
   }
+
   .text-gradient-orange {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-orange-400 to-amber-300;
   }
+
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
   .hide-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;

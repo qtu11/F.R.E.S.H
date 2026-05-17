@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { Language, TranslationKey, getTranslation } from '@/utils/i18n';
+import { AuthProvider } from '@/app/contexts/AuthContext';
+import { ToastContainer } from '@/components/Toast';
 
 type Theme = 'light' | 'dark';
 
@@ -20,7 +22,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Language>('vi');
   const [mounted, setMounted] = useState(false);
 
-  // Initial load
   useEffect(() => {
     const savedTheme = localStorage.getItem('fresh_theme') as Theme;
     const savedLang = localStorage.getItem('fresh_lang') as Language;
@@ -28,7 +29,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
     if (savedTheme) {
       setThemeState(savedTheme);
     } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      // Default to system preference if no saved theme
       setThemeState('dark');
     }
     
@@ -39,10 +39,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
     setMounted(true);
   }, []);
 
-  // Sync theme to DOM
   useEffect(() => {
     if (!mounted) return;
-
     const root = window.document.documentElement;
     if (theme === 'dark') {
       root.classList.add('dark');
@@ -51,13 +49,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       root.classList.remove('dark');
       root.style.colorScheme = 'light';
     }
-    
     localStorage.setItem('fresh_theme', theme);
   }, [theme, mounted]);
 
-  const setTheme = (t: Theme) => {
-    setThemeState(t);
-  };
+  const setTheme = (t: Theme) => setThemeState(t);
 
   const setLang = (l: Language) => {
     setLangState(l);
@@ -68,9 +63,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <GlobalContext.Provider value={{ theme, setTheme, lang, setLang, t }}>
-      <div className={mounted ? '' : 'invisible'}>
-        {children}
-      </div>
+      <AuthProvider>
+        <div className={mounted ? '' : 'invisible'}>
+          {children}
+        </div>
+        <ToastContainer />
+      </AuthProvider>
     </GlobalContext.Provider>
   );
 }

@@ -1,0 +1,152 @@
+C:\Users\kirit\Desktop\f.r.e.s.h\
+|-- .env
+|-- .env.example
+|-- .eslintrc.json
+|-- .git/
+|-- .gitignore
+|-- .next/
+|-- app/
+|   |-- (portals)/
+|   |   |-- admin/
+|   |   |   |-- commission/page.tsx
+|   |   |   |-- customer-care/page.tsx
+|   |   |   |-- esg/page.tsx
+|   |   |   |-- forecasting/page.tsx
+|   |   |   |-- fraud/page.tsx
+|   |   |   |-- heatmap/page.tsx
+|   |   |   |-- layout.tsx
+|   |   |   |-- login/page.tsx
+|   |   |   |-- marketing/page.tsx
+|   |   |   |-- page.tsx
+|   |   |   |-- partners/page.tsx
+|   |   |   |-- roles/page.tsx
+|   |   |   |-- setup/page.tsx
+|   |   |   |-- system/page.tsx
+|   |   |   |-- users/page.tsx
+|   |   |-- customer/
+|   |   |   |-- cart/page.tsx
+|   |   |   |-- deals/[id]/page.tsx
+|   |   |   |-- deals/page.tsx
+|   |   |   |-- favorites/page.tsx
+|   |   |   |-- gamification/page.tsx
+|   |   |   |-- impact/page.tsx
+|   |   |   |-- layout.tsx
+|   |   |   |-- notifications/page.tsx
+|   |   |   |-- orders/page.tsx
+|   |   |   |-- page.tsx
+|   |   |   |-- profile/page.tsx
+|   |   |   |-- search/page.tsx
+|   |   |   |-- stores/page.tsx
+|   |   |   |-- vouchers/page.tsx
+|   |   |   |-- wallet/page.tsx
+|   |   |-- partner/
+|   |   |   |-- analytics/page.tsx
+|   |   |   |-- finance/page.tsx
+|   |   |   |-- integration/page.tsx
+|   |   |   |-- inventory/page.tsx
+|   |   |   |-- layout.tsx
+|   |   |   |-- marketing/page.tsx
+|   |   |   |-- orders/page.tsx
+|   |   |   |-- page.tsx
+|   |   |   |-- pricing/page.tsx
+|   |   |   |-- staff/page.tsx
+|   |-- api/
+|   |   |-- auth/login/route.ts
+|   |   |-- auth/session/route.ts
+|   |   |-- bank-accounts/route.ts
+|   |   |-- categories/route.ts
+|   |   |-- chat/route.ts
+|   |   |-- fraud-alerts/route.ts
+|   |   |-- notifications/route.ts
+|   |   |-- notifications/stats/route.ts
+|   |   |-- orders/[id]/route.ts
+|   |   |-- orders/by-store/route.ts
+|   |   |-- orders/by-user/route.ts
+|   |   |-- orders/route.ts
+|   |   |-- orders/stats/route.ts
+|   |   |-- orders/update-status/route.ts
+|   |   |-- partners/pending/route.ts
+|   |   |-- partners/route.ts
+|   |   |-- products/route.ts
+|   |   |-- setup/save/route.ts
+|   |   |-- setup/seed/route.ts
+|   |   |-- setup/test/route.ts
+|   |   |-- stores/route.ts
+|   |   |-- support-tickets/respond/route.ts
+|   |   |-- support-tickets/route.ts
+|   |   |-- support-tickets/stats/route.ts
+|   |   |-- transactions/balance/route.ts
+|   |   |-- transactions/route.ts
+|   |   |-- users/route.ts
+|   |   |-- users/stats/route.ts
+|   |-- contexts/
+|   |   |-- AuthContext.tsx
+|   |-- globals.css
+|   |-- layout.tsx
+|   |-- page.tsx
+|   |-- providers.tsx
+|-- components/
+|   |-- AdminNavigation.tsx
+|   |-- AnimatedCounter.tsx
+|   |-- Badge.tsx
+|   |-- ConfirmationDialog.tsx
+|   |-- CountdownTimer.tsx
+|   |-- CustomerNavigation.tsx
+|   |-- EmptyState.tsx
+|   |-- ExpiryBar.tsx
+|   |-- FilterChips.tsx
+|   |-- FloatingAIAssistant.tsx
+|   |-- GlobalSettings.tsx
+|   |-- ImagePlaceholder.tsx
+|   |-- Loading.tsx
+|   |-- Modal.tsx
+|   |-- PageTransition.tsx
+|   |-- PartnerNavigation.tsx
+|   |-- ProgressBar.tsx
+|   |-- RatingStars.tsx
+|   |-- ScrollToTop.tsx
+|   |-- SearchBar.tsx
+|   |-- SkeletonLoader.tsx
+|   |-- StatusBadge.tsx
+|   |-- Tabs.tsx
+|   |-- Toast.tsx
+|-- config/
+|   |-- supabase.json
+|-- db/
+|   |-- migrations/
+|   |   |-- 001_init.sql
+|   |   |-- run.ts
+|   |-- seed.ts
+|-- eslint.config.mjs
+|-- hooks/
+|   |-- use-mobile.ts
+|-- lib/
+|   |-- animation.ts
+|   |-- data/
+|   |   |-- alerts.ts
+|   |   |-- auth.ts
+|   |   |-- bankAccounts.ts
+|   |   |-- notifications.ts
+|   |   |-- orders.ts
+|   |   |-- partners.ts
+|   |   |-- products.ts
+|   |   |-- transactions.ts
+|   |-- supabase/
+|   |   |-- client.ts
+|   |   |-- config.ts
+|   |   |-- helpers.ts
+|   |   |-- server.ts
+|   |   |-- transform.ts
+|   |-- utils.ts
+|-- metadata.json
+|-- next-env.d.ts
+|-- next.config.ts
+|-- node_modules/
+|-- package-lock.json
+|-- package.json
+|-- postcss.config.mjs
+|-- README.md
+|-- tsconfig.json
+|-- tsconfig.tsbuildinfo
+|-- utils/
+|   |-- i18n.ts

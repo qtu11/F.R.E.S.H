@@ -1,8 +1,10 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { useGlobal } from '@/app/providers';
 
 export function LoadingScreen() {
+  const { t } = useGlobal();
   return (
     <div className="fixed inset-0 z-[100] bg-white dark:bg-slate-950 flex flex-col items-center justify-center transition-colors duration-300">
       <div className="relative w-24 h-24">
@@ -26,7 +28,7 @@ export function LoadingScreen() {
         transition={{ delay: 0.5 }}
         className="mt-8 text-gray-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] animate-pulse"
       >
-        Initializing F.R.E.S.H AI...
+        {t('loading_text')}
       </motion.div>
     </div>
   );
@@ -38,7 +40,7 @@ export function SkeletonCard() {
        <div className="w-12 h-12 bg-gray-100 dark:bg-slate-700 rounded-xl" />
        <div className="space-y-2">
           <div className="w-3/4 h-4 bg-gray-100 dark:bg-slate-700 rounded-md" />
-          <div className="w-1/2 h-3 bg-gray-50 dark:bg-slate-750 rounded-md" />
+          <div className="w-1/2 h-3 bg-gray-50 dark:bg-slate-700 rounded-md" />
        </div>
        <div className="w-full h-10 bg-gray-100 dark:bg-slate-700 rounded-xl mt-4" />
     </div>

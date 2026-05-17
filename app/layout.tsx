@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { FloatingAIAssistant } from '@/components/FloatingAIAssistant';
+import { ScrollToTop } from '@/components/ScrollToTop';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -29,6 +30,7 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
           {children}
           <FloatingAIAssistant />
           <GlobalSettings />
+          <ScrollToTop />
         </Providers>
       </body>
     </html>

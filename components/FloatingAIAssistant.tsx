@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Send, Bot, Sparkles, Mic, Headset, PhoneCall, MoreVertical } from 'lucide-react';
+import { X, Send, Bot, Sparkles, Mic, Headset, PhoneCall, MoreVertical } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useGlobal } from '@/app/providers';
 
@@ -83,8 +83,8 @@ export function FloatingAIAssistant() {
                         newMessages[newMessages.length - 1] = { role: 'assistant', content: assistantReply };
                         return newMessages;
                     });
-                } catch (e) {
-                    console.error("Error parsing stream chunk", e);
+                } catch (_e) {
+                    // Silently ignore malformed stream chunks
                 }
             }
         }
@@ -137,7 +137,7 @@ export function FloatingAIAssistant() {
               </div>
               <div className="flex items-center gap-2">
                 <div className="relative">
-                   <button onClick={() => setShowOmnichannel(!showOmnichannel)} className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 dark:text-slate-300 transition-colors">
+                    <button onClick={() => setShowOmnichannel(!showOmnichannel)} className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 dark:text-slate-300 transition-colors" aria-label="More options">
                       <MoreVertical className="w-5 h-5" />
                    </button>
                    <AnimatePresence>
@@ -156,7 +156,7 @@ export function FloatingAIAssistant() {
                      )}
                    </AnimatePresence>
                 </div>
-                <button onClick={() => setIsOpen(false)} className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 dark:text-slate-300 transition-colors">
+                <button onClick={() => setIsOpen(false)} className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 dark:text-slate-300 transition-colors" aria-label="Close chat">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -198,6 +198,7 @@ export function FloatingAIAssistant() {
                 <button 
                   onClick={() => setIsRecording(!isRecording)}
                   className={`p-3 rounded-2xl transition-all shrink-0 border ${isRecording ? 'bg-red-50 dark:bg-red-900/20 text-red-500 border-red-200 dark:border-red-900/50 animate-pulse' : 'bg-gray-50 dark:bg-white/5 text-gray-400 dark:text-slate-500 border-gray-100 dark:border-white/10 hover:text-[#057A42] dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-white/10'}`}
+                  aria-label={isRecording ? 'Stop recording' : 'Start recording'}
                 >
                   <Mic className="w-5 h-5" />
                 </button>
@@ -211,6 +212,7 @@ export function FloatingAIAssistant() {
                     <button 
                       onClick={handleSend} disabled={!input.trim() || isLoading}
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl bg-[#057A42] text-white disabled:opacity-30 transition-all shadow-lg hover:scale-105"
+                      aria-label="Send message"
                     >
                       <Send className="w-4 h-4" />
                     </button>
@@ -237,6 +239,7 @@ export function FloatingAIAssistant() {
         <motion.button
           whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setIsOpen(!isOpen)}
           className="w-16 h-16 rounded-[2rem] bg-gradient-to-br from-[#057A42] to-emerald-400 p-[1px] shadow-2xl relative z-50 transition-all"
+          aria-label={isOpen ? 'Close AI assistant' : 'Open AI assistant'}
         >
           <div className="w-full h-full rounded-[2rem] bg-white dark:bg-slate-900 flex items-center justify-center relative overflow-hidden transition-colors">
             <div className={`absolute inset-0 ${isOpen ? 'bg-orange-500/10' : 'bg-[#057A42]/10 animate-pulse'}`}></div>

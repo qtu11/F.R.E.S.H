@@ -4,7 +4,7 @@ export async function POST(req: Request) {
   try {
     const { messages } = await req.json();
 
-    const apiKey = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || "YOUR_OPENROUTER_API_KEY_HERE";
+    const apiKey = process.env.OPENROUTER_API_KEY || "YOUR_OPENROUTER_API_KEY_HERE";
     if (!apiKey) {
       return NextResponse.json({ error: "OpenRouter API key is missing" }, { status: 500 });
     }
@@ -46,8 +46,6 @@ Quy tắc hỗ trợ (Support Rules):
     });
 
     if (!response.ok) {
-        const errorData = await response.text();
-        console.error("Open router error", errorData);
         return NextResponse.json({ error: "OpenRouter API error" }, { status: response.status });
     }
 
@@ -60,8 +58,7 @@ Quy tắc hỗ trợ (Support Rules):
       },
     });
 
-  } catch (error) {
-    console.error("AI Assistant Error:", error);
+  } catch (_error) {
     return NextResponse.json({ error: "Failed to generate AI response" }, { status: 500 });
   }
 }
