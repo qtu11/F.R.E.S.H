@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGlobal } from '@/app/providers';
 import { useAuth } from '@/app/contexts/AuthContext';
+import { orderService } from '@/lib/data/orders';
 import { showToast } from '@/lib/data/notifications';
 
 interface CartItem {
@@ -19,18 +20,11 @@ interface CartItem {
   discount: number;
 }
 
-const initialCart: CartItem[] = [
-  { id: 'd1', name: 'Bánh Mì Thịt Nguội', store: 'WinMart+ D1', price: 12000, originalPrice: 30000, quantity: 2, gradient: 'from-amber-400 to-orange-500', discount: 60 },
-  { id: 'd5', name: 'Rau Củ Tổng Hợp', store: 'Co.opmart D1', price: 13500, originalPrice: 45000, quantity: 1, gradient: 'from-green-400 to-emerald-600', discount: 70 },
-  { id: 'd9', name: 'Kem Vanilla Hộp', store: 'AEON Tân Phú', price: 32000, originalPrice: 80000, quantity: 1, gradient: 'from-blue-300 to-indigo-500', discount: 60 },
-  { id: 'd3', name: 'Gà Rán Cay', store: 'Circle K D1', price: 22000, originalPrice: 55000, quantity: 2, gradient: 'from-red-400 to-orange-600', discount: 60 },
-];
-
 const paymentMethods = [
+  { id: 'wallet', name: 'Ví FRESH', icon: '💰', color: 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800' },
   { id: 'momo', name: 'Momo', icon: '💜', color: 'bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800' },
   { id: 'zalopay', name: 'ZaloPay', icon: '💙', color: 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800' },
   { id: 'vnpay', name: 'VNPay', icon: '🧡', color: 'bg-orange-50 dark:bg-orange-900/30 border-orange-200 dark:border-orange-800' },
-  { id: 'applepay', name: 'Apple Pay', icon: '⚫', color: 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700' },
 ];
 
 export default function CustomerCart() {
@@ -39,20 +33,59 @@ export default function CustomerCart() {
   const [mounted, setMounted] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [pickup, setPickup] = useState(true);
-  const [selectedPayment, setSelectedPayment] = useState('momo');
+  const [selectedPayment, setSelectedPayment] = useState('wallet');
   const [ordering, setOrdering] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
 
   useEffect(() => {
     setMounted(true);
-    setCart(initialCart);
+    // Khôi phục giỏ hàng từ localStorage
+    if (typeof window !== 'undefined') {
+      const savedCart = localStorage.getItem('fresh_cart');
+      if (savedCart) {
+        try {
+          setCart(JSON.parse(savedCart));
+        } catch (e) {
+          console.error('Error parsing cart from localStorage:', e);
+        }
+      }
+    }
   }, []);
 
+  useEffect(() => {
+    if (user?.id) {
+      // Gọi API balance bảo mật không truyền query string userId trực tiếp tránh IDOR
+      fetch('/api/transactions/balance')
+        .then(res => res.json())
+        .then(data => {
+          if (typeof data === 'number') {
+            setWalletBalance(data);
+          } else if (data && typeof data.walletBalance === 'number') {
+            setWalletBalance(data.walletBalance);
+          }
+        })
+        .catch(err => console.error('Failed to fetch wallet balance', err));
+    }
+  }, [user]);
+
   const updateQty = (id: string, delta: number) => {
-    setCart(prev => prev.map(item => item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item));
+    setCart(prev => {
+      const next = prev.map(item => item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('fresh_cart', JSON.stringify(next));
+      }
+      return next;
+    });
   };
 
   const removeItem = (id: string) => {
-    setCart(prev => prev.filter(item => item.id !== id));
+    setCart(prev => {
+      const next = prev.filter(item => item.id !== id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('fresh_cart', JSON.stringify(next));
+      }
+      return next;
+    });
     showToast('info', 'Removed from cart');
   };
 
@@ -62,14 +95,44 @@ export default function CustomerCart() {
   const deliveryFee = pickup ? 0 : 15000;
   const total = subtotal + deliveryFee;
 
+  // Kiểm tra nếu thanh toán bằng Ví và không đủ số dư
+  const isWalletPayment = selectedPayment === 'wallet';
+  const isBalanceInsufficient = isWalletPayment && walletBalance !== null && walletBalance < total;
+
   const handlePlaceOrder = async () => {
     if (!user) { showToast('error', 'Please login first'); return; }
     if (cart.length === 0) { showToast('warning', 'Cart is empty'); return; }
+    if (isBalanceInsufficient) { showToast('error', 'Số dư ví FRESH không đủ', 'Vui lòng nạp thêm tiền hoặc chọn phương thức thanh toán khác'); return; }
+    
     setOrdering(true);
-    await new Promise(r => setTimeout(r, 1500));
-    setOrdering(false);
-    setCart([]);
-    showToast('success', 'Order Placed!', `Your order has been placed successfully. ${pickup ? 'Ready for pickup.' : 'On its way!'}`);
+    try {
+      await orderService.create({
+        userId: user.id,
+        items: cart.map(i => ({ productId: i.id, productName: i.name, productImage: '', quantity: i.quantity, unitPrice: i.price })),
+        subtotal,
+        deliveryFee,
+        serviceFee: 0,
+        discount: savings,
+        total: subtotal + deliveryFee,
+        deliveryMethod: pickup ? 'pickup' : 'delivery',
+        paymentMethod: selectedPayment as any,
+        address: pickup ? undefined : user.address,
+        storeId: (cart[0] as any)?.storeId || '',
+        storeName: cart[0]?.store || '',
+        notes: '',
+      });
+      
+      // Xoá giỏ hàng sau khi đặt thành công
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('fresh_cart');
+      }
+      setCart([]);
+      showToast('success', 'Order Placed!', `Your order has been placed successfully. ${pickup ? 'Ready for pickup.' : 'On its way!'}`);
+    } catch {
+      showToast('error', 'Order Failed', 'Please try again');
+    } finally {
+      setOrdering(false);
+    }
   };
 
   return (
@@ -96,7 +159,7 @@ export default function CustomerCart() {
             <div className="lg:col-span-2 space-y-4">
               {cart.map((item, i) => (
                 <motion.div key={item.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} layout className="bg-white dark:bg-slate-800 rounded-3xl p-4 shadow-sm border border-gray-100 dark:border-slate-700 flex gap-4 items-center transition-all hover:shadow-md">
-                  <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${item.gradient} shrink-0 flex items-center justify-center text-white font-black text-lg`}>
+                  <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${item.gradient || 'from-emerald-400 to-green-600'} shrink-0 flex items-center justify-center text-white font-black text-lg`}>
                     {item.discount}%
                   </div>
                   <div className="flex-1 min-w-0">
@@ -165,24 +228,36 @@ export default function CustomerCart() {
                 <div className="grid grid-cols-2 gap-2">
                   {paymentMethods.map(pm => (
                     <button key={pm.id} onClick={() => setSelectedPayment(pm.id)}
-                      className={`flex items-center gap-2 p-3 rounded-xl border text-xs font-bold transition-all ${selectedPayment === pm.id ? 'ring-2 ring-[#057A42] border-[#057A42] ' + pm.color : pm.color + ' opacity-70 hover:opacity-100'}`}
+                      className={`flex flex-col items-start gap-1 p-3 rounded-xl border text-xs font-bold transition-all ${selectedPayment === pm.id ? 'ring-2 ring-[#057A42] border-[#057A42] ' + pm.color : pm.color + ' opacity-70 hover:opacity-100'}`}
                     >
-                      <span className="text-lg">{pm.icon}</span>
-                      <span className={selectedPayment === pm.id ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-slate-300'}>{pm.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{pm.icon}</span>
+                        <span className={selectedPayment === pm.id ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-slate-300'}>{pm.name}</span>
+                      </div>
+                      {pm.id === 'wallet' && walletBalance !== null && (
+                        <span className={`text-[10px] mt-1 font-semibold ${walletBalance < total ? 'text-red-500 dark:text-red-400' : 'text-gray-500 dark:text-slate-400'}`}>
+                          Số dư: {walletBalance.toLocaleString()}đ
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
+                {isBalanceInsufficient && (
+                  <div className="mt-3 p-3 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 rounded-xl text-xs font-semibold leading-relaxed">
+                    ⚠ Số dư ví FRESH không đủ để thực hiện thanh toán này. Vui lòng nạp thêm tiền hoặc chọn phương thức thanh toán khác.
+                  </div>
+                )}
               </div>
 
-              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handlePlaceOrder} disabled={ordering}
-                className="w-full bg-gradient-to-r from-[#057A42] to-emerald-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-[#057A42]/30 flex items-center justify-center gap-3 transition-all uppercase tracking-widest text-sm disabled:opacity-50"
+              <motion.button whileHover={isBalanceInsufficient ? {} : { scale: 1.02 }} whileTap={isBalanceInsufficient ? {} : { scale: 0.98 }} onClick={handlePlaceOrder} disabled={ordering || isBalanceInsufficient}
+                className={`w-full text-white font-black py-4 rounded-2xl shadow-lg flex items-center justify-center gap-3 transition-all uppercase tracking-widest text-sm ${isBalanceInsufficient ? 'bg-gray-400 dark:bg-slate-700 cursor-not-allowed shadow-none' : 'bg-gradient-to-r from-[#057A42] to-emerald-600 shadow-[#057A42]/30 disabled:opacity-50'}`}
               >
                 {ordering ? (
                   <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity }} className="w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
                 ) : (
                   <ShoppingBag className="w-5 h-5" />
                 )}
-                {ordering ? 'Processing...' : `Place Order - ${total.toLocaleString()}đ`}
+                {ordering ? 'Processing...' : isBalanceInsufficient ? 'Số dư không đủ' : `Place Order - ${total.toLocaleString()}đ`}
               </motion.button>
             </div>
           </div>

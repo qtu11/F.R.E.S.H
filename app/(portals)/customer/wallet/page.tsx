@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Wallet, ArrowUpRight, ArrowDownLeft, Banknote, CreditCard, Plus, ArrowLeft, Check, X, Loader2, History } from 'lucide-react';
+import { Wallet, ArrowUpRight, ArrowDownLeft, Banknote, CreditCard, Plus, ArrowLeft, Check, X, Loader2, History, AlertTriangle } from 'lucide-react';
 import { useGlobal } from '@/app/providers';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { transactionService, Transaction } from '@/lib/data/transactions';
@@ -15,10 +16,11 @@ type TabType = 'all' | 'topup' | 'payment' | 'withdrawal' | 'refund';
 const TYPE_ICONS: Record<string, string> = { topup: '💳', payment: '🛒', withdrawal: '🏦', refund: '↩️', revenue: '💰', commission: '📊' };
 const TYPE_COLORS: Record<string, string> = { topup: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30', payment: 'text-red-600 bg-red-100 dark:bg-red-900/30', withdrawal: 'text-orange-600 bg-orange-100 dark:bg-orange-900/30', refund: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30', revenue: 'text-green-600 bg-green-100 dark:bg-green-900/30', commission: 'text-purple-600 bg-purple-100 dark:bg-purple-900/30' };
 
-export default function WalletPage() {
+function WalletPageContent() {
   const { t } = useGlobal();
   const { user } = useAuth();
   const reduced = useSafeReducedMotion();
+  const searchParams = useSearchParams();
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
@@ -30,9 +32,28 @@ export default function WalletPage() {
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAccount, setWithdrawAccount] = useState('');
+  const [depositAccount, setDepositAccount] = useState('');
   const [processing, setProcessing] = useState(false);
 
+  useEffect(() => {
+    if (bankAccounts.length > 0) {
+      const defaultAcc = bankAccounts.find(a => a.isDefault) || bankAccounts[0];
+      setDepositAccount(defaultAcc.id);
+    } else {
+      setDepositAccount('');
+    }
+  }, [bankAccounts, showDeposit]);
+
   useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'deposit') {
+      setShowDeposit(true);
+    } else if (action === 'withdraw') {
+      setShowWithdraw(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!user) return;
@@ -45,6 +66,10 @@ export default function WalletPage() {
       setBalance(bal);
       setBankAccounts(banks);
       setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      showToast('error', 'Failed to load wallet data');
+      setLoading(false);
     });
   }, [user]);
 
@@ -53,12 +78,14 @@ export default function WalletPage() {
   const handleDeposit = async () => {
     const amount = parseInt(depositAmount);
     if (!amount || amount < 10000) { showToast('error', 'Minimum deposit is 10,000đ'); return; }
+    if (!depositAccount) { showToast('error', 'Vui lòng liên hệ Admin để cấu hình tài khoản ngân hàng liên kết.'); return; }
     setProcessing(true);
     try {
+      const account = bankAccounts.find(a => a.id === depositAccount);
       await transactionService.addTransaction({
         userId: user!.id, type: 'topup', amount,
         date: new Date().toISOString(), status: 'completed',
-        description: `Wallet top-up of ${amount.toLocaleString()}đ`,
+        description: `Nạp tiền tự động từ ngân hàng ${account?.bankName} (${account?.accountNumber})`,
         paymentMethod: 'bank',
       });
       const newBal = await transactionService.getBalance(user!.id);
@@ -67,8 +94,8 @@ export default function WalletPage() {
       setTransactions(txs);
       setShowDeposit(false);
       setDepositAmount('');
-      showToast('success', 'Deposit Successful', `${amount.toLocaleString()}đ added to your wallet`);
-    } catch { showToast('error', 'Deposit failed'); }
+      showToast('success', 'Nạp tiền thành công', `${amount.toLocaleString()}đ đã được cộng vào ví của bạn.`);
+    } catch { showToast('error', 'Nạp tiền thất bại'); }
     setProcessing(false);
   };
 
@@ -252,29 +279,61 @@ export default function WalletPage() {
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-            <div className="mb-4">
-              <label className="text-sm font-bold text-gray-700 dark:text-slate-300 mb-2 block">{t('amount')}</label>
-              <div className="relative">
-                <input type="number" value={depositAmount} onChange={e => setDepositAmount(e.target.value)} placeholder="100,000"
-                  className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-2xl font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-lg font-bold text-gray-500">đ</span>
+            
+            {bankAccounts.length === 0 ? (
+              <div className="mb-6 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-850/50 rounded-2xl text-center">
+                <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                <p className="text-sm font-bold text-red-600 dark:text-red-400">Chưa liên kết ngân hàng</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+                  Tài khoản của bạn chưa được Admin cấu hình tài khoản ngân hàng liên kết. Vui lòng liên hệ Admin để liên kết ngân hàng trước khi thực hiện nạp tiền tự động.
+                </p>
               </div>
-            </div>
-            <div className="flex gap-2 mb-6">
-              {[100000, 200000, 500000, 1000000].map(amt => (
-                <button key={amt} onClick={() => setDepositAmount(amt.toString())}
-                  className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${depositAmount === amt.toString() ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-2 border-emerald-500' : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 border-2 border-transparent hover:border-gray-300'}`}
-                >
-                  {amt.toLocaleString()}
-                </button>
-              ))}
-            </div>
-            <motion.button onClick={handleDeposit} disabled={processing} whileHover={{ scale: 1.01 }} whileTap={buttonTap}
+            ) : (
+              <>
+                <div className="mb-4">
+                  <label className="text-sm font-bold text-gray-700 dark:text-slate-300 mb-2 block">{t('amount')}</label>
+                  <div className="relative">
+                    <input type="number" value={depositAmount} onChange={e => setDepositAmount(e.target.value)} placeholder="100,000"
+                      className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-2xl font-black text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-lg font-bold text-gray-500">đ</span>
+                  </div>
+                </div>
+                <div className="flex gap-2 mb-4">
+                  {[100000, 200000, 500000, 1000000].map(amt => (
+                    <button key={amt} onClick={() => setDepositAmount(amt.toString())}
+                      className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${depositAmount === amt.toString() ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-2 border-emerald-500' : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 border-2 border-transparent hover:border-gray-300'}`}
+                    >
+                      {amt.toLocaleString()}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mb-6">
+                  <label className="text-sm font-bold text-gray-700 dark:text-slate-300 mb-2 block">Tài khoản ngân hàng của bạn dùng nạp tự động</label>
+                  <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                    {bankAccounts.map(acc => (
+                      <button key={acc.id} onClick={() => setDepositAccount(acc.id)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${depositAccount === acc.id ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600'}`}
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs">{acc.bankName.slice(0, 2).toUpperCase()}</div>
+                        <div className="flex-1 text-left">
+                          <div className="text-sm font-bold text-gray-900 dark:text-white">{acc.bankName}</div>
+                          <div className="text-xs text-gray-500 dark:text-slate-400">{acc.accountNumber} - {acc.accountHolder}</div>
+                        </div>
+                        {depositAccount === acc.id && <Check className="w-5 h-5 text-emerald-500" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            <motion.button onClick={handleDeposit} disabled={processing || bankAccounts.length === 0} whileHover={{ scale: 1.01 }} whileTap={buttonTap}
               className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 transition-all shadow-lg shadow-emerald-500/25"
             >
               {processing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
-              {processing ? t('processing') : t('confirm_deposit')}
+              {processing ? t('processing') : 'Xác nhận nạp tiền tự động'}
             </motion.button>
           </motion.div>
         </div>
@@ -336,5 +395,17 @@ export default function WalletPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function WalletPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+      </div>
+    }>
+      <WalletPageContent />
+    </Suspense>
   );
 }

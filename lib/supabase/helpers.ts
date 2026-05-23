@@ -4,7 +4,9 @@ import { getServerClient } from './server';
 export function requireClient() {
   const client = getServerClient();
   if (!client) {
-    throw { status: 503, message: 'Supabase not configured. Go to /admin/setup' };
+    const err = new Error('Supabase not configured. Go to /admin/setup');
+    (err as any).status = 503;
+    throw err;
   }
   return client;
 }

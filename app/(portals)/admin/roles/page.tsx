@@ -2,46 +2,31 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Users, Plus, Settings, ChevronDown, ChevronUp, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Shield, Users, Plus, Settings, ChevronDown, ChevronUp, ToggleLeft, ToggleRight, Loader2 } from 'lucide-react';
 import { useGlobal } from '@/app/providers';
+import { adminService } from '@/lib/data/admin';
 
 const MODULES = ['Dashboard', 'Partners', 'Fraud', 'ESG', 'Users', 'Commission', 'Forecasting', 'Heatmap', 'Marketing', 'Customer Care', 'System'];
-
-const ROLES = [
-  {
-    name: 'Super Admin', count: 3, color: 'from-slate-800 to-slate-900', accent: 'slate',
-    permissions: Object.fromEntries(MODULES.map(m => [m, true])),
-  },
-  {
-    name: 'Finance', count: 5, color: 'from-emerald-600 to-emerald-800', accent: 'emerald',
-    permissions: Object.fromEntries(MODULES.map(m => ['Commission', 'Dashboard', 'Partners'].includes(m) ? [m, true] : [m, false])),
-  },
-  {
-    name: 'Marketing', count: 8, color: 'from-purple-600 to-purple-800', accent: 'purple',
-    permissions: Object.fromEntries(MODULES.map(m => ['Marketing', 'Dashboard', 'Users', 'Commission'].includes(m) ? [m, true] : [m, false])),
-  },
-  {
-    name: 'Data Analyst', count: 4, color: 'from-blue-600 to-blue-800', accent: 'blue',
-    permissions: Object.fromEntries(MODULES.map(m => ['Dashboard', 'Forecasting', 'Heatmap', 'ESG', 'Commission'].includes(m) ? [m, true] : [m, false])),
-  },
-  {
-    name: 'Support', count: 12, color: 'from-orange-500 to-orange-700', accent: 'orange',
-    permissions: Object.fromEntries(MODULES.map(m => ['Customer Care', 'Users', 'Partners', 'Dashboard'].includes(m) ? [m, true] : [m, false])),
-  },
-  {
-    name: 'Regional Manager', count: 6, color: 'from-cyan-600 to-cyan-800', accent: 'cyan',
-    permissions: Object.fromEntries(MODULES.map(m => ['Dashboard', 'Partners', 'Heatmap', 'Forecasting', 'Users', 'Commission'].includes(m) ? [m, true] : [m, false])),
-  },
-];
 
 export default function AdminRoles() {
   const { t } = useGlobal();
   const [mounted, setMounted] = useState(false);
-  const [roles, setRoles] = useState(ROLES);
+  const [roles, setRoles] = useState<any[]>([]);
+  const [rolesLoading, setRolesLoading] = useState(true);
   const [expandedRole, setExpandedRole] = useState<string | null>(null);
   const [showMatrix, setShowMatrix] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    setRolesLoading(true);
+    adminService.getRoles().then(data => {
+      if (Array.isArray(data) && data.length > 0) setRoles(data);
+      setRolesLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setRolesLoading(false);
+    });
+  }, []);
 
   const togglePermission = (roleName: string, module: string) => {
     setRoles(prev => prev.map(r => {
@@ -60,6 +45,17 @@ export default function AdminRoles() {
   };
 
   if (!mounted) return null;
+
+  if (rolesLoading) {
+    return (
+      <div className="min-h-screen bg-[#0A0F1C] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+          <div className="text-slate-300 text-sm font-medium">Loading security roles and policy configurations...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#f0f2f5] dark:bg-slate-950 min-h-screen pb-20 font-sans transition-colors duration-300">
@@ -123,6 +119,13 @@ export default function AdminRoles() {
           </motion.div>
         )}
 
+        {roles.length === 0 && !rolesLoading ? (
+          <div className="bg-white dark:bg-slate-800 rounded-[32px] p-12 text-center shadow-sm border border-gray-100 dark:border-slate-700">
+            <Shield className="w-16 h-16 mx-auto text-gray-300 dark:text-slate-600 mb-4" />
+            <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">No roles found</h3>
+            <p className="text-gray-500 dark:text-slate-400 font-medium">Add a new role to get started.</p>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {roles.map((role, i) => {
             const ac = roleAccentColors[role.accent];
@@ -173,6 +176,7 @@ export default function AdminRoles() {
             );
           })}
         </div>
+        )}
       </div>
     </div>
   );

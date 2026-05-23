@@ -2,326 +2,789 @@
 
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { useGlobal } from '@/app/providers';
-import { motion, useScroll, useTransform, useMotionValue, useSpring, AnimatePresence } from 'framer-motion';
-import { Canvas, useFrame, useLoader } from '@react-three/fiber';
-import { Float, MeshDistortMaterial, Sphere, Torus, useScroll as useR3FScroll } from '@react-three/drei';
-import * as THREE from 'three';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import Link from 'next/link';
 import {
-  ShoppingBag, Store, ShieldCheck, ArrowRight, Leaf, Globe, Mail, Phone, Search,
-  Sparkles, ChevronDown, Star, Layers, TrendingUp, BarChart3, Zap, Users,
-  Shield, Menu, X, Moon, Sun, Award, BadgeCheck, Repeat, ScanLine,
-  ChevronRight, ExternalLink, Target, TreePine,
-  Wallet, Heart, Clock, Network, MapPin, Settings, Ruler, Coins, Rocket,
-  Infinity, Cpu, Eye, LocateFixed, Quote
+  ShoppingBag, Store, ShieldCheck, ArrowRight, Leaf, Globe, Mail, Phone,
+  Sparkles, ChevronDown, Star, Layers, Zap, Users, Shield, Menu, X, Moon, Sun,
+  Award, BadgeCheck, Repeat, ScanLine, ChevronRight, ExternalLink, Target, TreePine,
+  Wallet, Heart, Clock, Network, MapPin, Settings, Coins, Rocket, Cpu, Eye, BookOpen,
+  ArrowUpRight, BarChart3, Database, Lock, AlertTriangle, CheckCircle2, Flame
 } from 'lucide-react';
 
-// ─── 3D Scene ──────────────────────────────────────────────────
-function Scene3D() {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const torusRef = useRef<THREE.Mesh>(null);
-  const particlesRef = useRef<THREE.Points>(null);
+// ─── 1. INTERACTIVE CYBER BACKGROUND (CANVAS API) ───────────────────
+function CyberBackground() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
-    if (meshRef.current) { meshRef.current.rotation.x = t * 0.1; meshRef.current.rotation.y = t * 0.15; }
-    if (torusRef.current) { torusRef.current.rotation.x = t * 0.08; torusRef.current.rotation.y = t * 0.12; }
-    if (particlesRef.current) {
-      particlesRef.current.rotation.y = t * 0.02;
-      const positions = particlesRef.current.geometry.attributes.position.array;
-      for (let i = 0; i < positions.length; i += 3) positions[i + 1] += Math.sin(t + i) * 0.002;
-      particlesRef.current.geometry.attributes.position.needsUpdate = true;
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animationFrameId: number;
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
+
+    const handleResize = () => {
+      if (!canvas) return;
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    };
+    window.addEventListener('resize', handleResize);
+
+    // Hạt năng lượng
+    const particles: Array<{
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      size: number;
+      color: string;
+      alpha: number;
+      decay: number;
+    }> = [];
+
+    const colors = ['rgba(16, 185, 129, 0.4)', 'rgba(249, 115, 22, 0.3)', 'rgba(59, 130, 246, 0.3)'];
+
+    for (let i = 0; i < 60; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
+        size: Math.random() * 2 + 1,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        alpha: Math.random() * 0.5 + 0.2,
+        decay: 0.002
+      });
     }
-  });
 
-  const particlesPositions = useMemo(() => {
-    const count = 400;
-    const positions = new Float32Array(count * 3);
-    for (let i = 0; i < count * 3; i++) positions[i] = (Math.random() - 0.5) * 20;
-    return positions;
+    let mouse = { x: -1000, y: -1000, active: false };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+      mouse.active = true;
+    };
+
+    const handleMouseLeave = () => {
+      mouse.active = false;
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseleave', handleMouseLeave);
+
+    const draw = () => {
+      ctx.clearRect(0, 0, width, height);
+
+      // Vẽ lưới mạng lưới 3D giả lập (cyber matrix grid)
+      ctx.strokeStyle = 'rgba(16, 185, 129, 0.025)';
+      ctx.lineWidth = 1;
+      const gridSize = 80;
+      for (let x = 0; x < width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+
+      // Vẽ liên kết plexus hạt
+      ctx.lineWidth = 0.8;
+      for (let i = 0; i < particles.length; i++) {
+        const p1 = particles[i];
+        p1.x += p1.vx;
+        p1.y += p1.vy;
+
+        // Tránh biên
+        if (p1.x < 0 || p1.x > width) p1.vx *= -1;
+        if (p1.y < 0 || p1.y > height) p1.vy *= -1;
+
+        // Vẽ hạt
+        ctx.beginPath();
+        ctx.arc(p1.x, p1.y, p1.size, 0, Math.PI * 2);
+        ctx.fillStyle = p1.color;
+        ctx.fill();
+
+        // Tương tác chuột
+        if (mouse.active) {
+          const dx = mouse.x - p1.x;
+          const dy = mouse.y - p1.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 180) {
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(mouse.x, mouse.y);
+            ctx.strokeStyle = `rgba(16, 185, 129, ${0.15 * (1 - dist / 180)})`;
+            ctx.stroke();
+          }
+        }
+
+        // Vẽ đường nối giữa các hạt gần nhau
+        for (let j = i + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const dx = p1.x - p2.x;
+          const dy = p1.y - p2.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist < 120) {
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = `rgba(16, 185, 129, ${0.08 * (1 - dist / 120)})`;
+            ctx.stroke();
+          }
+        }
+      }
+
+      animationFrameId = requestAnimationFrame(draw);
+    };
+
+    draw();
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseleave', handleMouseLeave);
+      cancelAnimationFrame(animationFrameId);
+    };
   }, []);
 
-  return (
-    <group>
-      <Sphere ref={meshRef} args={[1.2, 64, 64]} position={[0, 0, 0]}>
-        <MeshDistortMaterial color="#00A86B" roughness={0.2} metalness={0.8} distort={0.15} speed={2} />
-      </Sphere>
-      <Torus ref={torusRef} args={[2.2, 0.05, 32, 64]} position={[0, 0, 0]}>
-        <meshBasicMaterial color="#00A86B" transparent opacity={0.4} />
-      </Torus>
-      <Torus args={[2.8, 0.03, 16, 64]} position={[0, 0, 0]} rotation={[Math.PI / 3, 0, 0]}>
-        <meshBasicMaterial color="#10b981" transparent opacity={0.3} />
-      </Torus>
-      <points ref={particlesRef}>
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" args={[particlesPositions, 3]} count={400} />
-        </bufferGeometry>
-        <pointsMaterial size={0.04} color="#34d399" transparent opacity={0.6} />
-      </points>
-      {Array.from({ length: 8 }).map((_, i) => (
-        <Float key={i} speed={1.5 + Math.random()} rotationIntensity={0.5} floatIntensity={0.8}>
-          <mesh position={[
-            (Math.random() - 0.5) * 6,
-            (Math.random() - 0.5) * 4,
-            (Math.random() - 0.5) * 3 - 2
-          ]}>
-            {i % 2 === 0 ? <boxGeometry args={[0.08, 0.08, 0.08]} /> : <icosahedronGeometry args={[0.06]} />}
-            <meshBasicMaterial color={i % 3 === 0 ? '#FF6B00' : '#00A86B'} transparent opacity={0.5} />
-          </mesh>
-        </Float>
-      ))}
-      <ambientLight intensity={0.3} />
-      <directionalLight position={[5, 5, 5]} intensity={1} />
-      <directionalLight position={[-5, -5, -5]} intensity={0.3} color="#00A86B" />
-      <pointLight position={[0, 0, 3]} intensity={0.5} color="#34d399" />
-    </group>
-  );
+  return <canvas ref={canvasRef} className="fixed inset-0 z-0 pointer-events-none opacity-40 dark:opacity-80" />;
 }
 
-// ─── Scene2D (fallback / static 3D visualization) ──────────────
-function Hero3DEcosystem() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  if (!mounted) return <div className="w-full h-full rounded-3xl bg-gradient-to-br from-emerald-900/20 to-slate-900/20" />;
-  return (
-    <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
-      <Scene3D />
-    </Canvas>
-  );
+// ─── 2. TEXT SCRAMBLE / GLITCH EFFECT FOR Futurist Feel ──────────────
+function GlitchText({ text, className = '' }: { text: string; className?: string }) {
+  const [displayText, setDisplayText] = useState(text);
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*+=-';
+
+  const triggerGlitch = useCallback(() => {
+    let iterations = 0;
+    const interval = setInterval(() => {
+      setDisplayText(prev =>
+        text
+          .split('')
+          .map((char, index) => {
+            if (char === ' ' || char === '.' || char === ',') return char;
+            if (index < iterations) return text[index];
+            return chars[Math.floor(Math.random() * chars.length)];
+          })
+          .join('')
+      );
+      if (iterations >= text.length) {
+        clearInterval(interval);
+      }
+      iterations += 1 / 2;
+    }, 30);
+  }, [text, chars]);
+
+  useEffect(() => {
+    triggerGlitch();
+    const timer = setInterval(triggerGlitch, 8000);
+    return () => clearInterval(timer);
+  }, [triggerGlitch]);
+
+  return <span className={className}>{displayText}</span>;
 }
 
-// ─── Particle Field Background ──────────────────────────────────
-function ParticleField({ count = 30 }: { count?: number }) {
-  const particles = useMemo(() => {
-    return Array.from({ length: count }).map((_, i) => {
-      const hash = (i * 2654435761) % 10000;
-      return {
-        left: `${(hash % 100)}%`,
-        top: `${(hash * 7 % 100)}%`,
-        duration: 3 + (hash * 3 % 400) / 100,
-        delay: (hash * 13 % 500) / 100,
-      };
-    });
-  }, [count]);
+// ─── 3. INTERACTIVE NEON CORE (ABSTRACT 3D/CSS ENERGY CENTER) ───────
+function NeonEnergyCore() {
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
-      {particles.map((p, i) => (
+    <div className="relative w-full h-[380px] md:h-[480px] flex items-center justify-center overflow-hidden">
+      {/* Glow Orbs */}
+      <div className="absolute w-72 h-72 rounded-full bg-emerald-500/20 blur-[100px] animate-pulse" />
+      <div className="absolute w-60 h-60 rounded-full bg-orange-500/10 blur-[80px] animate-pulse delay-75" />
+
+      {/* Orbit Rings (3D perspective rotating) */}
+      <div className="relative w-64 h-64 flex items-center justify-center">
+        {/* Ring 1 */}
         <motion.div
-          key={i}
-          className="absolute w-1 h-1 bg-emerald-400/20 rounded-full"
-          style={{ left: p.left, top: p.top }}
-          animate={{ y: [0, -30, 0], opacity: [0, 0.5, 0] }}
-          transition={{ duration: p.duration, repeat: 9999, delay: p.delay }}
+          animate={{ rotate: 360 }}
+          transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
+          className="absolute inset-0 rounded-full border-2 border-dashed border-emerald-500/30 border-t-emerald-500/80 border-b-emerald-400/80"
+          style={{ transform: 'rotateX(60deg) rotateY(15deg)' }}
         />
-      ))}
+
+        {/* Ring 2 */}
+        <motion.div
+          animate={{ rotate: -360 }}
+          transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+          className="absolute w-[110%] h-[110%] rounded-full border border-orange-500/40 border-l-orange-500 border-r-transparent"
+          style={{ transform: 'rotateX(45deg) rotateY(-30deg)' }}
+        />
+
+        {/* Ring 3 */}
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
+          className="absolute w-[120%] h-[120%] rounded-full border border-dashed border-blue-500/20 border-t-blue-500 border-b-transparent"
+          style={{ transform: 'rotateX(75deg) rotateY(45deg)' }}
+        />
+
+        {/* Core Node */}
+        <motion.div
+          animate={{ scale: [1, 1.08, 1], y: [0, -8, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute w-28 h-28 rounded-3xl bg-gradient-to-br from-emerald-400 via-teal-500 to-emerald-600 flex flex-col items-center justify-center shadow-[0_0_50px_rgba(16,185,129,0.5)] border border-emerald-300/40"
+        >
+          <Leaf className="w-8 h-8 text-white mb-1 animate-bounce" />
+          <span className="text-[10px] font-black tracking-widest text-emerald-100 uppercase">F.R.E.S.H</span>
+          <span className="text-[8px] font-bold text-emerald-200 uppercase tracking-widest">AI CORE</span>
+        </motion.div>
+
+        {/* Floating Mini Nodes */}
+        {[
+          { color: 'bg-emerald-500 shadow-emerald-500/60', delay: 0, x: -100, y: -60, label: 'OCR' },
+          { color: 'bg-orange-500 shadow-orange-500/60', delay: 1, x: 110, y: 70, label: 'PRICING' },
+          { color: 'bg-blue-500 shadow-blue-500/60', delay: 2, x: 100, y: -90, label: 'ESG' },
+          { color: 'bg-emerald-400 shadow-emerald-400/60', delay: 3, x: -90, y: 100, label: 'MAP' }
+        ].map((node, i) => (
+          <motion.div
+            key={i}
+            initial={{ x: node.x, y: node.y }}
+            animate={{
+              y: [node.y - 6, node.y + 6, node.y - 6],
+              x: [node.x - 4, node.x + 4, node.x - 4]
+            }}
+            transition={{ duration: 3 + i, repeat: Infinity, ease: 'easeInOut', delay: node.delay }}
+            className="absolute flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/90 dark:bg-slate-950/90 border border-slate-200 dark:border-slate-700/50 backdrop-blur-md shadow-md dark:shadow-lg"
+          >
+            <span className={`w-2 h-2 rounded-full ${node.color} animate-pulse`} />
+            <span className="text-[9px] font-black tracking-wider text-slate-600 dark:text-slate-300">{node.label}</span>
+          </motion.div>
+        ))}
+      </div>
     </div>
   );
 }
 
-// ─── Magnetic Button ────────────────────────────────────────────
-function MagneticButton({ children, className = '', onClick, href }: {
-  children: React.ReactNode; className?: string; onClick?: () => void; href?: string;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const springX = useSpring(x, { stiffness: 150, damping: 15 });
-  const springY = useSpring(y, { stiffness: 150, damping: 15 });
+// ─── 4. INTERACTIVE ESG SIMULATOR ──────────────────────────────────
+function ESGSimulator() {
+  const { t } = useGlobal();
+  const [weight, setWeight] = useState(25);
+  const co2Reduced = useMemo(() => (weight * 2.5).toFixed(1), [weight]);
+  const greenCredits = useMemo(() => Math.floor(weight * 10), [weight]);
+  const treesSaved = useMemo(() => (weight * 0.12).toFixed(2), [weight]);
 
-  const handleMouse = useCallback((e: React.MouseEvent) => {
-    const rect = ref.current?.getBoundingClientRect();
-    if (rect) { x.set((e.clientX - rect.left - rect.width / 2) * 0.3); y.set((e.clientY - rect.top - rect.height / 2) * 0.3); }
-  }, [x, y]);
+  const items = useMemo(() => [
+    { label: t('co2_reduced_label'), val: co2Reduced, unit: ` ${t('co2_saved_unit')}`, desc: t('protect_atmosphere'), icon: Flame, color: 'text-orange-500 bg-orange-500/10' },
+    { label: t('green_credits_label'), val: greenCredits, unit: ` ${t('green_credits_unit')}`, desc: t('redeem_rewards'), icon: Coins, color: 'text-emerald-500 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-400/10' },
+    { label: t('trees_saved_label'), val: treesSaved, unit: ` ${t('trees_saved_unit')}`, desc: t('absorb_carbon'), icon: TreePine, color: 'text-blue-500 dark:text-blue-400 bg-blue-500/10 dark:bg-blue-400/10' }
+  ], [t, co2Reduced, greenCredits, treesSaved]);
 
-  const reset = useCallback(() => { x.set(0); y.set(0); }, [x, y]);
+  return (
+    <div className="bg-white/90 dark:bg-slate-950/80 border border-slate-200 dark:border-emerald-500/20 rounded-[2rem] p-6 backdrop-blur-xl shadow-xl shadow-slate-100/50 dark:shadow-none relative overflow-hidden group">
+      {/* Light glow lines */}
+      <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent" />
 
-  const content = (
-    <motion.div
-      ref={ref} onMouseMove={handleMouse} onMouseLeave={reset}
-      style={{ x: springX, y: springY }}
-      className={className}
-      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-    >
-      {children}
-    </motion.div>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-555 dark:text-emerald-400">
+            <Coins className="w-5 h-5 animate-pulse" />
+          </div>
+          <div>
+            <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">{t('esg_sim_title')}</h4>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest font-bold">{t('esg_sim_subtitle')}</p>
+          </div>
+        </div>
+        <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20 dark:border-emerald-500/30">REALTIME ESG</span>
+      </div>
+
+      {/* Selector */}
+      <div className="mb-6">
+        <div className="flex justify-between items-center text-xs font-bold text-slate-600 dark:text-slate-300 mb-2">
+          <span>{t('food_rescue_amount')}:</span>
+          <span className="text-emerald-500 dark:text-emerald-400 text-sm font-black">{weight} kg</span>
+        </div>
+        <input
+          type="range"
+          min="1"
+          max="200"
+          value={weight}
+          onChange={(e) => setWeight(parseInt(e.target.value))}
+          className="w-full h-1 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+        />
+      </div>
+
+      {/* Grid displays */}
+      <div className="grid grid-cols-3 gap-3">
+        {items.map((item, i) => (
+          <div key={i} className="bg-slate-50 dark:bg-slate-900/40 rounded-2xl p-4 border border-slate-150 dark:border-slate-800/50 hover:border-slate-300 dark:hover:border-slate-700/50 transition-all flex flex-col justify-between shadow-sm dark:shadow-none">
+            <div className="flex justify-between items-start mb-2">
+              <div className={`p-1.5 rounded-lg ${item.color}`}>
+                <item.icon className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div>
+              <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">{item.label}</p>
+              <div className="text-lg font-black text-slate-800 dark:text-white mt-0.5">
+                {item.val}
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">{item.unit}</span>
+              </div>
+              <p className="text-[8px] text-slate-500 dark:text-slate-600 font-bold uppercase tracking-wider mt-1">{item.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
-
-  if (href) return <Link href={href} onClick={onClick}>{content}</Link>;
-  return <button onClick={onClick} className="p-0 border-none bg-transparent">{content}</button>;
 }
 
-// ─── Counter Hook ───────────────────────────────────────────────
-function useCounter(end: number, duration = 2000) {
-  const [value, setValue] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
-  const counted = useRef(false);
+// ─── 5. AI DYNAMIC PRICING SIMULATOR ────────────────────────────────
+function PricingSimulator() {
+  const { t, lang } = useGlobal();
+  const [hoursLeft, setHoursLeft] = useState(12);
+
+  // Thuật toán tính giá động AI
+  const originalPrice = 50000;
+  const aiPrice = useMemo(() => {
+    // Giá giảm dần phi tuyến tính dựa trên hạn sử dụng
+    const ratio = hoursLeft / 24; // 0 -> 1
+    const factor = 0.3 + 0.7 * Math.pow(ratio, 0.85); // giảm sâu khi cận giờ
+    return Math.round(originalPrice * factor);
+  }, [hoursLeft]);
+
+  const discountPercent = useMemo(() => {
+    return Math.round(((originalPrice - aiPrice) / originalPrice) * 100);
+  }, [originalPrice, aiPrice]);
+
+  const formattedOriginalPrice = useMemo(() => {
+    return lang === 'vi' ? '50Kđ' : '50k VND';
+  }, [lang]);
+
+  const formattedAIPrice = useMemo(() => {
+    return lang === 'vi' ? `${(aiPrice / 1000).toFixed(0)}Kđ` : `${(aiPrice / 1000).toFixed(0)}k VND`;
+  }, [lang, aiPrice]);
+
+  return (
+    <div className="bg-white/90 dark:bg-slate-950/80 border border-slate-200 dark:border-orange-500/20 rounded-[2rem] p-6 backdrop-blur-xl shadow-xl shadow-slate-100/50 dark:shadow-none relative overflow-hidden group h-full flex flex-col justify-between">
+      <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-orange-500/40 to-transparent" />
+
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-orange-500/10 text-orange-500 dark:text-orange-400">
+              <Zap className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">{t('tech_title_0')}</h4>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest font-bold">{t('ai_pricing_subtitle')}</p>
+            </div>
+          </div>
+          <span className="text-[9px] px-2 py-0.5 rounded bg-orange-500/10 dark:bg-orange-500/20 text-orange-655 dark:text-orange-400 font-bold border border-orange-500/20 dark:border-orange-500/30">AUTOPILOT</span>
+        </div>
+
+        {/* Product preview */}
+        <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 border border-slate-150 dark:border-slate-800/40 flex items-center gap-4 mb-4 shadow-sm dark:shadow-none">
+          <div className="w-16 h-16 rounded-xl bg-slate-200/50 dark:bg-slate-800/50 flex items-center justify-center text-3xl shadow-inner border border-slate-250 dark:border-slate-700">
+            🍔
+          </div>
+          <div className="flex-1">
+            <span className="text-[9px] font-black tracking-widest text-slate-400 dark:text-slate-500 uppercase">{t('surplus_rescue_package')}</span>
+            <h5 className="text-xs font-black text-slate-800 dark:text-white uppercase">{t('hamburger_combo')}</h5>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-xs text-slate-450 line-through font-bold">{formattedOriginalPrice}</span>
+              <span className="text-sm text-orange-550 dark:text-orange-400 font-black">{formattedAIPrice}</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded bg-red-500/10 dark:bg-red-500/20 text-red-500 dark:text-red-400 font-black">-{discountPercent}%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Expiry Slider */}
+        <div className="mb-4">
+          <div className="flex justify-between items-center text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1.5">
+            <span>{t('hours_to_expiry')}:</span>
+            <span className="text-orange-550 dark:text-orange-400">{hoursLeft} {t('hours_unit')}</span>
+          </div>
+          <input
+            type="range"
+            min="1"
+            max="24"
+            value={hoursLeft}
+            onChange={(e) => setHoursLeft(parseInt(e.target.value))}
+            className="w-full h-1 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-orange-500"
+          />
+        </div>
+      </div>
+
+      <div className="bg-slate-50/50 dark:bg-slate-900/30 rounded-xl p-3 border border-slate-200/60 dark:border-slate-800/20 text-center">
+        <span className="text-[8px] text-slate-400 dark:text-slate-500 font-black tracking-widest uppercase block mb-1">{t('demand_hyperlocal')}</span>
+        <div className="flex items-end justify-center gap-1.5 h-10">
+          {Array.from({ length: 12 }).map((_, idx) => {
+            const isTarget = Math.abs(idx - (24 - hoursLeft) / 2) < 2.5;
+            return (
+              <motion.div
+                key={idx}
+                animate={{ height: isTarget ? ['35%', '85%', '35%'] : ['15%', '45%', '15%'] }}
+                transition={{ duration: 2, repeat: Infinity, delay: idx * 0.1 }}
+                className={`w-2 rounded-t-sm ${isTarget ? 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.4)]' : 'bg-slate-200 dark:bg-slate-800'}`}
+              />
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── 6. LIVE RADAR SCREEN ───────────────────────────────────────────
+function RadarScreen() {
+  const { t, lang } = useGlobal();
+  const [logs, setLogs] = useState<string[]>([]);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && !counted.current) {
-        counted.current = true;
-        const start = performance.now();
-        const animate = (now: number) => {
-          const progress = Math.min((now - start) / duration, 1);
-          setValue(Math.floor(progress * end));
-          if (progress < 1) requestAnimationFrame(animate);
-        };
-        requestAnimationFrame(animate);
-      }
-    }, { threshold: 0.3 });
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [end, duration]);
+    setLogs([t('radar_init_log')]);
+  }, [t]);
 
-  return { value, ref };
-}
+  useEffect(() => {
+    const locations = ['WinMart+ Bùi Hữu Nghĩa', 'Circle K UEF Điện Biên Phủ', 'GS25 Ung Văn Khiêm', 'FamilyMart Nguyễn Gia Trí', 'Lotte Mart Quận 7'];
+    const productsVi = ['Gói bánh ngọt Pháp', 'Sữa tươi organic', 'Cơm cuộn tam giác', 'Sandwich đùi heo', 'Gói rau sạch salad'];
+    const productsEn = ['French Pastry Pack', 'Organic Fresh Milk', 'Triangle Kimbap', 'Ham Sandwich', 'Fresh Salad Pack'];
 
-// ─── Section Wrapper ────────────────────────────────────────────
-function Section({ children, className = '', id }: { children: React.ReactNode; className?: string; id?: string }) {
+    const interval = setInterval(() => {
+      const randomLoc = locations[Math.floor(Math.random() * locations.length)];
+      const productsList = lang === 'vi' ? productsVi : productsEn;
+      const randomProd = productsList[Math.floor(Math.random() * productsList.length)];
+      const time = new Date().toLocaleTimeString();
+      const newLog = `[${time}] ${t('radar_success_log')} ${randomProd} ${t('at')} ${randomLoc}`;
+
+      setLogs(prev => [newLog, ...prev.slice(0, 3)]);
+    }, 4500);
+
+    return () => clearInterval(interval);
+  }, [lang, t]);
+
   return (
-    <motion.section
-      id={id}
-      initial={{ opacity: 0, y: 40 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-100px' }}
-      transition={{ duration: 0.7, ease: [0.25, 0.1, 0, 1] }}
-      className={`relative z-10 w-full ${className}`}
-    >
-      {children}
-    </motion.section>
+    <div className="bg-white/90 dark:bg-slate-950/80 border border-slate-200 dark:border-blue-500/20 rounded-[2rem] p-6 backdrop-blur-xl shadow-xl shadow-slate-100/50 dark:shadow-none relative overflow-hidden h-full flex flex-col justify-between">
+      <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
+
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-650 dark:text-blue-400">
+              <Target className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">{t('local_rescue_radar')}</h4>
+              <p className="text-[10px] text-slate-450 dark:text-slate-500 uppercase tracking-widest font-bold">Hyperlocal Scanner</p>
+            </div>
+          </div>
+          <span className="flex items-center gap-1.5 text-[8px] bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded font-black border border-emerald-500/15 dark:border-emerald-500/30">
+            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" />
+            {t('live_scan')}
+          </span>
+        </div>
+
+        {/* Radar Graphic */}
+        <div className="relative w-40 h-40 mx-auto my-3 rounded-full border border-blue-500/20 dark:border-blue-500/30 flex items-center justify-center overflow-hidden bg-slate-50 dark:bg-slate-950/50 shadow-inner">
+          <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-blue-500/15 to-transparent animate-spin" style={{ animationDuration: '4s' }} />
+          <div className="absolute w-[70%] h-[70%] rounded-full border border-blue-500/15 dark:border-blue-500/20" />
+          <div className="absolute w-[40%] h-[40%] rounded-full border border-blue-500/10 dark:border-blue-500/15" />
+          <div className="absolute w-1.5 h-1.5 bg-blue-500 dark:bg-blue-400 rounded-full animate-ping" />
+          <span className="absolute top-8 left-12 w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+          <span className="absolute bottom-12 right-16 w-2 h-2 bg-orange-500 rounded-full animate-pulse shadow-[0_0_6px_rgba(249,115,22,0.8)]" />
+          <span className="absolute top-20 right-8 w-2 bg-blue-500 dark:bg-blue-400 rounded-full animate-pulse" />
+        </div>
+      </div>
+
+      {/* Terminal log output */}
+      <div className="bg-slate-950 dark:bg-black/60 rounded-xl p-3 border border-slate-800 dark:border-slate-800/80 font-mono text-[9px] leading-normal shadow-[inset_0_2px_8px_rgba(0,0,0,0.8)] relative group">
+        <span className="text-slate-500 dark:text-slate-600 block mb-1 font-black uppercase tracking-wider">{t('live_system_log')}</span>
+        <div className="space-y-1">
+          {logs.map((log, i) => (
+            <div key={i} className="truncate text-slate-300 dark:text-slate-400">
+              <span className={log.includes('SYS') ? 'text-blue-400 dark:text-blue-300 font-semibold' : 'text-emerald-500 dark:text-emerald-400 font-semibold'}>{log.slice(0, 8)}</span>
+              <span className="ml-1.5">{log.slice(8)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
-// ─── DATA ───────────────────────────────────────────────────────
-const NAV_LINKS = ['About', 'Technology', 'Impact', 'Network', 'Partners', 'AI Engine', 'Marketplace', 'Contact'];
-const TECH_CARDS = [
-  { icon: TrendingUp, title: 'AI Dynamic Pricing', desc: 'Real-time price optimization based on expiry, demand, and inventory data', color: '#00A86B' },
-  { icon: MapPin, title: 'Hyperlocal Rescue Engine', desc: 'Geo-aware matching of surplus food to nearby consumers within minutes', color: '#FF6B00' },
-  { icon: Leaf, title: 'ESG & Green Credit', desc: 'Automated carbon accounting and tokenized green reward system', color: '#10b981' },
-  { icon: ScanLine, title: 'OCR Smart Scan', desc: 'Instant product recognition via AI-powered image processing', color: '#3b82f6' },
-  { icon: BarChart3, title: 'SaaS Inventory Intelligence', desc: 'Predictive stock management with automated surplus alerts', color: '#8b5cf6' },
-  { icon: Cpu, title: 'Predictive Demand AI', desc: 'ML-powered demand forecasting across hyperlocal networks', color: '#f97316' },
-];
-const STEPS = [
-  { icon: ScanLine, title: 'Scan Expiring Products', desc: 'Merchants scan near-expiry items via our AI OCR engine', color: '#3b82f6' },
-  { icon: TrendingUp, title: 'AI Dynamic Pricing', desc: 'Algorithm sets optimal rescue price automatically', color: '#00A86B' },
-  { icon: Globe, title: 'Hyperlocal Marketplace', desc: 'Products appear instantly on nearby consumer feeds', color: '#FF6B00' },
-  { icon: Award, title: 'Rescue & ESG Rewards', desc: 'Users earn Green Credits with measurable CO2 impact', color: '#10b981' },
-];
+// ─── 7. THEMES & NAV DATA ───────────────────────────────────────────
 const PARTNERS = [
   { name: 'WinMart+', icon: '🏪' }, { name: 'GS25', icon: '🏬' }, { name: 'Circle K', icon: '🛒' },
   { name: 'AEON Mall', icon: '🏢' }, { name: 'Co.opmart', icon: '🛍️' }, { name: 'FamilyMart', icon: '🏪' },
   { name: 'Lotte Mart', icon: '🏬' }, { name: 'MM Mega Market', icon: '🏪' },
 ];
-const TESTIMONIALS = [
-  { name: 'Minh Tran', role: 'Gen Z Consumer', q: 'I save 40% on groceries while helping the planet. This is the future of shopping.', avatar: 'MT', credit: 1250 },
-  { name: 'Lan Nguyen', role: 'WinMart+ Manager', q: 'Our waste dropped 60% in 3 months. The AI pricing engine is revolutionary.', avatar: 'LN', credit: 890 },
-  { name: 'Dr. Hieu Pham', role: 'ESG Advisor, UNDP', q: 'F.R.E.S.H demonstrates how technology can drive measurable climate action.', avatar: 'HP', credit: 2100 },
-];
 
 // ═══════════════════════════════════════════════════════════════════
-// MAIN PAGE
+// MAIN PAGE LANDING
 // ═══════════════════════════════════════════════════════════════════
 export default function LandingPage() {
-  const { t, theme, setTheme } = useGlobal();
+  const { t, theme, setTheme, lang, setLang } = useGlobal();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { scrollYProgress } = useScroll();
   const navOpacity = useTransform(scrollYProgress, [0, 0.05], [1, 0.95]);
-  const navBlur = useTransform(scrollYProgress, [0, 0.05], ['blur(0px)', 'blur(20px)']);
+  const mainRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 50);
+    const main = mainRef.current;
+    if (!main) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = main.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      main.style.setProperty('--mouse-x', `${x}px`);
+      main.style.setProperty('--mouse-y', `${y}px`);
+    };
+    main.addEventListener('mousemove', handleMouseMove);
+    return () => main.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  const navLinks = useMemo(() => [
+    { label: t('nav_about'), id: 'about' },
+    { label: t('nav_technology'), id: 'technology' },
+    { label: t('nav_network'), id: 'network' },
+    { label: t('explore_portals'), id: 'portals' },
+    { label: t('community_feedback'), id: 'testimonials' }
+  ], [t]);
+
+  const testimonials = useMemo(() => [
+    { name: t('testimonial_name_1'), role: t('testimonial_role_1'), q: t('testimonial_quote_1'), avatar: 'MT', credits: 2850 },
+    { name: t('testimonial_name_2'), role: t('testimonial_role_2'), q: t('testimonial_quote_2'), avatar: 'LV', credits: 1940 },
+    { name: t('testimonial_name_3'), role: t('testimonial_role_3'), q: t('testimonial_quote_3'), avatar: 'MH', credits: 3420 }
+  ], [t]);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   return (
-    <main className="min-h-screen relative bg-white dark:bg-slate-950 text-gray-900 dark:text-white overflow-x-hidden selection:bg-emerald-500/30 transition-colors duration-300">
+    <main ref={mainRef} className="min-h-screen relative bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-white overflow-x-hidden selection:bg-emerald-500/30 selection:text-white transition-colors duration-500">
 
-      {/* Ambient Background */}
+      {/* Dynamic Mouse Glow Spotlight */}
+      <div 
+        className="absolute inset-0 z-0 pointer-events-none opacity-90 dark:opacity-45 transition-opacity duration-500" 
+        style={{
+          background: 'radial-gradient(circle 800px at var(--mouse-x, -9999px) var(--mouse-y, -9999px), rgba(16, 185, 129, 0.07), rgba(59, 130, 246, 0.02) 50%, transparent 80%)'
+        }} 
+      />
+      
+      {/* 1. Cyber Dynamic Background Grid */}
+      <CyberBackground />
+
+      {/* Decorative Orbs */}
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-5%] w-[50%] h-[50%] bg-gradient-to-br from-emerald-500/8 to-transparent rounded-full blur-[150px] animate-pulse" style={{ animationDuration: '8s' }} />
-        <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-gradient-to-tl from-blue-500/5 to-transparent rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '6s' }} />
-        <div className="absolute top-[40%] left-[30%] w-[30%] h-[30%] bg-gradient-to-r from-orange-500/5 to-transparent rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '10s' }} />
-        <ParticleField count={20} />
+        <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-gradient-to-br from-emerald-500/10 via-transparent to-transparent rounded-full blur-[160px] animate-pulse" style={{ animationDuration: '10s' }} />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[45vw] h-[45vw] bg-gradient-to-tl from-orange-500/5 via-transparent to-transparent rounded-full blur-[140px] animate-pulse" style={{ animationDuration: '8s' }} />
+        <div className="absolute top-[40%] left-[25%] w-[35vw] h-[35vw] bg-gradient-to-r from-blue-500/5 via-transparent to-transparent rounded-full blur-[120px]" />
       </div>
 
-      {/* ─── NAVBAR ────────────────────────────────────────── */}
+      {/* ─── NAVBAR (Ultra Glassmorphism) ────────────────────────── */}
       <motion.header
-        style={{ opacity: navOpacity, boxShadow: scrolled ? '0 8px 32px 0 rgba(0,0,0,0.08)' : 'none' }}
-        className={`fixed top-4 inset-x-4 z-50 mx-auto max-w-7xl rounded-2xl transition-all duration-500 ${scrolled ? 'bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-white/20 dark:border-white/5' : 'bg-transparent'}`}
+        style={{ opacity: navOpacity }}
+        className={`fixed top-4 inset-x-4 z-50 mx-auto max-w-7xl rounded-2xl border transition-all duration-500 ${
+          scrolled
+            ? 'bg-white/80 dark:bg-slate-950/70 border-slate-200 dark:border-slate-800/80 backdrop-blur-xl shadow-2xl'
+            : 'bg-transparent border-transparent'
+        }`}
       >
-        <div className="flex items-center justify-between px-6 h-16">
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                <span className="text-2xl font-black text-white italic">F</span>
-              </div>
-              <motion.div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full" animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 2, repeat: 9999 }} />
+        <div className="flex items-center justify-between px-6 h-18">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="relative flex items-center justify-center w-11 h-11 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl shadow-[0_0_20px_rgba(52,211,153,0.3)] transition-transform group-hover:scale-105 duration-300">
+              <span className="text-2xl font-black text-white italic tracking-tighter">F</span>
+              <motion.div
+                animate={{ scale: [1, 1.4, 1], opacity: [1, 0.4, 1] }}
+                transition={{ duration: 2.5, repeat: Infinity }}
+                className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-950"
+              />
             </div>
-            <div className="hidden sm:block">
-              <h1 className="text-lg font-black tracking-tight uppercase">F.R.E.S.H <span className="text-emerald-500">AI</span></h1>
-              <p className="text-[8px] text-gray-400 dark:text-slate-500 uppercase tracking-[0.2em] font-bold">Rescue · ESG · Hyperlocal</p>
+            <div>
+              <h1 className="text-lg font-black tracking-tight uppercase flex items-center gap-1.5 text-slate-900 dark:text-white">
+                F.R.E.S.H <span className="text-emerald-400 text-xs px-1.5 py-0.2 rounded bg-emerald-500/15 border border-emerald-500/30">AI</span>
+              </h1>
+              <p className="text-[8px] text-slate-400 dark:text-slate-500 uppercase tracking-[0.25em] font-extrabold">Rescue · ESG · Hyperlocal</p>
             </div>
-          </motion.div>
+          </Link>
 
-          <nav className="hidden lg:flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-slate-300">
-            {NAV_LINKS.map(item => {
-              const key = 'nav_' + item.toLowerCase().replace(/\s+/g, '_');
-              return (
-                <Link key={item} href={`#${item.toLowerCase().replace(/\s+/g, '_')}`}
-                  className="px-3.5 py-2 rounded-lg hover:text-emerald-500 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all relative group"
-                >
-                  {t(key)}
-                  <span className="absolute bottom-1 left-3 right-3 h-[2px] bg-emerald-500 scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
-                </Link>
-              );
-            })}
+          {/* Nav Items */}
+          <nav className="hidden lg:flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-655 dark:text-slate-300">
+            {navLinks.map(link => (
+              <a
+                key={link.id}
+                href={`#${link.id}`}
+                className="px-4 py-2.5 rounded-xl hover:text-emerald-500 dark:hover:text-emerald-400 hover:bg-slate-200/40 dark:hover:bg-slate-800/40 border border-transparent hover:border-slate-200 dark:hover:border-slate-800 transition-all duration-300 relative group"
+              >
+                {link.label}
+                <span className="absolute bottom-1.5 left-4 right-4 h-[2px] bg-emerald-400 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300" />
+              </a>
+            ))}
           </nav>
 
+          {/* Quick Controls */}
           <div className="flex items-center gap-3">
-            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-              className="hidden sm:flex w-9 h-9 rounded-xl bg-gray-100 dark:bg-slate-800 items-center justify-center text-gray-500 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700 transition-all"
-            >
-              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-            </motion.button>
-
-            <MagneticButton href="/customer">
-              <div className="hidden md:flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-xs font-bold uppercase tracking-widest shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all">
-                <Zap className="w-3.5 h-3.5" />
-                {t('launch_ecosystem')}
+            {/* Unified Settings Pill (Desktop) */}
+            <div className="hidden sm:flex items-center gap-2.5 p-1 bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-full shadow-sm backdrop-blur-md relative">
+              {/* Language selection: sliding pills */}
+              <div className="flex items-center bg-slate-200/60 dark:bg-slate-950/80 rounded-full p-0.5 relative">
+                <button
+                  onClick={() => setLang('vi')}
+                  className={`relative px-2.5 py-1 text-[9px] font-black tracking-wider rounded-full transition-colors duration-300 z-10 cursor-pointer ${
+                    lang === 'vi' ? 'text-white' : 'text-slate-600 dark:text-slate-400'
+                  }`}
+                >
+                  VI
+                  {lang === 'vi' && (
+                    <motion.div
+                      layoutId="activeLang"
+                      className="absolute inset-0 bg-emerald-500 rounded-full -z-10"
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                </button>
+                <button
+                  onClick={() => setLang('en')}
+                  className={`relative px-2.5 py-1 text-[9px] font-black tracking-wider rounded-full transition-colors duration-300 z-10 cursor-pointer ${
+                    lang === 'en' ? 'text-white' : 'text-slate-600 dark:text-slate-400'
+                  }`}
+                >
+                  EN
+                  {lang === 'en' && (
+                    <motion.div
+                      layoutId="activeLang"
+                      className="absolute inset-0 bg-emerald-500 rounded-full -z-10"
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                </button>
               </div>
-            </MagneticButton>
 
-            <button onClick={() => setMenuOpen(!menuOpen)} className="lg:hidden w-9 h-9 rounded-xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
-              {menuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+              <div className="w-[1px] h-4 bg-slate-200 dark:bg-slate-800" />
+
+              {/* Theme Toggle Button */}
+              <button
+                onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+                className="relative w-8 h-8 rounded-full bg-slate-200/60 dark:bg-slate-950/80 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors shadow-inner overflow-hidden cursor-pointer"
+                title={theme === 'light' ? t('switch_dark') : t('switch_light')}
+              >
+                <motion.div
+                  animate={{ rotate: theme === 'light' ? 0 : 180, scale: theme === 'light' ? 1 : 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="absolute"
+                >
+                  <Moon className="w-4 h-4 text-slate-700" />
+                </motion.div>
+                <motion.div
+                  animate={{ rotate: theme === 'light' ? -180 : 0, scale: theme === 'light' ? 0 : 1 }}
+                  transition={{ duration: 0.3 }}
+                  className="absolute"
+                >
+                  <Sun className="w-4 h-4 text-amber-400" />
+                </motion.div>
+              </button>
+            </div>
+
+            {/* Launch System */}
+            <Link
+              href="/customer"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-102 transition-all"
+            >
+              <Zap className="w-3.5 h-3.5 text-white animate-pulse" />
+              {t('login_btn')}
+            </Link>
+
+            {/* Mobile menu trigger */}
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="lg:hidden w-10 h-10 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-650 dark:text-slate-355 hover:text-slate-900 dark:hover:text-white"
+            >
+              {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Nav Menu */}
         <AnimatePresence>
           {menuOpen && (
-            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden border-t border-gray-100 dark:border-slate-800"
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden border-t border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-950"
             >
-              <div className="px-6 py-4 space-y-2">
-                {NAV_LINKS.map(item => {
-                  const key = 'nav_' + item.toLowerCase().replace(/\s+/g, '_');
-                  return (
-                    <Link key={item} href={`#${item.toLowerCase().replace(/\s+/g, '_')}`} onClick={() => setMenuOpen(false)}
-                      className="block px-4 py-3 rounded-xl text-sm font-bold text-gray-600 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-500 transition-all"
+              <div className="px-6 py-5 space-y-4">
+                {navLinks.map(link => (
+                  <a
+                    key={link.id}
+                    href={`#${link.id}`}
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-4 py-3 rounded-xl text-xs font-bold text-slate-750 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white border border-transparent hover:border-slate-200 dark:hover:border-slate-800 transition-all"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+                <div className="h-px bg-slate-200 dark:bg-slate-800/80 my-2" />
+                
+                {/* Unified Settings Pill (Mobile Nav) */}
+                <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800/60 shadow-inner">
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{t('settings_prefs')}:</span>
+                  
+                  <div className="flex items-center gap-2 p-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-emerald-500/20 rounded-full shadow-sm relative">
+                    {/* Lang selection */}
+                    <div className="flex items-center bg-slate-100 dark:bg-slate-900 rounded-full p-0.5 relative">
+                      <button
+                        onClick={() => setLang('vi')}
+                        className={`relative px-2.5 py-1 text-[8px] font-black rounded-full transition-colors duration-300 z-10 cursor-pointer ${
+                          lang === 'vi' ? 'text-white' : 'text-slate-500 dark:text-slate-400'
+                        }`}
+                      >
+                        VI
+                        {lang === 'vi' && (
+                          <motion.div
+                            layoutId="activeLangMob"
+                            className="absolute inset-0 bg-emerald-500 rounded-full -z-10"
+                            transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                          />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => setLang('en')}
+                        className={`relative px-2.5 py-1 text-[8px] font-black rounded-full transition-colors duration-300 z-10 cursor-pointer ${
+                          lang === 'en' ? 'text-white' : 'text-slate-500 dark:text-slate-400'
+                        }`}
+                      >
+                        EN
+                        {lang === 'en' && (
+                          <motion.div
+                            layoutId="activeLangMob"
+                            className="absolute inset-0 bg-emerald-500 rounded-full -z-10"
+                            transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                          />
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="w-[1px] h-3 bg-slate-200 dark:bg-slate-850" />
+
+                    {/* Theme select */}
+                    <button
+                      onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+                      className="relative w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-emerald-500 transition-colors cursor-pointer"
                     >
-                      {t(key)}
-                    </Link>
-                  );
-                })}
-                <Link href="/customer" onClick={() => setMenuOpen(false)}
-                  className="block px-4 py-3 rounded-xl text-sm font-bold text-white bg-emerald-500 text-center"
+                      {theme === 'light' ? <Moon className="w-3.5 h-3.5 text-slate-700" /> : <Sun className="w-3.5 h-3.5 text-amber-400" />}
+                    </button>
+                  </div>
+                </div>
+
+                <Link
+                  href="/customer"
+                  onClick={() => setMenuOpen(false)}
+                  className="block px-4 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest text-white bg-emerald-500 hover:bg-emerald-600 text-center shadow-lg shadow-emerald-500/25"
                 >
-                  {t('launch_ecosystem')}
+                  {t('login_btn')}
                 </Link>
               </div>
             </motion.div>
@@ -329,467 +792,489 @@ export default function LandingPage() {
         </AnimatePresence>
       </motion.header>
 
-      {/* ─── HERO ──────────────────────────────────────────── */}
-      <section className="relative min-h-screen flex items-center pt-32 pb-20 overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(16,185,129,0.08)_0%,_transparent_60%)]" />
+      {/* ─── HERO SECTION (Text Masking & Energy Core) ──────────── */}
+      <section className="relative min-h-screen flex items-center pt-28 pb-16 overflow-hidden">
+        {/* Subtle Cyber Grid Grid Background */}
+        <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{
+          backgroundImage: `linear-gradient(rgba(16,185,129,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(16,185,129,0.3) 1px, transparent 1px)`,
+          backgroundSize: '40px 40px',
+        }} />
 
-          {/* Subtle Grid */}
-          <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]" style={{
-            backgroundImage: `linear-gradient(rgba(0,168,107,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(0,168,107,0.3) 1px, transparent 1px)`,
-            backgroundSize: '60px 60px',
-          }} />
-        </div>
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          {/* Left Column (Hero Content) */}
+          <div className="lg:col-span-7 flex flex-col items-start">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="inline-flex items-center gap-2 px-4 py-2 mb-8 rounded-full bg-emerald-500/10 border border-emerald-500/20"
+            >
+              <Zap className="w-3 h-3 text-emerald-400" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">{t('hero_badge')}</span>
+            </motion.div>
 
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          {/* Left Content */}
-          <motion.div initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, ease: [0.25, 0.1, 0, 1] }}>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-[0.25em] mb-8">
-              <Sparkles className="w-3 h-3" />
-              {t('hero_badge')}
-            </div>
-
-            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[0.88] mb-8">
-              <span className="text-gray-900 dark:text-white">{t('hero_title_1')}<br /></span>
-              <span className="text-emerald-500">{t('hero_title_2')}<br /></span>
-              <span className="text-orange-500">{t('hero_title_3')}</span>
+            {/* Heading */}
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black uppercase leading-[0.9] tracking-tight mb-6">
+              <span className="text-slate-900 dark:text-white">{t('hero_heading_1')}</span>
+              <br />
+              <span className="text-gradient">{t('hero_heading_2')}</span>
             </h1>
 
-            <p className="text-gray-500 dark:text-slate-400 text-lg sm:text-xl max-w-xl font-medium leading-relaxed mb-10">
-              An AI-powered hyperlocal ecosystem transforming food waste into sustainable economic value through dynamic pricing, ESG analytics, and real-time rescue commerce.
+            {/* Subheading */}
+            <p className="text-slate-400 text-sm sm:text-base md:text-lg max-w-xl font-medium leading-relaxed mb-8">
+              {t('hero_subtitle')}
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              <MagneticButton href="/customer">
-                <div className="flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-sm uppercase tracking-widest shadow-2xl shadow-emerald-500/30 hover:shadow-emerald-500/50 transition-all">
-                  {t('launch_ecosystem')}
-                  <ArrowRight className="w-4 h-4" />
-                </div>
-              </MagneticButton>
-              <MagneticButton>
-                <div className="flex items-center gap-3 px-8 py-4 rounded-2xl bg-white dark:bg-slate-800 text-gray-900 dark:text-white font-bold text-sm uppercase tracking-widest border border-gray-200 dark:border-slate-700 shadow-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-all">
-                  <PlayIcon />
-                  {t('watch_demo')}
-                </div>
-              </MagneticButton>
-            </div>
-          </motion.div>
+            {/* Action buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+              <Link
+                href="/customer"
+                className="flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-xs uppercase tracking-widest shadow-2xl shadow-emerald-500/30 hover:scale-102 hover:shadow-emerald-500/50 transition-all cursor-pointer"
+              >
+                {t('launch_ecosystem')}
+                <ArrowRight className="w-4 h-4" />
+              </Link>
 
-          {/* Right - 3D Scene */}
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1, delay: 0.2 }}
-            className="h-[400px] md:h-[500px] lg:h-[600px] relative"
-          >
-            <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-emerald-500/10 via-transparent to-orange-500/10" />
-            <Hero3DEcosystem />
-            {/* Floating labels */}
-            <motion.div className="absolute top-8 left-6 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-xl px-3 py-2 text-xs font-bold shadow-lg border border-white/20"
-              animate={{ y: [0, -8, 0] }} transition={{ duration: 4, repeat: 9999, ease: 'easeInOut' }}>
-              <span className="text-emerald-500">⬤ </span>12.4K {t('hero_floating_1')}
-            </motion.div>
-            <motion.div className="absolute bottom-12 right-6 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-xl px-3 py-2 text-xs font-bold shadow-lg border border-white/20"
-              animate={{ y: [0, 8, 0] }} transition={{ duration: 5, repeat: 9999, ease: 'easeInOut' }}>
-              🌍 98.5T {t('hero_floating_2')}
-            </motion.div>
-            <motion.div className="absolute top-1/3 -right-2 bg-orange-500/90 text-white backdrop-blur-md rounded-xl px-3 py-2 text-xs font-bold shadow-lg"
-              animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 3, repeat: 9999 }}>
-              -67% {t('hero_floating_3')}
-            </motion.div>
-          </motion.div>
+              <Link
+                href="/startup"
+                className="flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-slate-900 border border-slate-800 text-slate-300 font-bold text-xs uppercase tracking-widest hover:bg-slate-800 hover:text-white transition-all cursor-pointer"
+              >
+                <BookOpen className="w-4 h-4 text-emerald-400" />
+                {t('learn_project')}
+              </Link>
+            </div>
+          </div>
+
+          {/* Right Column (Abstract Core Animation) */}
+          <div className="lg:col-span-5 relative flex justify-center items-center">
+            <NeonEnergyCore />
+          </div>
         </div>
 
-        <motion.div animate={{ y: [0, 10, 0] }} transition={{ duration: 2, repeat: 9999 }} className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10">
-          <ChevronDown className="w-6 h-6 text-gray-300 dark:text-slate-600" />
-        </motion.div>
+        {/* Scroll indicator */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 opacity-40">
+          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-500">{t('scroll_explore')}</span>
+          <motion.div animate={{ y: [0, 8, 0] }} transition={{ duration: 2, repeat: Infinity }} className="text-slate-400">
+            <ChevronDown className="w-5 h-5" />
+          </motion.div>
+        </div>
       </section>
 
-      {/* ─── LIVE IMPACT STRIP ─────────────────────────────── */}
-      <Section className="max-w-6xl mx-auto px-6 -mt-10 mb-24">
-        <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-          className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-white/30 dark:border-slate-700/50 rounded-[2.5rem] p-8"
-          style={{ boxShadow: '0 8px 40px 0 rgba(0,0,0,0.06)' }}
-        >
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+      {/* ─── LIVE METRIC PANEL (Futuristic Dashboard) ──────────── */}
+      <section className="relative z-10 max-w-7xl mx-auto px-6 mb-24">
+        <div className="p-8 rounded-[2.5rem] bg-white/75 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-xl shadow-xl shadow-slate-100/50 dark:shadow-none relative group overflow-hidden transition-all duration-500 hover:border-emerald-500/30">
+          {/* Animated decorative green light inside metric panel */}
+          <div className="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-3xl pointer-events-none group-hover:scale-150 transition-transform duration-700" />
+          <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-3xl pointer-events-none group-hover:scale-150 transition-transform duration-700" />
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 text-center relative z-10">
             {[
-              { label: 'Food Rescued', value: 1248392, suffix: ' KG', color: '#00A86B' },
-              { label: 'CO₂ Reduced', value: 418500, suffix: ' KG', color: '#10b981' },
-              { label: 'Active Partners', value: 8102, suffix: '', color: '#3b82f6' },
-              { label: 'AI Pricing Accuracy', value: 97, suffix: ' %', color: '#8b5cf6' },
-              { label: 'Rescue Orders', value: 45289, suffix: '', color: '#FF6B00' },
-              { label: 'ESG Impact Score', value: 94, suffix: ' /100', color: '#f97316' },
+              { label: t('food_rescued_stat'), value: '1,248,392', unit: ' KG', color: 'text-emerald-600 dark:text-emerald-400' },
+              { label: t('co2_reduction_stat'), value: '418,500', unit: ' KG', color: 'text-emerald-600 dark:text-emerald-400' },
+              { label: t('active_nodes_stat'), value: '8,102', unit: ` ${lang === 'vi' ? 'C.HẰNG' : 'STORES'}`, color: 'text-blue-600 dark:text-blue-400' },
+              { label: t('ai_confidence'), value: '97.4', unit: ' %', color: 'text-orange-600 dark:text-orange-400' },
+              { label: t('about_rescuers'), value: '45,289', unit: ' USER', color: 'text-emerald-600 dark:text-emerald-400' },
+              { label: t('green_credits_upper'), value: '94.8', unit: ' /100', color: 'text-blue-600 dark:text-blue-400' }
             ].map((stat, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}
-                className="text-center group cursor-default"
-              >
-                <p className="text-[10px] text-gray-400 dark:text-slate-500 uppercase tracking-[0.15em] font-bold mb-2">{stat.label}</p>
-                <p className="text-2xl md:text-3xl font-black font-mono" style={{ color: stat.color }}>
-                  <LiveCounter value={stat.value} suffix={stat.suffix} />
+              <div key={i} className="group/item relative py-2 rounded-2xl hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors duration-300">
+                <span className="text-[9px] text-slate-550 dark:text-slate-400 uppercase tracking-widest font-black block mb-2">{stat.label}</span>
+                <p className={`text-2xl md:text-3xl font-black font-mono tracking-tight ${stat.color}`}>
+                  {stat.value}
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">{stat.unit}</span>
                 </p>
-                <div className="w-0 h-0.5 bg-emerald-500 mx-auto mt-2 group-hover:w-3/4 transition-all duration-500 rounded-full" />
-              </motion.div>
-            ))}
-          </div>
-          {/* Pulse ring */}
-          <motion.div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full" animate={{ scale: [1, 2, 1], opacity: [1, 0, 1] }} transition={{ duration: 3, repeat: 9999 }} />
-        </motion.div>
-      </Section>
-
-      {/* ─── ABOUT SECTION ─────────────────────────────────── */}
-      <Section id="about" className="max-w-7xl mx-auto px-6 py-24">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}
-            className="h-[400px] relative rounded-3xl overflow-hidden bg-gradient-to-br from-emerald-500/5 to-blue-500/5 border border-gray-100 dark:border-slate-800"
-          >
-            <Hero3DEcosystem />
-            <div className="absolute bottom-4 left-4 right-4 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl p-4 border border-white/20">
-              <div className="flex items-center gap-3 text-sm font-bold">
-                <div className="flex -space-x-2">
-                  {['MT', 'LN', 'HP'].map((a, i) => (
-                    <div key={i} className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black border-2 border-white dark:border-slate-800">{a}</div>
-                  ))}
-                </div>
-                <span className="text-gray-600 dark:text-slate-300"><span className="text-emerald-500">12.4K+</span> {t('about_rescuers')}</span>
+                <div className="w-0 h-0.5 bg-emerald-500 mx-auto mt-2.5 group-hover/item:w-1/2 transition-all duration-300 rounded-full" />
               </div>
-            </div>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-500 mb-4 block">{t('about_badge')}</span>
-            <h2 className="text-4xl md:text-5xl font-black tracking-tight leading-[1.05] mb-8">
-              {t('about_heading')} <span className="text-emerald-500">{t('about_heading_acc')}</span> Revolution
-            </h2>
-            <div className="space-y-4 text-gray-500 dark:text-slate-400 font-medium leading-relaxed">
-              <p>{t('about_p1')}</p>
-              <p>{t('about_p2')}</p>
-              <p>{t('about_p3')}</p>
-            </div>
-            <div className="flex gap-6 mt-8">
-              {[
-                { value: '8.2M', label: t('about_stat1_label'), color: 'text-orange-500' },
-                { value: '60%', label: t('about_stat2_label'), color: 'text-emerald-500' },
-                { value: '98.5K', label: t('about_stat3_label'), color: 'text-blue-500' },
-              ].map((s, i) => (
-                <div key={i}>
-                  <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">{s.label}</p>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        </div>
-      </Section>
-
-      {/* ─── TECHNOLOGY SECTION ─────────────────────────────── */}
-      <Section id="technology" className="py-24 bg-gray-50/50 dark:bg-slate-900/50 border-y border-gray-100 dark:border-slate-800">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-500 mb-4 block">{t('tech_badge')}</span>
-            <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-6">{t('tech_heading')} <span className="text-emerald-500">{t('tech_heading_acc')}</span></h2>
-            <p className="text-gray-500 dark:text-slate-400 max-w-2xl mx-auto font-medium mb-16">{t('tech_subtitle')}</p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {TECH_CARDS.map((card, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}
-                whileHover={{ y: -8, scale: 1.02 }}
-                className="group relative bg-white dark:bg-slate-800 rounded-[2rem] p-8 border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-2xl transition-all text-left overflow-hidden"
-              >
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                  style={{ background: `radial-gradient(600px circle at 50% 50%, ${card.color}08, transparent)` }} />
-                <div className="relative z-10">
-                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-lg" style={{ backgroundColor: card.color }}>
-                    <card.icon className="w-7 h-7 text-white" />
-                  </div>
-                  <h3 className="text-lg font-black text-gray-900 dark:text-white mb-3">{t('tech_title_' + i)}</h3>
-                  <p className="text-sm text-gray-500 dark:text-slate-400 font-medium leading-relaxed">{t('tech_desc_' + i)}</p>
-                </div>
-                <motion.div className="absolute bottom-0 left-0 h-0.5 bg-emerald-500 group-hover:w-full transition-all duration-700" style={{ width: '0%' }} />
-              </motion.div>
             ))}
           </div>
         </div>
-      </Section>
+      </section>
 
-      {/* ─── HOW IT WORKS ──────────────────────────────────── */}
-      <Section id="how_it_works" className="max-w-7xl mx-auto px-6 py-24">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-20">
-          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-500 mb-4 block">{t('steps_badge')}</span>
-          <h2 className="text-4xl md:text-5xl font-black tracking-tight">{t('steps_heading')} <span className="text-emerald-500">{t('steps_heading_acc')}</span> {t('steps_subtitle')}</h2>
-        </motion.div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative">
-          {/* Connector line */}
-          <div className="hidden md:block absolute top-24 left-[12.5%] right-[12.5%] h-0.5 bg-gradient-to-r from-emerald-300 via-emerald-500 to-orange-400" />
-
-          {STEPS.map((step, i) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.15 }}
-              className="relative text-center group"
-            >
-              <div className="w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-lg relative z-10 transition-transform group-hover:scale-110 duration-300" style={{ backgroundColor: step.color }}>
-                <step.icon className="w-9 h-9 text-white" />
+      {/* ─── ABOUT SECTION (Dẫn đầu cuộc cách mạng) ───────────────── */}
+      <section id="about" className="relative z-10 max-w-7xl mx-auto px-6 py-24 border-t border-slate-200 dark:border-slate-800/50">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
+          {/* Graphic block Left */}
+          <div className="lg:col-span-5 relative">
+            <div className="relative rounded-[2.5rem] overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 shadow-xl shadow-slate-100/50 dark:shadow-2xl">
+              {/* Green credits list mock */}
+              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 mb-4">
+                <span className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">{t('achievement_badges')}</span>
+                <span className="text-[9px] text-emerald-500 dark:text-emerald-400 font-bold uppercase">{t('newly_received')}</span>
               </div>
-              <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-emerald-500 text-white text-xs font-black flex items-center justify-center shadow-lg z-20">0{i + 1}</div>
-              <h3 className="text-lg font-black text-gray-900 dark:text-white mb-3">{step.title}</h3>
-              <p className="text-sm text-gray-500 dark:text-slate-400 font-medium leading-relaxed max-w-xs mx-auto">{step.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </Section>
-
-      {/* ─── GAMIFICATION SECTION ─────────────────────────────── */}
-      <Section className="py-24 bg-gradient-to-br from-emerald-500/5 via-transparent to-orange-500/5 dark:from-emerald-900/10 dark:via-transparent dark:to-orange-900/10 border-y border-gray-100 dark:border-slate-800">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-500 mb-4 block">{t('game_badge')}</span>
-            <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-6">{t('game_heading')} <span className="text-emerald-500">{t('game_heading_acc')}</span></h2>
-            <p className="text-gray-500 dark:text-slate-400 max-w-2xl mx-auto font-medium mb-16">{t('game_subtitle')}</p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { icon: Coins, titleKey: 'game_col_0_title', itemsKey: 'game_col_0_items', color: '#00A86B' },
-              { icon: Award, titleKey: 'game_col_1_title', itemsKey: 'game_col_1_items', color: '#FF6B00' },
-              { icon: TreePine, titleKey: 'game_col_2_title', itemsKey: 'game_col_2_items', color: '#10b981' },
-            ].map((col, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-                className="bg-white dark:bg-slate-800 rounded-[2rem] p-8 border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all text-left"
-              >
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6" style={{ backgroundColor: col.color }}>
-                  <col.icon className="w-7 h-7 text-white" />
-                </div>
-                <h3 className="text-lg font-black text-gray-900 dark:text-white mb-5">{t(col.titleKey)}</h3>
-                <div className="space-y-3">
-                  {t(col.itemsKey).split('|').map((item, j) => (
-                    <div key={j} className="flex items-center gap-3 text-sm font-medium text-gray-600 dark:text-slate-300">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: col.color }} />
-                      {item}
+              <div className="space-y-3">
+                {[
+                  { badge: '🌱', title: t('achievement_starter_title'), reward: '+100 Credits', date: t('just_now') },
+                  { badge: '🌍', title: t('achievement_warrior_title'), reward: '+250 Credits', date: `2 ${t('minutes_ago')}` },
+                  { badge: '♻️', title: t('achievement_ambassador_title'), reward: '+500 Credits', date: `10 ${t('minutes_ago')}` }
+                ].map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{item.badge}</span>
+                      <div>
+                        <h6 className="text-xs font-black text-slate-800 dark:text-white uppercase">{item.title}</h6>
+                        <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold">{item.date}</p>
+                      </div>
                     </div>
-                  ))}
+                    <span className="text-[10px] font-black text-emerald-555 dark:text-emerald-400">{item.reward}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Glowing ring back */}
+              <div className="absolute -bottom-10 -left-10 w-44 h-44 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Content Block Right */}
+          <div className="lg:col-span-7 flex flex-col items-start">
+            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-400 mb-3">{t('about_badge')}</span>
+            <h2 className="text-3xl sm:text-5xl font-black uppercase leading-tight tracking-tight mb-6">
+              {t('about_heading')} <span className="text-emerald-400">{t('about_heading_acc')}</span> {t('about_heading_tail')}
+            </h2>
+            <div className="space-y-5 text-slate-400 text-sm md:text-base font-medium leading-relaxed">
+              <p>
+                {t('about_p1')}
+              </p>
+              <p>
+                {t('about_p2')}
+              </p>
+              <p>
+                {t('about_p3')}
+              </p>
+            </div>
+
+            {/* Quick stats inline */}
+            <div className="flex gap-8 mt-8 border-t border-slate-200 dark:border-slate-800 pt-6 w-full">
+              {[
+                { value: t('stats_wasted_val'), label: t('stats_wasted_yr'), color: 'text-orange-400' },
+                { value: t('stats_reduction_val'), label: t('stats_waste_reduction'), color: 'text-emerald-400' },
+                { value: t('stats_co2_val'), label: t('stats_co2_reduced'), color: 'text-blue-400' }
+              ].map((s, idx) => (
+                <div key={idx}>
+                  <p className={`text-lg md:text-xl font-black ${s.color}`}>{s.value}</p>
+                  <p className="text-[9px] text-slate-500 uppercase font-black tracking-wider mt-0.5">{s.label}</p>
                 </div>
-              </motion.div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
-      </Section>
+      </section>
 
-      {/* ─── PARTNER ECOSYSTEM ──────────────────────────────── */}
-      <Section id="partners" className="max-w-7xl mx-auto px-6 py-24">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-16">
-          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-500 mb-4 block">{t('eco_badge')}</span>
-          <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-6">{t('eco_heading')} <span className="text-emerald-500">{t('eco_heading_acc')}</span></h2>
-        </motion.div>
-
-        {/* Infinite Marquee */}
-        <div className="relative overflow-hidden">
-          <motion.div className="flex gap-8" animate={{ x: ['0%', '-50%'] }} transition={{ duration: 30, repeat: 9999, ease: 'linear' }}>
-            {[...PARTNERS, ...PARTNERS].map((p, i) => (
-              <div key={i} className="flex-shrink-0 flex items-center gap-4 px-8 py-6 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all group">
-                <span className="text-3xl group-hover:scale-110 transition-transform">{p.icon}</span>
-                <span className="text-sm font-black text-gray-700 dark:text-slate-300">{p.name}</span>
-              </div>
-            ))}
-          </motion.div>
+      {/* ─── TECHNOLOGY SECTION (BENTO GRID) ────────────────────── */}
+      <section id="technology" className="relative z-10 max-w-7xl mx-auto px-6 py-24 border-t border-slate-200 dark:border-slate-800/50">
+        <div className="text-center mb-16">
+          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-500 dark:text-emerald-400 mb-3 block">{t('tech_badge')}</span>
+          <h2 className="text-3xl sm:text-5xl font-black uppercase tracking-tight text-slate-900 dark:text-white">
+            {t('tech_heading')} <span className="text-gradient">{t('tech_heading_acc')}</span>
+          </h2>
+          <p className="text-slate-400 max-w-xl mx-auto text-xs sm:text-sm font-medium mt-4">
+            {t('tech_subtitle')}
+          </p>
         </div>
 
-        {/* Ecosystem Map Preview */}
-        <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-          className="mt-12 bg-gradient-to-br from-emerald-500/5 to-blue-500/5 dark:from-emerald-900/20 dark:to-blue-900/20 rounded-[2rem] p-8 md:p-12 border border-gray-100 dark:border-slate-800 text-center"
-        >
-          <Globe className="w-12 h-12 text-emerald-500 mx-auto mb-6" />
-          <h3 className="text-2xl font-black mb-4">8,102+ {t('eco_node_title')}</h3>
-          <p className="text-gray-500 dark:text-slate-400 max-w-xl mx-auto font-medium mb-8">{t('eco_node_desc')}</p>
-          <MagneticButton href="/partner">
-            <div className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-500 text-white font-bold text-sm uppercase tracking-widest shadow-lg">
-              {t('eco_cta')} <ArrowRight className="w-4 h-4" />
-            </div>
-          </MagneticButton>
-        </motion.div>
-      </Section>
+        {/* Bento Grid layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Box 1 (AI Pricing Simulator) */}
+          <div className="lg:col-span-7">
+            <PricingSimulator />
+          </div>
 
-      {/* ─── DASHBOARD PREVIEW ──────────────────────────────── */}
-      <Section className="py-24 bg-slate-950 border-y border-slate-800">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-400 mb-4 block text-emerald-400">{t('dash_badge')}</span>
-            <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-6 text-white">{t('dash_heading')} <span className="text-emerald-400">{t('dash_heading_acc')}</span></h2>
-            <p className="text-slate-400 max-w-2xl mx-auto font-medium mb-16">{t('dash_subtitle')}</p>
-          </motion.div>
+          {/* Box 2 (Radar local scanner) */}
+          <div className="lg:col-span-5">
+            <RadarScreen />
+          </div>
 
-          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-            className="relative bg-slate-900 rounded-[2rem] p-6 md:p-8 border border-slate-800 shadow-2xl overflow-hidden text-left"
-          >
-            {/* Dashboard Top Bar */}
-            <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="flex gap-1.5">
-                  {['red', 'yellow', 'green'].map(c => <div key={c} className={`w-3 h-3 rounded-full bg-${c}-500`} style={{ backgroundColor: c }} />)}
+          {/* Box 3 (ESG Live Simulator) */}
+          <div className="lg:col-span-5">
+            <ESGSimulator />
+          </div>
+
+          {/* Box 4 (OCR Scanner details) */}
+          <div className="lg:col-span-7 bg-white/90 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-[2rem] p-8 flex flex-col justify-between backdrop-blur-xl relative overflow-hidden group shadow-xl shadow-slate-100/50 dark:shadow-none">
+            <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="max-w-md">
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 w-fit mb-4">
+                  <ScanLine className="w-6 h-6 animate-pulse" />
                 </div>
-                <span className="text-xs text-slate-500 font-bold uppercase tracking-wider ml-4">{t('dash_cmd')}</span>
+                <h4 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-wider mb-2">{t('tech_title_3')}</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                  {t('ocr_desc')}
+                </p>
               </div>
-              <div className="flex items-center gap-2">
-                <motion.div className="w-2 h-2 bg-emerald-400 rounded-full" animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 2, repeat: 9999 }} />
-                <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">{t('dash_online')}</span>
+              <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-center w-full md:w-44 shadow-inner flex flex-col items-center justify-center">
+                <span className="text-[8px] text-slate-400 dark:text-slate-500 font-black tracking-widest uppercase block mb-2">{t('scanning_module')}</span>
+                <div className="w-20 h-20 bg-slate-100 dark:bg-slate-900 rounded-full border-2 border-emerald-500/20 flex items-center justify-center relative overflow-hidden mb-2">
+                  <div className="absolute inset-0 bg-gradient-to-t from-transparent via-emerald-500/10 to-transparent animate-pulse" />
+                  <ScanLine className="w-8 h-8 text-emerald-555 dark:text-emerald-400" />
+                </div>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">{t('waiting_load')}</span>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
 
-            {/* Dashboard Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* ─── NETWORK & MAP (Mạng lưới cứu hộ) ───────────────────── */}
+      <section id="network" className="relative z-10 max-w-7xl mx-auto px-6 py-24 border-t border-slate-800/50">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          <div className="lg:col-span-6 flex flex-col items-start">
+            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-400 mb-3">{t('partner_network_title')}</span>
+            <h2 className="text-3xl sm:text-5xl font-black uppercase tracking-tight mb-6">
+              {t('partner_heading')} <span className="text-emerald-400">{t('partner_heading_acc')}</span>
+            </h2>
+            <p className="text-slate-400 text-sm font-medium leading-relaxed mb-6">
+              {t('partner_network_desc')}
+            </p>
+            
+            <div className="grid grid-cols-2 gap-4 w-full mb-8">
               {[
-                { label: t('dash_stat_0'), value: '247', change: '+12%', color: '#00A86B' },
-                { label: t('dash_stat_1'), value: '48,290', change: '+8%', color: '#10b981' },
-                { label: t('dash_stat_2'), value: '12.4T', change: '+5%', color: '#3b82f6' },
-              ].map((d, i) => (
-                <div key={i} className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-1">{d.label}</p>
-                  <p className="text-2xl font-black text-white" style={{ color: d.color }}>{d.value}</p>
-                  <p className="text-[11px] text-emerald-400 font-bold mt-1">{d.change}</p>
-                  <div className="mt-3 h-1 bg-slate-700 rounded-full overflow-hidden">
-                    <motion.div className="h-full rounded-full" style={{ backgroundColor: d.color }}
-                      initial={{ width: 0 }} whileInView={{ width: `${60 + i * 15}%` }} viewport={{ once: true }}
-                      transition={{ duration: 1.5, delay: i * 0.2, ease: 'easeOut' }}
-                    />
-                  </div>
+                { count: '8,102+', label: t('stats_coverage') },
+                { count: '100%', label: t('stats_realtime_api') },
+                { count: `0.8 ${t('seconds_unit')}`, label: t('stats_latency') },
+                { count: '4.8★', label: t('stats_app_rating') }
+              ].map((item, idx) => (
+                <div key={idx} className="bg-white dark:bg-slate-900/60 border border-slate-205 dark:border-slate-800/80 rounded-2xl p-4 shadow-sm dark:shadow-none">
+                  <p className="text-xl font-black text-slate-850 dark:text-white">{item.count}</p>
+                  <p className="text-[9px] text-slate-500 dark:text-slate-500 uppercase font-black tracking-wider mt-1">{item.label}</p>
                 </div>
               ))}
             </div>
 
-            {/* Bottom widgets */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div className="bg-slate-800/30 rounded-xl p-5 border border-slate-700/50">
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-3">{t('dash_heatmap')}</p>
-                <div className="grid grid-cols-12 gap-1 h-20">
-                  {Array.from({ length: 36 }).map((_, i) => (
-                    <motion.div key={i} className="rounded-sm"
-                      style={{ backgroundColor: `rgba(16,185,129,${0.1 + ((i * 37 + 13) % 100) * 0.006})` }}
-                      whileHover={{ scale: 1.5, zIndex: 10 }}
-                    />
-                  ))}
-                </div>
-              </div>
-              <div className="bg-slate-800/30 rounded-xl p-5 border border-slate-700/50">
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-3">{t('dash_pricing')}</p>
-                <div className="flex items-end gap-2 h-20">
-                  {[45, 62, 38, 75, 52, 88, 41, 69].map((h, i) => (
-                    <motion.div key={i} className="flex-1 rounded-sm bg-gradient-to-t from-emerald-500 to-emerald-400"
-                      initial={{ height: 0 }} whileInView={{ height: `${h}%` }} viewport={{ once: true }}
-                      transition={{ duration: 0.8, delay: i * 0.1 }}
-                    />
-                  ))}
-                </div>
+            <Link
+              href="/partner"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-705 dark:text-slate-300 font-black text-xs uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-all shadow-sm dark:shadow-none"
+            >
+              {t('btn_become_partner')}
+              <ArrowRight className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+            </Link>
+          </div>
+
+          {/* Map Preview Graphic */}
+          <div className="lg:col-span-6">
+            <div className="bg-white dark:bg-slate-900/50 border border-slate-205 dark:border-slate-800 rounded-[2.5rem] p-8 shadow-xl shadow-slate-100/50 dark:shadow-2xl relative overflow-hidden text-center">
+              {/* Map grid lines */}
+              <div className="absolute inset-0 opacity-[0.03]" style={{
+                backgroundImage: `radial-gradient(circle, rgba(16,185,129,0.3) 1.5px, transparent 1.5px)`,
+                backgroundSize: '20px 20px',
+              }} />
+              
+              <Globe className="w-16 h-16 text-emerald-500 dark:text-emerald-400 mx-auto mb-6 animate-pulse" />
+              <h4 className="text-lg font-black text-slate-850 dark:text-white uppercase tracking-wider mb-2">{t('hyperlocal_infrastructure')}</h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium max-w-sm mx-auto">
+                {t('heatmap_desc')}
+              </p>
+
+              {/* Connected Nodes */}
+              <div className="mt-8 flex justify-center gap-2.5">
+                {['Q.1', 'Q.3', 'Q.Bình Thạnh', 'Q.Thủ Đức', 'Q.7'].map((dist, idx) => (
+                  <span key={idx} className="px-3 py-1 rounded-full bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-850 text-[9px] text-slate-600 dark:text-slate-400 font-bold shadow-inner">
+                    ⬤ {dist}
+                  </span>
+                ))}
               </div>
             </div>
-
-            {/* Glow accents */}
-            <div className="absolute -top-20 -left-20 w-40 h-40 bg-emerald-500/10 rounded-full blur-[60px] pointer-events-none" />
-            <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-blue-500/10 rounded-full blur-[60px] pointer-events-none" />
-          </motion.div>
+          </div>
         </div>
-      </Section>
+      </section>
 
-      {/* ─── TESTIMONIALS ───────────────────────────────────── */}
-      <Section className="max-w-7xl mx-auto px-6 py-24">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-16">
-          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-500 mb-4 block">{t('test_badge')}</span>
-          <h2 className="text-4xl md:text-5xl font-black tracking-tight">{t('test_heading')} <span className="text-emerald-500">{t('test_heading_about')}</span> Says</h2>
-        </motion.div>
+      {/* ─── INFINITE MARQUEE (Đối tác liên kết) ────────────────── */}
+      <section className="py-12 bg-emerald-50/20 dark:bg-slate-950/50 border-y border-slate-200 dark:border-slate-900/80 overflow-hidden relative z-10">
+        <div className="relative w-full overflow-hidden flex">
+          <div className="animate-marquee-infinite flex gap-8 pr-8">
+            {[...PARTNERS, ...PARTNERS, ...PARTNERS, ...PARTNERS].map((p, i) => (
+              <div
+                key={i}
+                className="group flex items-center gap-4.5 px-8 py-5 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/60 rounded-2xl shadow-sm dark:shadow-md hover:bg-slate-50 dark:hover:bg-slate-900/95 hover:border-emerald-500 hover:shadow-[0_0_30px_rgba(52,211,153,0.15)] dark:hover:shadow-[0_0_30px_rgba(52,211,153,0.2)] hover:-translate-y-2 transition-all duration-300 cursor-pointer"
+              >
+                <span className="text-3xl group-hover:scale-120 group-hover:rotate-6 transition-transform duration-300">{p.icon}</span>
+                <span className="text-xs font-black text-slate-600 dark:text-slate-300 group-hover:text-emerald-555 dark:group-hover:text-emerald-400 uppercase tracking-widest transition-colors duration-300">{p.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── SYSTEM PORTALS (Các cổng thông tin chính) ───────────── */}
+      <section id="portals" className="relative z-10 max-w-7xl mx-auto px-6 py-24">
+        <div className="text-center mb-16">
+          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-555 dark:text-emerald-400 mb-3 block">{t('explore_portals')}</span>
+          <h2 className="text-3xl sm:text-5xl font-black uppercase tracking-tight text-slate-900 dark:text-white">
+            {t('explore_portals_heading')} <span className="text-emerald-400">{lang === 'vi' ? 'cứu hộ' : 'rescue'}</span>
+          </h2>
+          <p className="text-slate-400 max-w-xl mx-auto text-xs sm:text-sm font-medium mt-4">
+            {t('explore_portals_sub')}
+          </p>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {TESTIMONIALS.map((tItem, i) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-              whileHover={{ y: -6 }}
-              className="bg-white dark:bg-slate-800 rounded-[2rem] p-8 border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all relative"
+          {[
+            {
+              title: t('consumer_portal'),
+              desc: t('consumer_desc'),
+              path: '/customer',
+              glow: 'hover:shadow-[0_0_40px_rgba(16,185,129,0.15)] hover:border-emerald-500/40',
+              accent: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+              icon: ShoppingBag,
+              btnBg: 'bg-emerald-500 hover:bg-emerald-600 text-white'
+            },
+            {
+              title: t('merchant_hub'),
+              desc: t('partner_portal_desc'),
+              path: '/partner',
+              glow: 'hover:shadow-[0_0_40px_rgba(59,130,246,0.15)] hover:border-blue-500/40',
+              accent: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+              icon: Store,
+              btnBg: 'bg-blue-500 hover:bg-blue-600 text-white'
+            },
+            {
+              title: t('admin_console'),
+              desc: t('admin_portal_desc'),
+              path: '/admin',
+              glow: 'hover:shadow-[0_0_40px_rgba(249,115,22,0.15)] hover:border-orange-500/40',
+              accent: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
+              icon: ShieldCheck,
+              btnBg: 'bg-orange-500 hover:bg-orange-600 text-white'
+            }
+          ].map((portal, i) => (
+            <div
+              key={i}
+              className={`bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-8 flex flex-col justify-between backdrop-blur-xl transition-all duration-500 shadow-xl shadow-slate-100/50 dark:shadow-none ${portal.glow}`}
             >
-              <Quote className="w-8 h-8 text-emerald-500/20 absolute top-6 right-6" />
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-black text-sm">
-                  {tItem.avatar}
+              <div>
+                <div className={`p-3 rounded-2xl w-fit border mb-6 ${portal.accent}`}>
+                  <portal.icon className="w-7 h-7" />
                 </div>
-                <div>
-                  <p className="font-black text-gray-900 dark:text-white text-sm">{tItem.name}</p>
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">{tItem.role}</p>
-                </div>
+                <h3 className="text-xl font-black text-slate-855 dark:text-white uppercase mb-3">{portal.title}</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed font-medium mb-8">{portal.desc}</p>
               </div>
-              <p className="text-gray-600 dark:text-slate-300 font-medium leading-relaxed">"{tItem.q}"</p>
-              <div className="flex items-center gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-slate-700">
-                <Leaf className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="text-xs font-bold text-emerald-500">{tItem.credit} {t('test_credit')}</span>
-              </div>
-            </motion.div>
+
+              <Link
+                href={portal.path}
+                className={`w-full py-3.5 rounded-xl font-black text-xs uppercase tracking-widest text-center transition-all ${portal.btnBg}`}
+              >
+                {t('enter_portal')}
+              </Link>
+            </div>
           ))}
         </div>
-      </Section>
+      </section>
 
-      {/* ─── FINAL CTA ──────────────────────────────────────── */}
-      <Section className="max-w-6xl mx-auto px-6 pb-24">
-        <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-          className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 rounded-[3rem] p-12 md:p-20 text-center overflow-hidden border border-emerald-500/20 shadow-2xl"
-        >
-          {/* Background effects */}
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-emerald-500/10 rounded-full blur-[100px]" />
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-orange-500/10 rounded-full blur-[100px]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(16,185,129,0.05)_0%,_transparent_60%)]" />
+      {/* ─── TESTIMONIALS (Đánh giá từ cộng đồng) ────────────────── */}
+      <section id="testimonials" className="relative z-10 max-w-7xl mx-auto px-6 py-24 border-t border-slate-200 dark:border-slate-800/50">
+        <div className="text-center mb-16">
+          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-555 dark:text-emerald-400 mb-3 block">{t('community_feedback')}</span>
+          <h2 className="text-3xl sm:text-5xl font-black uppercase tracking-tight text-slate-900 dark:text-white">
+            {t('feedback_heading')} <span className="text-gradient">F.R.E.S.H</span>
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {testimonials.map((tItem, idx) => (
+            <div
+              key={idx}
+              className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800/80 rounded-[2rem] p-8 hover:border-slate-350 dark:hover:border-slate-700/80 transition-all flex flex-col justify-between relative shadow-xl shadow-slate-100/50 dark:shadow-none"
+            >
+              <span className="text-slate-200 dark:text-slate-700 text-6xl absolute top-4 right-6 font-serif select-none pointer-events-none">“</span>
+              
+              <div>
+                {/* User Info */}
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-black">
+                    {tItem.avatar}
+                  </div>
+                  <div>
+                    <h6 className="text-sm font-black text-slate-800 dark:text-white uppercase">{tItem.name}</h6>
+                    <p className="text-[9px] text-slate-400 dark:text-slate-500 uppercase tracking-wider font-bold">{tItem.role}</p>
+                  </div>
+                </div>
+                <p className="text-slate-600 dark:text-slate-300 text-xs leading-relaxed font-medium italic mb-6">
+                  &quot;{tItem.q}&quot;
+                </p>
+              </div>
+
+              <div className="flex items-center gap-1.5 mt-4 pt-4 border-t border-slate-200 dark:border-slate-800/60">
+                <Leaf className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider">{tItem.credits} {t('green_credits_upper')}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ─── FINAL CYBER CTA (Kêu gọi hành động) ────────────────── */}
+      <section className="relative z-10 max-w-7xl mx-auto px-6 pb-24">
+        <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 rounded-[3rem] p-12 md:p-20 text-center border border-emerald-500/20 shadow-2xl relative overflow-hidden">
+          {/* Accent light grids */}
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none" />
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-orange-500/10 rounded-full blur-[100px] pointer-events-none" />
 
           <div className="relative z-10">
-            <motion.div className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-500/20 border border-emerald-500/30 rounded-full text-emerald-400 text-[10px] font-black uppercase tracking-[0.2em] mb-8">
-              <Zap className="w-3 h-3" /> {t('cta_badge')}
-            </motion.div>
-
-            <h2 className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tight text-white mb-8 leading-[1.05]">
-              {t('cta_heading')}<br />
-              <span className="text-emerald-400">{t('cta_heading_acc')}</span>
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-500/20 border border-emerald-500/30 rounded-full text-emerald-400 text-[9px] font-black uppercase tracking-[0.2em] mb-6">
+              <Zap className="w-3 h-3" /> {t('join_green_movement')}
+            </span>
+            
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-black uppercase leading-none tracking-tight text-white mb-6">
+              {t('sustainable_commerce_heading')}<br />
+              <span className="text-gradient">{t('sustainable_commerce_heading_acc')}</span>
             </h2>
-            <p className="text-slate-400 max-w-2xl mx-auto text-lg font-medium mb-12">
-              {t('cta_subtitle')}
+            <p className="text-slate-400 max-w-lg mx-auto text-xs md:text-sm font-medium leading-relaxed mb-10">
+              {t('cta_description')}
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <MagneticButton href="/customer">
-                <div className="flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-sm uppercase tracking-widest shadow-2xl shadow-emerald-500/30">
-                  {t('cta_btn_1')} <ArrowRight className="w-4 h-4" />
-                </div>
-              </MagneticButton>
-              <MagneticButton href="/partner">
-                <div className="flex items-center gap-3 px-8 py-4 rounded-2xl bg-white/10 backdrop-blur-sm text-white font-bold text-sm uppercase tracking-widest border border-white/20 hover:bg-white/20 transition-all">
-                  {t('cta_btn_2')} <ExternalLink className="w-4 h-4" />
-                </div>
-              </MagneticButton>
-              <MagneticButton>
-                <div className="flex items-center gap-3 px-8 py-4 rounded-2xl bg-white/5 backdrop-blur-sm text-slate-300 font-bold text-sm uppercase tracking-widest border border-white/10 hover:bg-white/10 transition-all">
-                  {t('cta_btn_3')} <Globe className="w-4 h-4" />
-                </div>
-              </MagneticButton>
+              <Link
+                href="/customer"
+                className="flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-xs uppercase tracking-widest shadow-2xl shadow-emerald-500/30 hover:scale-102 transition-all cursor-pointer"
+              >
+                {t('btn_join_now')}
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                href="/partner"
+                className="flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-bold text-xs uppercase tracking-widest hover:bg-white/10 transition-all cursor-pointer"
+              >
+                {t('btn_partner_coop')}
+                <ExternalLink className="w-4 h-4" />
+              </Link>
             </div>
           </div>
-        </motion.div>
-      </Section>
+        </div>
+      </section>
 
-      {/* ─── FOOTER ─────────────────────────────────────────── */}
-      <footer className="relative z-10 border-t border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50">
+      {/* ─── FOOTER ─────────────────────────────────────────────── */}
+      <footer className="relative z-10 border-t border-emerald-950/20 dark:border-slate-900 bg-[#091512] dark:bg-[#030712]/90 backdrop-blur-md overflow-hidden">
+        {/* Glow Line Top */}
+        <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
+        {/* Decorative Green Orb */}
+        <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none" />
+
         <div className="max-w-7xl mx-auto px-6 py-16">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-16">
-            <div className="col-span-2 md:col-span-1">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-12">
+            <div>
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <span className="text-2xl font-black text-white italic">F</span>
+                <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl shadow-lg">
+                  <span className="text-xl font-black text-white italic">F</span>
                 </div>
-                <div>
-                  <p className="text-lg font-black uppercase">F.R.E.S.H <span className="text-emerald-500">AI</span></p>
-                </div>
+                <h4 className="text-sm font-black uppercase text-white tracking-wider">F.R.E.S.H AI</h4>
               </div>
-              <p className="text-sm text-gray-500 dark:text-slate-400 font-medium leading-relaxed max-w-xs">
-                {t('footer_tagline')}
+              <p className="text-xs text-slate-400 leading-relaxed font-medium max-w-xs">
+                {t('footer_desc')}
               </p>
             </div>
+
             {[
-              { titleKey: 'footer_col_0', linkKeys: ['footer_link_0', 'footer_link_1', 'footer_link_2', 'footer_link_3'] },
-              { titleKey: 'footer_col_1', linkKeys: ['footer_link_4', 'footer_link_5', 'footer_link_6', 'footer_link_7'] },
-              { titleKey: 'footer_col_2', linkKeys: ['footer_link_8', 'footer_link_9', 'footer_link_10', 'footer_link_11'] },
-            ].map((col, i) => (
-              <div key={i}>
-                <h4 className="text-xs font-black uppercase tracking-wider text-gray-900 dark:text-white mb-6">{t(col.titleKey)}</h4>
-                <ul className="space-y-3">
-                  {col.linkKeys.map((key, j) => (
-                    <li key={j}>
-                      <a href="#" className="text-sm text-gray-500 dark:text-slate-400 font-medium hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors">{t(key)}</a>
+              { title: t('footer_portals'), links: [{ label: t('portal_customer'), path: '/customer' }, { label: t('portal_partner'), path: '/partner' }, { label: t('portal_admin'), path: '/admin' }] },
+              { title: t('footer_tech'), links: [{ label: t('tech_pricing'), path: '#' }, { label: t('tech_ocr'), path: '#' }, { label: t('tech_esg'), path: '#' }] },
+              { title: t('footer_links'), links: [{ label: t('link_uef'), path: '/startup' }, { label: t('link_support'), path: '#' }, { label: t('link_terms'), path: '#' }] }
+            ].map((col, idx) => (
+              <div key={idx}>
+                <h5 className="text-[10px] font-black uppercase text-slate-350 dark:text-slate-300 tracking-wider mb-5">{col.title}</h5>
+                <ul className="space-y-3 text-xs text-slate-400 font-medium">
+                  {col.links.map((link, lIdx) => (
+                    <li key={lIdx}>
+                      <Link href={link.path} className="hover:text-emerald-400 transition-colors">
+                        {link.label}
+                      </Link>
                     </li>
                   ))}
                 </ul>
@@ -797,38 +1282,24 @@ export default function LandingPage() {
             ))}
           </div>
 
-          <div className="flex flex-col md:flex-row items-center justify-between pt-8 border-t border-gray-100 dark:border-slate-800 gap-4">
-            <p className="text-xs text-gray-400 dark:text-slate-500 font-bold tracking-wider uppercase">
-              &copy; {new Date().getFullYear()} {t('footer_copyright')}
+          <div className="flex flex-col md:flex-row items-center justify-between pt-8 border-t border-emerald-950/30 dark:border-slate-900/80 gap-4">
+            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">
+              &copy; {new Date().getFullYear()} F.R.E.S.H Platform.
             </p>
-            <div className="flex items-center gap-4">
-              {[Mail, Globe, Phone].map((Icon, i) => (
-                <motion.a key={i} href="#" whileHover={{ y: -2 }}
-                  className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center text-gray-400 dark:text-slate-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-500 transition-all"
+            <div className="flex items-center gap-3">
+              {[Mail, Globe, Phone].map((Icon, idx) => (
+                <a
+                  key={idx}
+                  href="#"
+                  className="w-9 h-9 rounded-xl bg-emerald-950/30 dark:bg-slate-900 border border-emerald-900/30 dark:border-slate-800/80 flex items-center justify-center text-slate-450 hover:text-emerald-400 hover:border-emerald-500/30 transition-all"
                 >
                   <Icon className="w-4 h-4" />
-                </motion.a>
+                </a>
               ))}
             </div>
           </div>
         </div>
       </footer>
     </main>
-  );
-}
-
-// ─── Live Counter Component ────────────────────────────────────
-function LiveCounter({ value, suffix = '' }: { value: number; suffix?: string }) {
-  const { value: count, ref } = useCounter(value, 2000);
-  const format = value >= 1000 ? count.toLocaleString() : count;
-  return <span ref={ref}>{format}{suffix}</span>;
-}
-
-// ─── Play Icon ──────────────────────────────────────────────────
-function PlayIcon() {
-  return (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none" />
-    </svg>
   );
 }

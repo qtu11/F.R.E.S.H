@@ -2,33 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Brain, TrendingUp, Clock, AlertTriangle, RefreshCw, BarChart3, MapPin, Lightbulb, Zap, Package } from 'lucide-react';
+import { Brain, TrendingUp, Clock, AlertTriangle, RefreshCw, BarChart3, MapPin, Lightbulb, Zap, Package, Loader2 } from 'lucide-react';
 import { useGlobal } from '@/app/providers';
+import { adminService } from '@/lib/data/admin';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`);
-const DEMAND_FORECAST = [45, 38, 25, 18, 12, 8, 15, 42, 78, 95, 102, 88, 75, 68, 82, 110, 145, 168, 152, 120, 98, 72, 55, 48];
-const PEAK_HOURS = [{ start: 7, end: 9, label: 'Morning Rush', level: 'High' }, { start: 11, end: 13, label: 'Lunch Peak', level: 'High' }, { start: 17, end: 19, label: 'Dinner Rush', level: 'High' }, { start: 20, end: 22, label: 'Evening Deals', level: 'Medium' }];
-const maxDemand = Math.max(...DEMAND_FORECAST);
-
-const WASTE_HOTSPOTS = [
-  { district: 'District 1', waste: 145, risk: 'High' as const },
-  { district: 'Binh Thanh', waste: 112, risk: 'High' as const },
-  { district: 'District 7', waste: 89, risk: 'Medium' as const },
-  { district: 'Thu Duc', waste: 76, risk: 'Medium' as const },
-  { district: 'Tan Binh', waste: 62, risk: 'Medium' as const },
-  { district: 'District 3', waste: 48, risk: 'Low' as const },
-  { district: 'Phu Nhuan', waste: 35, risk: 'Low' as const },
-  { district: 'Go Vap', waste: 28, risk: 'Low' as const },
-];
-
-const AI_RECOMMENDATIONS = [
-  'Increase partner commission in District 1 by 3% to reduce waste',
-  'Promote bakery deals at 8PM to match dinner demand',
-  'Shift inventory from District 7 to Thu Duc (surplus detected)',
-  'Launch flash sale on seafood before 10AM expiration window',
-  'Optimize delivery routes in Binh Thanh (high congestion)',
-  'Bundle slow-moving items with peak-hour bestsellers',
-];
 
 const RISK_STYLES: Record<string, string> = {
   Low: 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/50',
@@ -39,20 +17,69 @@ const RISK_STYLES: Record<string, string> = {
 export default function AdminForecasting() {
   const { t } = useGlobal();
   const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [forecast, setForecast] = useState<number[]>([]);
+  const [peakHours, setPeakHours] = useState<any[]>([]);
+  const [wasteHotspots, setWasteHotspots] = useState<any[]>([]);
+  const [recommendations, setRecommendations] = useState<string[]>([]);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    setLoading(true);
+    Promise.all([
+      adminService.getForecasting(),
+      adminService.getHeatmap('waste'),
+    ]).then(([forecastData, wasteData]) => {
+      if (forecastData) {
+        if (Array.isArray(forecastData.demandForecast)) setForecast(forecastData.demandForecast);
+        if (Array.isArray(forecastData.peakHours)) setPeakHours(forecastData.peakHours);
+        if (Array.isArray(forecastData.recommendations)) setRecommendations(forecastData.recommendations);
+      }
+      if (Array.isArray(wasteData)) setWasteHotspots(wasteData);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, []);
 
   const handleRefresh = () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1500);
+    Promise.all([
+      adminService.getForecasting(),
+      adminService.getHeatmap('waste'),
+    ]).then(([forecastData, wasteData]) => {
+      if (forecastData) {
+        if (Array.isArray(forecastData.demandForecast)) setForecast(forecastData.demandForecast);
+        if (Array.isArray(forecastData.peakHours)) setPeakHours(forecastData.peakHours);
+        if (Array.isArray(forecastData.recommendations)) setRecommendations(forecastData.recommendations);
+      }
+      if (Array.isArray(wasteData)) setWasteHotspots(wasteData);
+      setRefreshing(false);
+    }).catch(err => {
+      console.error(err);
+      setRefreshing(false);
+    });
   };
 
   if (!mounted) return null;
 
-  const predictedDemand = DEMAND_FORECAST.reduce((a, b) => a + b, 0);
-  const wasteHotspotCount = WASTE_HOTSPOTS.filter(w => w.risk === 'High').length;
-  const avgPeakDemand = Math.round(DEMAND_FORECAST.slice(7, 9).concat(DEMAND_FORECAST.slice(11, 13)).concat(DEMAND_FORECAST.slice(17, 19)).reduce((a, b) => a + b, 0) / 6);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0A0F1C] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+          <div className="text-slate-300 text-sm font-medium">Recalculating AI forecasting models...</div>
+        </div>
+      </div>
+    );
+  }
+
+  const maxDemand = forecast.length > 0 ? Math.max(...forecast) : 1;
+  const predictedDemand = forecast.reduce((a, b) => a + b, 0);
+  const wasteHotspotCount = wasteHotspots.filter((w: any) => w.risk === 'High').length;
+  const avgPeakDemand = Math.round(forecast.slice(7, 9).concat(forecast.slice(11, 13)).concat(forecast.slice(17, 19)).reduce((a, b) => a + b, 0) / 6);
 
   return (
     <div className="bg-[#f0f2f5] dark:bg-slate-950 min-h-screen pb-20 font-sans transition-colors duration-300">
@@ -82,7 +109,7 @@ export default function AdminForecasting() {
               <Clock className="w-4 h-4 text-slate-500" />
               <span className="text-gray-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider">Peak Hours</span>
             </div>
-            <div className="text-2xl font-black text-orange-600">{PEAK_HOURS.filter(p => p.level === 'High').length} periods</div>
+            <div className="text-2xl font-black text-orange-600">{peakHours.filter(p => p.level === 'High').length} periods</div>
             <div className="text-[10px] font-bold mt-1 text-orange-500">~{avgPeakDemand} orders/hr avg</div>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-slate-700">
@@ -98,7 +125,7 @@ export default function AdminForecasting() {
               <AlertTriangle className="w-4 h-4 text-slate-500" />
               <span className="text-gray-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider">Inventory Alerts</span>
             </div>
-            <div className="text-2xl font-black text-yellow-600">{WASTE_HOTSPOTS.filter(w => w.risk === 'High').length + 2}</div>
+            <div className="text-2xl font-black text-yellow-600">{wasteHotspots.filter((w: any) => w.risk === 'High').length}</div>
             <div className="text-[10px] text-yellow-500 font-bold mt-1">Requires attention</div>
           </div>
         </div>
@@ -116,7 +143,7 @@ export default function AdminForecasting() {
                 <span>{maxDemand}</span><span>{Math.round(maxDemand * 2 / 3)}</span><span>{Math.round(maxDemand / 3)}</span><span>0</span>
               </div>
               <div className="absolute left-8 right-0 top-0 bottom-6 flex items-end justify-around gap-[1px]">
-                {DEMAND_FORECAST.map((val, i) => (
+                {forecast.map((val, i) => (
                   <motion.div
                     key={i}
                     initial={{ height: 0 }}
@@ -139,7 +166,7 @@ export default function AdminForecasting() {
             </h3>
             <div className="relative py-6">
               <div className="absolute left-0 right-0 top-1/2 h-1 bg-gray-200 dark:bg-slate-700 rounded-full -translate-y-1/2" />
-              {PEAK_HOURS.map((peak, i) => {
+              {peakHours.map((peak, i) => {
                 const leftPct = (peak.start / 24) * 100;
                 const widthPct = ((peak.end - peak.start) / 24) * 100;
                 return (
@@ -167,7 +194,7 @@ export default function AdminForecasting() {
             <MapPin className="w-4 h-5 text-slate-600 dark:text-slate-400" /> Waste Hotspots
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {WASTE_HOTSPOTS.map((spot, i) => (
+            {wasteHotspots.map((spot, i) => (
               <motion.div
                 key={spot.district}
                 initial={{ opacity: 0, x: -10 }}
@@ -178,8 +205,8 @@ export default function AdminForecasting() {
                 <div className="flex items-center gap-3">
                   <div className={`w-2 h-2 rounded-full ${spot.risk === 'High' ? 'bg-red-500' : spot.risk === 'Medium' ? 'bg-yellow-500' : 'bg-green-500'}`} />
                   <div>
-                    <div className="text-sm font-bold text-gray-900 dark:text-white">{spot.district}</div>
-                    <div className="text-[10px] text-gray-400 font-medium">{spot.waste} kg predicted</div>
+                    <div className="text-sm font-bold text-gray-900 dark:text-white">{spot.district || spot.name}</div>
+                    <div className="text-[10px] text-gray-400 font-medium">{spot.waste || spot.orders || 0} kg predicted</div>
                   </div>
                 </div>
                 <span className={`text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wider border ${RISK_STYLES[spot.risk]}`}>
@@ -195,7 +222,7 @@ export default function AdminForecasting() {
             <Lightbulb className="w-4 h-5 text-amber-500" /> AI Recommendations
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {AI_RECOMMENDATIONS.map((rec, i) => (
+            {recommendations.map((rec, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 10 }}

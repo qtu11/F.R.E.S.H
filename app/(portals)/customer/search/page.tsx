@@ -5,21 +5,9 @@ import { Search as SearchIcon, X, Clock, MapPin, SlidersHorizontal } from 'lucid
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGlobal } from '@/app/providers';
-
-const allProducts = [
-  { id: 'd1', name: 'Bánh Mì Thịt Nguội', category: 'Bakery', store: 'WinMart+ D1', originalPrice: 30000, discountedPrice: 12000, discount: 60, timeLeft: '45m', gradient: 'from-amber-400 to-orange-500', tags: ['under_50k', 'vegan'] },
-  { id: 'd2', name: 'Croissant Bơ', category: 'Bakery', store: 'FamilyMart D3', originalPrice: 25000, discountedPrice: 10000, discount: 60, timeLeft: '1h', gradient: 'from-yellow-300 to-amber-500', tags: ['under_50k', 'vegan'] },
-  { id: 'd3', name: 'Gà Rán Cay', category: 'Fast Food', store: 'Circle K D1', originalPrice: 55000, discountedPrice: 22000, discount: 60, timeLeft: '30m', gradient: 'from-red-400 to-orange-600', tags: ['under_50k'] },
-  { id: 'd4', name: 'Khoai Tây Chiên', category: 'Fast Food', store: 'AEON Tân Phú', originalPrice: 35000, discountedPrice: 14000, discount: 60, timeLeft: '2h', gradient: 'from-yellow-400 to-yellow-600', tags: ['under_50k', 'vegan'] },
-  { id: 'd5', name: 'Rau Củ Tổng Hợp', category: 'Vegetables', store: 'Co.opmart D1', originalPrice: 45000, discountedPrice: 13500, discount: 70, timeLeft: '3h', gradient: 'from-green-400 to-emerald-600', tags: ['under_50k', 'vegan', 'halal', 'over_70'] },
-  { id: 'd6', name: 'Salad Rau Trộn', category: 'Vegetables', store: 'WinMart+ D1', originalPrice: 40000, discountedPrice: 12000, discount: 70, timeLeft: '1h', gradient: 'from-lime-400 to-green-500', tags: ['under_50k', 'vegan', 'over_70'] },
-  { id: 'd7', name: 'Trái Cây Tươi', category: 'Fruits', store: 'MM Mega Market', originalPrice: 60000, discountedPrice: 18000, discount: 70, timeLeft: '4h', gradient: 'from-pink-400 to-red-400', tags: ['under_50k', 'vegan', 'halal', 'over_70'] },
-  { id: 'd8', name: 'Sinh Tố Trái Cây', category: 'Fruits', store: 'Lotte Mart D7', originalPrice: 50000, discountedPrice: 25000, discount: 50, timeLeft: '2h', gradient: 'from-purple-400 to-pink-500', tags: ['under_50k', 'vegan'] },
-  { id: 'd9', name: 'Kem Vanilla Hộp', category: 'Frozen', store: 'AEON Tân Phú', originalPrice: 80000, discountedPrice: 32000, discount: 60, timeLeft: '5h', gradient: 'from-blue-300 to-indigo-500', tags: ['under_50k'] },
-  { id: 'd10', name: 'Cá Hồi Đông Lạnh', category: 'Frozen', store: 'Big C D2', originalPrice: 150000, discountedPrice: 60000, discount: 60, timeLeft: '6h', gradient: 'from-teal-400 to-blue-600', tags: ['under_1h'] },
-  { id: 'd11', name: 'Bánh Bao Nhân Thịt', category: 'Frozen', store: 'FamilyMart D3', originalPrice: 20000, discountedPrice: 6000, discount: 70, timeLeft: '1h', gradient: 'from-gray-300 to-gray-500', tags: ['under_50k', 'over_70'] },
-  { id: 'd12', name: 'Xôi Gà', category: 'Fast Food', store: 'Circle K D1', originalPrice: 25000, discountedPrice: 12500, discount: 50, timeLeft: '20m', gradient: 'from-orange-300 to-red-500', tags: ['under_50k', 'halal'] },
-];
+import { useAuth } from '@/app/contexts/AuthContext';
+import { productService } from '@/lib/data/products';
+import { showToast } from '@/lib/data/notifications';
 
 const categories = ['Bakery', 'Fast Food', 'Vegetables', 'Fruits', 'Frozen'];
 const filterOptions = [
@@ -30,15 +18,58 @@ const filterOptions = [
   { key: 'over_70', label: 'Over 70% off' },
 ];
 
+const categoryGradients: Record<string, string> = {
+  Bakery: 'from-amber-400 to-orange-500',
+  'Fast Food': 'from-red-400 to-orange-600',
+  Vegetables: 'from-green-400 to-emerald-600',
+  Fruits: 'from-pink-400 to-red-400',
+  Frozen: 'from-blue-300 to-indigo-500',
+  Beverages: 'from-cyan-400 to-blue-500',
+  Dairy: 'from-yellow-200 to-yellow-500',
+  Meals: 'from-orange-300 to-red-500',
+  Snacks: 'from-purple-400 to-pink-500',
+  Produce: 'from-lime-400 to-green-500',
+};
+
 export default function CustomerSearch() {
   const { t } = useGlobal();
+  const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    productService.getAll().then(data => {
+      setProducts((data || []).map((p: any) => {
+        const tags: string[] = [];
+        if (p.aiPrice < 50000) tags.push('under_50k');
+        if (p.discount >= 70) tags.push('over_70');
+        return {
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          store: p.storeName,
+          storeId: p.storeId || '',
+          originalPrice: p.originalPrice,
+          discountedPrice: p.aiPrice,
+          discount: p.discount,
+          timeLeft: '2h',
+          gradient: categoryGradients[p.category] || 'from-emerald-400 to-green-600',
+          tags,
+        };
+      }));
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      showToast('error', 'Failed to load products');
+      setLoading(false);
+    });
+  }, []);
 
   const toggleFilter = (key: string) => {
     setActiveFilters(prev => prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]);
@@ -48,7 +79,7 @@ export default function CustomerSearch() {
     setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
   };
 
-  const filtered = allProducts.filter(p => {
+  const filtered = products.filter(p => {
     if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase()) && !p.store.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (selectedCategory && p.category !== selectedCategory) return false;
     if (activeFilters.length > 0 && !activeFilters.every(f => p.tags.includes(f))) return false;
@@ -124,7 +155,7 @@ export default function CustomerSearch() {
           ))}
         </div>
 
-        {!mounted ? null : filtered.length === 0 ? (
+        {!mounted || loading ? null : filtered.length === 0 ? (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-slate-800 rounded-3xl p-12 text-center shadow-sm border border-gray-100 dark:border-slate-700 mt-8">
             <SearchIcon className="w-16 h-16 mx-auto text-gray-300 dark:text-slate-600 mb-4" />
             <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">No results found</h3>

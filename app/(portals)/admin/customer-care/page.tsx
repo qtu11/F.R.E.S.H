@@ -19,27 +19,51 @@ export default function CustomerCareDashboard() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'open' | 'resolved'>('all');
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
-    alertService.getTickets().then(data => {
-      setTickets(data);
+    setLoading(true);
+    Promise.all([
+      alertService.getTickets(),
+      alertService.getStats(),
+    ]).then(([ticketData, statsData]) => {
+      setTickets(ticketData || []);
+      if (statsData) setStats(statsData);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
       setLoading(false);
     });
   }, []);
 
   const handleResolve = async (id: string) => {
-    await alertService.resolveTicket(id);
-    setTickets(prev => prev.map(t => t.id === id ? { ...t, status: 'resolved' as const } : t));
-    setSelectedTicket(null);
-    showToast('success', 'Ticket Resolved', 'Support ticket has been marked as resolved');
+    try {
+      await alertService.resolveTicket(id);
+      setTickets(prev => prev.map(t => t.id === id ? { ...t, status: 'resolved' as const } : t));
+      setSelectedTicket(null);
+      showToast('success', 'Ticket Resolved', 'Support ticket has been marked as resolved');
+    } catch (err) {
+      console.error(err);
+      showToast('error', 'Error', 'Failed to resolve ticket');
+    }
   };
 
   const filteredTickets = filter === 'all' ? tickets : tickets.filter(t => t.status === filter);
 
-  const stats = {
+  const liveStats = stats ? {
+    open: stats.open ?? tickets.filter(t => t.status === 'open').length,
+    resolved: stats.resolved ?? tickets.filter(t => t.status === 'resolved').length,
+    escalated: stats.escalated ?? tickets.filter(t => t.status === 'escalated').length,
+    aiResolutionRate: stats.aiResolutionRate ?? null,
+    humanHandoffRate: stats.humanHandoffRate ?? null,
+    avgResolutionTime: stats.avgResolutionTime ?? null,
+  } : {
     open: tickets.filter(t => t.status === 'open').length,
     resolved: tickets.filter(t => t.status === 'resolved').length,
     escalated: tickets.filter(t => t.status === 'escalated').length,
+    aiResolutionRate: null,
+    humanHandoffRate: null,
+    avgResolutionTime: null,
   };
 
   return (
@@ -62,22 +86,22 @@ export default function CustomerCareDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 transition-all hover:shadow-md">
             <div className="text-gray-500 dark:text-slate-400 text-xs font-bold mb-1">{t('live_tickets')}</div>
-            <div className="text-3xl text-black dark:text-white font-black mb-1">{stats.open}</div>
+            <div className="text-3xl text-black dark:text-white font-black mb-1">{liveStats.open}</div>
             <div className="text-[10px] font-bold text-blue-500 dark:text-blue-400">Active tickets</div>
           </div>
           <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 transition-all hover:shadow-md">
             <div className="text-gray-500 dark:text-slate-400 text-xs font-bold mb-1">{t('ai_resolution_rate')}</div>
-            <div className="text-3xl text-[#057A42] dark:text-emerald-400 font-black mb-1">86%</div>
+            <div className="text-3xl text-[#057A42] dark:text-emerald-400 font-black mb-1">{liveStats.aiResolutionRate !== null ? `${liveStats.aiResolutionRate}%` : '—'}</div>
             <div className="text-[10px] font-bold text-gray-400 dark:text-slate-500">{t('target')} &gt; 85% ✓</div>
           </div>
           <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 transition-all hover:shadow-md">
             <div className="text-gray-500 dark:text-slate-400 text-xs font-bold mb-1">{t('human_handoff_rate')}</div>
-            <div className="text-3xl text-orange-500 dark:text-orange-400 font-black mb-1">14%</div>
+            <div className="text-3xl text-orange-500 dark:text-orange-400 font-black mb-1">{liveStats.humanHandoffRate !== null ? `${liveStats.humanHandoffRate}%` : '—'}</div>
             <div className="text-[10px] font-bold text-gray-400 dark:text-slate-500">Primarily dispute related</div>
           </div>
           <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 transition-all hover:shadow-md">
             <div className="text-gray-500 dark:text-slate-400 text-xs font-bold mb-1">{t('avg_resolution_time')}</div>
-            <div className="text-3xl text-black dark:text-white font-black mb-1">1.2m</div>
+            <div className="text-3xl text-black dark:text-white font-black mb-1">{liveStats.avgResolutionTime !== null ? `${liveStats.avgResolutionTime}m` : '—'}</div>
             <div className="text-[10px] font-bold text-gray-400 dark:text-slate-500">AI responds in &lt; 1s</div>
           </div>
         </div>

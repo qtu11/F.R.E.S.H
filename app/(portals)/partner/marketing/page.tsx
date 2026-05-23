@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Tag, Zap, Gift, Bell, Percent, Calendar, Users, Trash2 } from 'lucide-react';
+import { Plus, Tag, Zap, Gift, Bell, Percent, Calendar, Users, Trash2, Loader2 } from 'lucide-react';
 import { useGlobal } from '@/app/providers';
+import { useAuth } from '@/app/contexts/AuthContext';
+import { campaignService, Campaign as ApiCampaign } from '@/lib/data/campaigns';
+import { showToast } from '@/lib/data/notifications';
 
 interface Voucher {
   code: string;
@@ -31,35 +34,48 @@ interface Campaign {
   status: 'active' | 'inactive';
 }
 
-const initialVouchers: Voucher[] = [
-  { code: 'FRESH10', discount: 10, minOrder: 50000, expires: '2026-06-01', uses: 34, maxUses: 100, active: true },
-  { code: 'WELCOME20', discount: 20, minOrder: 100000, expires: '2026-05-25', uses: 12, maxUses: 50, active: true },
-  { code: 'FREESHIP', discount: 15, minOrder: 30000, expires: '2026-05-30', uses: 67, maxUses: 200, active: true },
-  { code: 'VIP25', discount: 25, minOrder: 200000, expires: '2026-04-30', uses: 8, maxUses: 30, active: false },
-  { code: 'HALFOFF', discount: 50, minOrder: 150000, expires: '2026-05-20', uses: 22, maxUses: 40, active: true },
-  { code: 'MIDNIGHT', discount: 30, minOrder: 80000, expires: '2026-05-28', uses: 3, maxUses: 20, active: false },
-];
 
-const initialFlashSales: FlashSale[] = [
-  { id: '1', name: 'Midnight Madness', discount: '40% off all baked goods', start: '2026-05-20 00:00', end: '2026-05-20 06:00', status: 'upcoming' },
-  { id: '2', name: 'Lunch Rush', discount: 'Buy 1 Get 1 Free', start: '2026-05-16 11:00', end: '2026-05-16 14:00', status: 'active' },
-  { id: '3', name: 'Weekend Brunch', discount: '25% off brunch items', start: '2026-05-10 08:00', end: '2026-05-12 16:00', status: 'ended' },
-  { id: '4', name: 'Earth Day Special', discount: 'Free drink with any food', start: '2026-04-22 08:00', end: '2026-04-22 20:00', status: 'ended' },
-];
 
-const initialCampaigns: Campaign[] = [
-  { id: '1', name: 'Buy 5 Get 1 Free', type: 'loyalty', status: 'active' },
-  { id: '2', name: 'Double Points Weekend', type: 'loyalty', status: 'active' },
-  { id: '3', name: 'Birthday Bonus', type: 'loyalty', status: 'inactive' },
-  { id: '4', name: 'Refer a Friend', type: 'referral', status: 'active' },
-];
+function mapToVoucher(c: ApiCampaign): Voucher {
+  return {
+    code: c.title?.toUpperCase().replace(/\s+/g, '_').slice(0, 10) || `CAMP${c.id}`,
+    discount: c.discountRate || 10,
+    minOrder: c.budget ? Math.round(c.budget * 0.1) : 50000,
+    expires: c.endDate || '2026-06-30',
+    uses: c.actualConversions || 0,
+    maxUses: c.targetConversions || 100,
+    active: c.status === 'active',
+  };
+}
+
+function mapToFlashSale(c: ApiCampaign): FlashSale {
+  return {
+    id: c.id,
+    name: c.title,
+    discount: c.description || `${c.discountRate || 0}% off`,
+    start: c.startDate || '',
+    end: c.endDate || '',
+    status: c.status === 'active' ? 'active' : c.status === 'upcoming' ? 'upcoming' : 'ended',
+  };
+}
+
+function mapToCampaign(c: ApiCampaign): Campaign {
+  return {
+    id: c.id,
+    name: c.title,
+    type: c.type,
+    status: c.status === 'active' ? 'active' : 'inactive',
+  };
+}
 
 export default function PartnerMarketingPage() {
   const { t } = useGlobal();
+  const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
-  const [vouchers, setVouchers] = useState<Voucher[]>(initialVouchers);
-  const [flashSales] = useState<FlashSale[]>(initialFlashSales);
-  const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns);
+  const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [flashSales, setFlashSales] = useState<FlashSale[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showVoucherForm, setShowVoucherForm] = useState(false);
 
   const [voucherForm, setVoucherForm] = useState({ discount: 10, minOrder: 50000, expires: '', maxUses: 100 });
@@ -68,10 +84,30 @@ export default function PartnerMarketingPage() {
   const [notifMessage, setNotifMessage] = useState('');
   const [notifTarget, setNotifTarget] = useState<'all' | 'nearby' | 'premium'>('all');
 
-  useEffect(() => { setMounted(true); }, []);
+  const storeId = user?.storeId || '';
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!storeId) return;
+    setLoading(true);
+    campaignService.getByStore(storeId).then(data => {
+      const all = data || [];
+      const typed = all as any[];
+      setVouchers(typed.filter((c: any) => c.type === 'voucher' || c.discountRate != null).slice(0, 6).map(mapToVoucher));
+      setFlashSales(typed.filter((c: any) => c.type === 'flash_sale' || (c.startDate && c.endDate)).slice(0, 4).map(mapToFlashSale));
+      setCampaigns(typed.filter((c: any) => c.type === 'loyalty' || c.type === 'referral').slice(0, 4).map(mapToCampaign));
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, [storeId]);
 
   const handleCreateVoucher = () => {
-    const code = `PROMO${Math.floor(Math.random() * 10000)}`;
+    const code = `PROMO${Date.now().toString(36).toUpperCase()}`;
     const newV: Voucher = {
       code,
       discount: voucherForm.discount,
@@ -95,12 +131,24 @@ export default function PartnerMarketingPage() {
 
   const handleSendNotification = () => {
     if (!notifTitle || !notifMessage) return;
-    alert(`Notification sent to ${notifTarget}: ${notifTitle}`);
+    // TODO: replace with real API call to send push notification
+    showToast('success', 'Notification Sent', `To: ${notifTarget} - ${notifTitle}`);
     setNotifTitle('');
     setNotifMessage('');
   };
 
   if (!mounted) return null;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+          <div className="text-gray-900 dark:text-white text-sm font-medium">Loading marketing campaigns...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">

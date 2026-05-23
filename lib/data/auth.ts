@@ -6,6 +6,7 @@ export interface User {
   name: string;
   role: UserRole;
   avatar: string;
+  storeId?: string;
   phone?: string;
   address?: string;
   joinDate?: string;
@@ -16,7 +17,6 @@ export interface User {
   co2Reduced?: number;
   totalOrders?: number;
   totalSpent?: number;
-  password?: string;
   walletBalance?: number;
 }
 
@@ -25,47 +25,59 @@ export interface AuthSession {
   token: string;
 }
 
+export interface RegisterData {
+  email: string;
+  password: string;
+  name: string;
+  role?: 'customer' | 'partner' | 'admin';
+  phone?: string;
+  address?: string;
+}
+
 async function api(path: string, options?: RequestInit) {
   const res = await fetch(`/api${path}`, {
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     ...options,
   });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || 'Request failed');
+  }
   return res.json();
 }
 
 export const authService = {
-  async login(email: string, password: string): Promise<AuthSession | null> {
+  async login(email: string, password: string): Promise<AuthSession> {
     const result = await api('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    if (result.error) return null;
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('fresh_session', JSON.stringify(result));
-    }
     return result;
   },
 
-  async getSession(): Promise<AuthSession | null> {
-    if (typeof window === 'undefined') return null;
-    const raw = localStorage.getItem('fresh_session');
-    if (!raw) return null;
+  async register(data: RegisterData): Promise<AuthSession> {
+    const result = await api('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return result;
+  },
+
+  async getMe(): Promise<AuthSession | null> {
     try {
-      const session = JSON.parse(raw) as AuthSession;
-      // verify session is still valid from server
-      const user = await api(`/users?userId=${session.user.id}`);
-      if (user && user.id) {
-        return { user, token: session.token };
-      }
-      return session;
+      const result = await api('/auth/me');
+      if (!result || !result.user) return null;
+      return result;
     } catch {
       return null;
     }
   },
 
   async logout(): Promise<void> {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('fresh_session');
+    try {
+      await api('/auth/logout', { method: 'POST' });
+    } catch {
     }
   },
 
@@ -74,7 +86,7 @@ export const authService = {
   },
 
   getUserById(id: string): Promise<User | undefined> {
-    return api(`/users?userId=${id}`);
+    return api(`/users?userId=${encodeURIComponent(id)}`);
   },
 
   async updateUserStatus(id: string, status: 'active' | 'suspended' | 'banned') {

@@ -30,8 +30,13 @@ export interface SupportTicket {
 async function api(path: string, options?: RequestInit) {
   const res = await fetch(`/api${path}`, {
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     ...options,
   });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || 'Request failed');
+  }
   return res.json();
 }
 
@@ -44,8 +49,8 @@ export const alertService = {
     return api('/support-tickets');
   },
 
-  async getTicketsByStatus(status: string): Promise<SupportTicket[]> {
-    return api(`/support-tickets?status=${status}`);
+  async getTicketsByStatus(status: SupportTicket['status']): Promise<SupportTicket[]> {
+    return api(`/support-tickets?status=${encodeURIComponent(status)}`);
   },
 
   async resolveTicket(id: string): Promise<SupportTicket | undefined> {

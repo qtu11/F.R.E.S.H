@@ -1,9 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, DollarSign, Package, Leaf, Trash2, Download, Calendar } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Package, Leaf, Trash2, Download, Calendar, Loader2 } from 'lucide-react';
 import { useGlobal } from '@/app/providers';
+import { useAuth } from '@/app/contexts/AuthContext';
+import { orderService, Order } from '@/lib/data/orders';
+import { productService, Product } from '@/lib/data/products';
+import { transactionService, Transaction } from '@/lib/data/transactions';
 
 type DateRange = 'today' | 'week' | 'month';
 
@@ -22,30 +26,7 @@ interface DailyRow {
   items: number;
 }
 
-const topItems = [
-  { name: 'Banana Bread', sold: 48, color: 'bg-emerald-500' },
-  { name: 'Avocado Toast', sold: 36, color: 'bg-emerald-400' },
-  { name: 'Croissant', sold: 32, color: 'bg-emerald-300' },
-  { name: 'Iced Coffee', sold: 29, color: 'bg-emerald-200' },
-  { name: 'Muffin', sold: 22, color: 'bg-emerald-100' },
-];
 
-const hourlyData = [
-  { hour: '7AM', value: 20 }, { hour: '8AM', value: 55 }, { hour: '9AM', value: 80 },
-  { hour: '10AM', value: 95 }, { hour: '11AM', value: 100 }, { hour: '12PM', value: 90 },
-  { hour: '1PM', value: 70 }, { hour: '2PM', value: 45 }, { hour: '3PM', value: 30 },
-  { hour: '4PM', value: 25 }, { hour: '5PM', value: 40 }, { hour: '6PM', value: 35 },
-];
-
-const dailyData: DailyRow[] = [
-  { date: 'May 10', orders: 12, revenue: 485000, items: 18 },
-  { date: 'May 11', orders: 15, revenue: 532000, items: 22 },
-  { date: 'May 12', orders: 10, revenue: 378000, items: 14 },
-  { date: 'May 13', orders: 18, revenue: 694000, items: 27 },
-  { date: 'May 14', orders: 21, revenue: 815000, items: 33 },
-  { date: 'May 15', orders: 14, revenue: 503000, items: 20 },
-  { date: 'May 16', orders: 8, revenue: 296000, items: 11 },
-];
 
 const ranges: { key: DateRange; label: string }[] = [
   { key: 'today', label: 'Today' },
@@ -55,22 +36,110 @@ const ranges: { key: DateRange; label: string }[] = [
 
 export default function PartnerAnalyticsPage() {
   const { t } = useGlobal();
+  const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [range, setRange] = useState<DateRange>('week');
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { setMounted(true); }, []);
+  const storeId = user?.storeId || '';
 
-  const kpis: Kpi[] = [
-    { label: 'Total Revenue', value: '8,240,000 VNĐ', change: 12.5, icon: DollarSign, color: 'text-emerald-600' },
-    { label: 'Orders Fulfilled', value: '98', change: 8.3, icon: Package, color: 'text-blue-600' },
-    { label: 'Items Rescued', value: '145', change: 15.2, icon: Leaf, color: 'text-green-600' },
-    { label: 'Waste Reduced', value: '362 kg', change: -3.1, icon: Trash2, color: 'text-orange-600' },
-  ];
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  const maxSold = Math.max(...topItems.map(i => i.sold));
-  const maxHourly = Math.max(...hourlyData.map(h => h.value));
+  useEffect(() => {
+    if (!storeId || !user?.id) return;
+    setLoading(true);
+    Promise.all([
+      orderService.getByStore(storeId),
+      transactionService.getByUser(user.id),
+      productService.getByStore(storeId),
+    ]).then(([o, txs, prods]) => {
+      setOrders(o || []);
+      setTransactions(txs || []);
+      setProducts(prods || []);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, [storeId, user]);
+
+  const topItems = useMemo(() => {
+    const counts: Record<string, number> = {};
+    orders.forEach(o => o.items?.forEach(item => {
+      counts[item.productName] = (counts[item.productName] || 0) + item.quantity;
+    }));
+    const colors = ['bg-emerald-500', 'bg-emerald-400', 'bg-emerald-300', 'bg-emerald-200', 'bg-emerald-100'];
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, sold], i) => ({ name, sold, color: colors[i] || 'bg-emerald-100' }));
+  }, [orders]);
+
+  const hourlyData = useMemo(() => {
+    const hours = Array.from({ length: 12 }, (_, i) => i + 7);
+    const counts: Record<number, number> = {};
+    orders.forEach(o => {
+      const h = o.createdAt ? new Date(o.createdAt).getHours() : -1;
+      if (h >= 7 && h <= 18) counts[h] = (counts[h] || 0) + 1;
+    });
+    const max = Math.max(...Object.values(counts), 1);
+    const labels = ['7AM','8AM','9AM','10AM','11AM','12PM','1PM','2PM','3PM','4PM','5PM','6PM'];
+    return labels.map((hour, i) => ({
+      hour,
+      value: Math.round(((counts[i + 7] || 0) / max) * 100),
+    }));
+  }, [orders]);
+
+  const dailyData: DailyRow[] = useMemo(() => {
+    const byDate: Record<string, DailyRow> = {};
+    orders.forEach(o => {
+      if (!o.createdAt) return;
+      const d = new Date(o.createdAt);
+      const key = `${d.getMonth() + 1}/${d.getDate()}`;
+      if (!byDate[key]) byDate[key] = { date: key, orders: 0, revenue: 0, items: 0 };
+      byDate[key].orders += 1;
+      byDate[key].revenue += o.total || 0;
+      byDate[key].items += (o.items || []).reduce((s, i) => s + i.quantity, 0);
+    });
+    return Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date));
+  }, [orders]);
+
+  const kpis: Kpi[] = useMemo(() => {
+    const totalRevenue = transactions
+      .filter(t => t.type === 'revenue' && t.status === 'completed')
+      .reduce((s, t) => s + t.amount, 0);
+    const ordersFulfilled = orders.filter(o => o.status === 'delivered').length;
+    const itemsRescued = orders.reduce((s, o) => s + (o.items || []).reduce((s2, i) => s2 + i.quantity, 0), 0);
+    const totalCo2Saved = products.reduce((s, p) => s + (p.co2Saved || 0), 0);
+    const wasteKg = totalCo2Saved > 0 ? totalCo2Saved : Math.round(itemsRescued * 2.5);
+    return [
+      { label: 'Total Revenue', value: `${totalRevenue.toLocaleString()} VNĐ`, change: 12.5, icon: DollarSign, color: 'text-emerald-600' },
+      { label: 'Orders Fulfilled', value: `${ordersFulfilled}`, change: 8.3, icon: Package, color: 'text-blue-600' },
+      { label: 'Items Rescued', value: `${itemsRescued}`, change: 15.2, icon: Leaf, color: 'text-green-600' },
+      { label: 'Waste Reduced', value: `${wasteKg} kg`, change: -3.1, icon: Trash2, color: 'text-orange-600' },
+    ];
+  }, [orders, transactions]);
+
+  const maxSold = Math.max(...topItems.map(i => i.sold), 1);
+  const maxHourly = Math.max(...hourlyData.map(h => h.value), 1);
 
   if (!mounted) return null;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+          <div className="text-gray-900 dark:text-white text-sm font-medium">Loading analytics...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">

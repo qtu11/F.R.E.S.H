@@ -4,15 +4,19 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, PackageSearch, Tag, Wallet, ShoppingCart, BarChart3, Megaphone, Users, Plug, Menu, ArrowLeft, X } from 'lucide-react';
+import { LayoutDashboard, PackageSearch, Tag, Wallet, ShoppingCart, BarChart3, Megaphone, Users, Plug, Menu, ArrowLeft, X, LogOut } from 'lucide-react';
 import Image from 'next/image';
 import { useGlobal } from '@/app/providers';
+import { useAuth } from '@/app/contexts/AuthContext';
 
 export function PartnerNavigation() {
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useGlobal();
+  const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showLogoutMobile, setShowLogoutMobile] = useState(false);
+  const [showLogoutDesktop, setShowLogoutDesktop] = useState(false);
 
   const navItems = [
     { icon: LayoutDashboard, label: t('dashboard'), href: '/partner' },
@@ -25,6 +29,14 @@ export function PartnerNavigation() {
     { icon: Plug, label: t('integration'), href: '/partner/integration' },
     { icon: Wallet, label: t('finance'), href: '/partner/finance' },
   ];
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/partner/login');
+  };
+
+  const displayName = user?.name || 'WinMart+ D1';
+  const initialLetter = displayName.charAt(0).toUpperCase() || 'P';
 
   return (
     <>
@@ -76,13 +88,40 @@ export function PartnerNavigation() {
                   );
                 })}
               </nav>
-              <div className="p-4 border-t border-gray-100 dark:border-slate-800">
-                <div className="flex items-center gap-3 bg-gray-50 dark:bg-slate-800 p-3 rounded-2xl">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800/50 overflow-hidden relative shrink-0">
-                    <Image src="https://picsum.photos/seed/store/100/100" alt="Store" fill className="object-cover" unoptimized referrerPolicy="no-referrer" />
+              <div className="p-4 border-t border-gray-100 dark:border-slate-800 relative">
+                {/* Mobile Logout Dropdown Overlay */}
+                {showLogoutMobile && (
+                  <div className="fixed inset-0 z-40" onClick={() => setShowLogoutMobile(false)} />
+                )}
+
+                <AnimatePresence>
+                  {showLogoutMobile && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="absolute bottom-20 left-4 right-4 bg-white dark:bg-slate-850 border border-gray-200 dark:border-slate-800 rounded-2xl p-2 shadow-2xl z-50"
+                    >
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-bold text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-colors cursor-pointer"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Đăng xuất
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div 
+                  onClick={() => setShowLogoutMobile(!showLogoutMobile)}
+                  className="flex items-center gap-3 bg-gray-50 dark:bg-slate-800 p-3 rounded-2xl cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors select-none"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-[#057A42]/20 border border-emerald-250 dark:border-[#057A42]/30 flex items-center justify-center shrink-0">
+                    <span className="text-emerald-700 dark:text-emerald-400 text-sm font-bold">{initialLetter}</span>
                   </div>
                   <div>
-                    <div className="text-sm font-bold text-gray-900 dark:text-white">WinMart+ D1</div>
+                    <div className="text-sm font-bold text-gray-900 dark:text-white">{displayName}</div>
                     <div className="text-xs font-semibold text-[#057A42] dark:text-emerald-400 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Verified
                     </div>
@@ -120,13 +159,40 @@ export function PartnerNavigation() {
           })}
         </nav>
 
-        <div className="p-6 border-t border-gray-100 dark:border-slate-800">
-          <div className="flex items-center gap-3 w-full bg-gray-50 dark:bg-slate-800 p-3 rounded-2xl border border-gray-200 dark:border-slate-700">
-             <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800/50 overflow-hidden relative shrink-0">
-                <Image src="https://picsum.photos/seed/store/100/100" alt="Store" fill className="object-cover" unoptimized referrerPolicy="no-referrer" />
+        <div className="p-6 border-t border-gray-100 dark:border-slate-800 relative">
+          {/* Desktop Logout Dropdown Overlay */}
+          {showLogoutDesktop && (
+            <div className="fixed inset-0 z-40" onClick={() => setShowLogoutDesktop(false)} />
+          )}
+
+          <AnimatePresence>
+            {showLogoutDesktop && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute bottom-20 left-6 right-6 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-1.5 shadow-xl z-50"
+              >
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-colors cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Đăng xuất
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div 
+            onClick={() => setShowLogoutDesktop(!showLogoutDesktop)}
+            className="flex items-center gap-3 w-full bg-gray-50 dark:bg-slate-800 p-3 rounded-2xl border border-gray-200 dark:border-slate-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors select-none"
+          >
+             <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-[#057A42]/20 border border-emerald-250 dark:border-[#057A42]/30 flex items-center justify-center shrink-0">
+                <span className="text-emerald-700 dark:text-emerald-400 text-sm font-bold">{initialLetter}</span>
              </div>
              <div>
-                <div className="text-sm font-bold text-gray-900 dark:text-white">WinMart+ D1</div>
+                <div className="text-sm font-bold text-gray-900 dark:text-white">{displayName}</div>
                 <div className="text-xs font-semibold text-[#057A42] dark:text-emerald-400 flex items-center gap-1">
                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Verified
                 </div>

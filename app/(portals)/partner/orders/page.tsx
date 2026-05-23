@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, ChevronDown, Clock, CheckCircle, Package, Bike, UtensilsCrossed } from 'lucide-react';
+import { Search, ChevronDown, Clock, CheckCircle, Package, Bike, UtensilsCrossed, Loader2 } from 'lucide-react';
 import { useGlobal } from '@/app/providers';
+import { useAuth } from '@/app/contexts/AuthContext';
+import { orderService, Order as ApiOrder } from '@/lib/data/orders';
+import { showToast } from '@/lib/data/notifications';
 
 type OrderStatus = 'pending' | 'preparing' | 'ready' | 'picked_up' | 'completed';
 
@@ -24,20 +27,7 @@ const statusColors: Record<OrderStatus, { bg: string; text: string }> = {
   completed: { bg: 'bg-gray-100', text: 'text-gray-500' },
 };
 
-const mockOrders: Order[] = [
-  { id: 'ORD-001', customer: 'Alice Nguyen', items: ['Banana Bread', 'Iced Coffee'], total: 45000, time: '10:23 AM', status: 'pending' },
-  { id: 'ORD-002', customer: 'Bob Tran', items: ['Avocado Toast', 'Green Smoothie'], total: 62000, time: '10:45 AM', status: 'preparing' },
-  { id: 'ORD-003', customer: 'Carol Le', items: ['Croissant', 'Latte'], total: 35000, time: '11:00 AM', status: 'ready' },
-  { id: 'ORD-004', customer: 'David Pham', items: ['Muffin', 'Hot Chocolate'], total: 28000, time: '11:15 AM', status: 'picked_up' },
-  { id: 'ORD-005', customer: 'Eve Hoang', items: ['Sandwich', 'Cold Brew', 'Cookie'], total: 78000, time: '11:30 AM', status: 'completed' },
-  { id: 'ORD-006', customer: 'Frank Vo', items: ['Bagel', 'Cappuccino'], total: 39000, time: '11:50 AM', status: 'pending' },
-  { id: 'ORD-007', customer: 'Grace Bui', items: ['Panini', 'Lemonade'], total: 52000, time: '12:10 PM', status: 'preparing' },
-  { id: 'ORD-008', customer: 'Henry Dang', items: ['Salad Wrap', 'Iced Tea'], total: 42000, time: '12:30 PM', status: 'pending' },
-  { id: 'ORD-009', customer: 'Ivy Ngo', items: ['Brownie', 'Espresso'], total: 25000, time: '12:45 PM', status: 'ready' },
-  { id: 'ORD-010', customer: 'Jack Vu', items: ['Pizza Slice', 'Soda', 'Fries'], total: 89000, time: '1:00 PM', status: 'picked_up' },
-  { id: 'ORD-011', customer: 'Kim Ly', items: ['Donut', 'Matcha Latte'], total: 32000, time: '1:20 PM', status: 'completed' },
-  { id: 'ORD-012', customer: 'Leo Mai', items: ['Quiche', 'Orange Juice'], total: 48000, time: '1:40 PM', status: 'preparing' },
-];
+
 
 const tabs: { key: OrderStatus | 'all'; icon: typeof Clock }[] = [
   { key: 'all', icon: Clock },
@@ -48,7 +38,7 @@ const tabs: { key: OrderStatus | 'all'; icon: typeof Clock }[] = [
   { key: 'completed', icon: UtensilsCrossed },
 ];
 
-const nextStatus: Record<OrderStatus, OrderStatus | null> = {
+const nextStatus: Record<string, OrderStatus | null> = {
   pending: 'preparing',
   preparing: 'ready',
   ready: 'picked_up',
@@ -56,14 +46,60 @@ const nextStatus: Record<OrderStatus, OrderStatus | null> = {
   completed: null,
 };
 
+const orderStatusMap: Record<string, OrderStatus> = {
+  pending: 'pending',
+  confirmed: 'preparing',
+  preparing: 'preparing',
+  ready: 'ready',
+  in_transit: 'picked_up',
+  delivered: 'completed',
+};
+
+const apiStatusMap: Record<string, string> = {
+  pending: 'pending',
+  preparing: 'preparing',
+  ready: 'ready',
+  picked_up: 'in_transit',
+  completed: 'delivered',
+};
+
+function mapOrder(o: ApiOrder): Order {
+  return {
+    id: o.id,
+    customer: o.storeName || o.userId,
+    items: (o.items || []).map(i => i.productName),
+    total: o.total,
+    time: o.createdAt ? new Date(o.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+    status: orderStatusMap[o.status] || 'pending',
+  };
+}
+
 export default function PartnerOrdersPage() {
   const { t } = useGlobal();
+  const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<OrderStatus | 'all'>('all');
   const [search, setSearch] = useState('');
-  const [orders, setOrders] = useState<Order[]>(mockOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { setMounted(true); }, []);
+  const storeId = user?.storeId || '';
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!storeId) return;
+    setLoading(true);
+    orderService.getByStore(storeId).then(data => {
+      setOrders((data || []).map(mapOrder));
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, [storeId]);
 
   const filtered = orders.filter(o => {
     const matchTab = activeTab === 'all' || o.status === activeTab;
@@ -77,15 +113,30 @@ export default function PartnerOrdersPage() {
     return acc;
   }, {} as Record<string, number>);
 
-  const handleStatusUpdate = (id: string) => {
-    setOrders(prev => prev.map(o => {
-      if (o.id !== id) return o;
-      const next = nextStatus[o.status];
-      return next ? { ...o, status: next } : o;
-    }));
+  const handleStatusUpdate = async (id: string) => {
+    const order = orders.find(o => o.id === id);
+    if (!order) return;
+    const next = nextStatus[order.status];
+    if (!next) return;
+    const apiStatus = apiStatusMap[next] || next;
+    try {
+      await orderService.updateStatus(id, apiStatus as any);
+      setOrders(prev => prev.map(o => o.id === id ? { ...o, status: next } : o));
+    } catch { showToast('error', 'Failed to update status'); }
   };
 
   if (!mounted) return null;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+          <div className="text-gray-900 dark:text-white text-sm font-medium">Loading orders...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">

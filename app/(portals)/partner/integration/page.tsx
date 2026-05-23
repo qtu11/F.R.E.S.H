@@ -6,10 +6,12 @@ import {
   Plug, Key, Copy, Eye, EyeOff, RefreshCw, Webhook,
   CheckCircle, XCircle, AlertCircle, Printer, Database,
   Settings, Code, BookOpen, Clock, ArrowUpRight, Shield,
-  ChevronDown, ChevronUp, Zap
+  ChevronDown, ChevronUp, Zap, Loader2
 } from 'lucide-react';
 import Link from 'next/link';
 import { useGlobal } from '@/app/providers';
+import { useAuth } from '@/app/contexts/AuthContext';
+import { integrationService, Integration, WebhookLog } from '@/lib/data/integrations';
 
 interface IntegrationStatus {
   name: string;
@@ -39,32 +41,34 @@ interface GuideStep {
   code?: string;
 }
 
-const integrations: IntegrationStatus[] = [
-  { name: 'POS System', icon: Plug, status: 'connected', description: 'Square POS v2.1' },
-  { name: 'ERP System', icon: Database, status: 'not-connected', description: 'Not configured' },
-  { name: 'Receipt Printer', icon: Printer, status: 'online', description: 'Epson TM-T20III' },
-  { name: 'Inventory System', icon: Database, status: 'synced', description: 'Last sync: 2 min ago' },
-];
 
-const webhookEvents: WebhookEvent[] = [
-  { id: 'order.created', label: 'order.created', enabled: true },
-  { id: 'order.updated', label: 'order.updated', enabled: true },
-  { id: 'inventory.low', label: 'inventory.low', enabled: false },
-  { id: 'product.expired', label: 'product.expired', enabled: true },
-];
 
-const apiLogs: ApiLogEntry[] = [
-  { id: 'l1', timestamp: '2026-05-16 19:45:12', endpoint: '/api/v1/deals', method: 'GET', status: 200, responseTime: 45 },
-  { id: 'l2', timestamp: '2026-05-16 19:44:58', endpoint: '/api/v1/orders', method: 'POST', status: 201, responseTime: 120 },
-  { id: 'l3', timestamp: '2026-05-16 19:43:30', endpoint: '/api/v1/inventory', method: 'PUT', status: 200, responseTime: 89 },
-  { id: 'l4', timestamp: '2026-05-16 19:42:15', endpoint: '/api/v1/products', method: 'GET', status: 200, responseTime: 32 },
-  { id: 'l5', timestamp: '2026-05-16 19:40:02', endpoint: '/api/v1/orders/abc', method: 'PATCH', status: 400, responseTime: 15 },
-  { id: 'l6', timestamp: '2026-05-16 19:38:44', endpoint: '/api/v1/webhooks/test', method: 'POST', status: 200, responseTime: 200 },
-  { id: 'l7', timestamp: '2026-05-16 19:35:21', endpoint: '/api/v1/analytics', method: 'GET', status: 500, responseTime: 5000 },
-  { id: 'l8', timestamp: '2026-05-16 19:30:10', endpoint: '/api/v1/deals/create', method: 'POST', status: 201, responseTime: 156 },
-  { id: 'l9', timestamp: '2026-05-16 19:28:55', endpoint: '/api/v1/auth/refresh', method: 'POST', status: 200, responseTime: 28 },
-  { id: 'l10', timestamp: '2026-05-16 19:25:00', endpoint: '/api/v1/products/expiring', method: 'GET', status: 200, responseTime: 67 },
-];
+const iconMap: Record<string, typeof Plug> = {
+  pos: Plug,
+  erp: Database,
+  printer: Printer,
+  inventory: Database,
+};
+
+function mapIntegration(item: Integration): IntegrationStatus {
+  return {
+    name: item.name,
+    icon: iconMap[item.type] || Plug,
+    status: (item.status === 'connected' || item.status === 'online' || item.status === 'synced' ? item.status : 'not-connected') as IntegrationStatus['status'],
+    description: item.status === 'connected' ? `Connected ${item.connectedAt ? new Date(item.connectedAt).toLocaleDateString() : ''}` : item.config?.description || 'Not configured',
+  };
+}
+
+function mapLog(log: any): ApiLogEntry {
+  return {
+    id: log.id,
+    timestamp: log.createdAt || '',
+    endpoint: log.event || '/api/unknown',
+    method: 'POST',
+    status: log.status === 'success' ? 200 : 500,
+    responseTime: log.responseTime || 0,
+  };
+}
 
 const posGuide: GuideStep[] = [
   { title: 'Install F.R.E.S.H POS Plugin', description: 'Download and install the plugin from your POS marketplace.', code: 'npm install @fresh-pos/plugin' },
@@ -87,16 +91,51 @@ const printerGuide: GuideStep[] = [
 
 export default function IntegrationPage() {
   const { t } = useGlobal();
+  const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
-  const [webhookUrl, setWebhookUrl] = useState('https://your-server.com/webhooks/fresh');
-  const [events, setEvents] = useState<WebhookEvent[]>(webhookEvents);
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [integrations, setIntegrations] = useState<IntegrationStatus[]>([]);
+  const [events, setEvents] = useState<WebhookEvent[]>([
+    { id: 'order.created', label: 'order.created', enabled: true },
+    { id: 'order.updated', label: 'order.updated', enabled: true },
+    { id: 'inventory.low', label: 'inventory.low', enabled: false },
+    { id: 'product.expired', label: 'product.expired', enabled: true },
+  ]);
+  const [apiLogs, setApiLogs] = useState<ApiLogEntry[]>([]);
+  const [apiKey, setApiKey] = useState('');
   const [openGuides, setOpenGuides] = useState<string | null>('pos');
   const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { setMounted(true); }, []);
+  const storeId = user?.storeId || '';
 
-  const apiKey = 'sk_fresh_live_a8f3k29d0x7m4p1q6w5e';
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!storeId) return;
+    setLoading(true);
+    integrationService.getByStore(storeId).then(data => {
+      const list = data || [];
+      setIntegrations(list.map(mapIntegration));
+
+      if (list.length > 0) {
+        const cfg = list[0].config;
+        if (cfg?.apiKey) setApiKey(cfg.apiKey);
+        if (cfg?.webhookUrl) setWebhookUrl(cfg.webhookUrl);
+      }
+
+      return integrationService.getLogs(storeId);
+    }).then(logs => {
+      setApiLogs((logs || []).slice(0, 10).map(mapLog));
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, [storeId]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(apiKey);
@@ -124,6 +163,17 @@ export default function IntegrationPage() {
   };
 
   if (!mounted) return null;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f0f2f5] dark:bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+          <div className="text-gray-900 dark:text-white text-sm font-medium">Loading integration settings...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f0f2f5] dark:bg-slate-950 pb-20 font-sans transition-colors duration-300">

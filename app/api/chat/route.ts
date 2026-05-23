@@ -4,13 +4,13 @@ export async function POST(req: Request) {
   try {
     const { messages } = await req.json();
 
-    const apiKey = process.env.OPENROUTER_API_KEY || "YOUR_OPENROUTER_API_KEY_HERE";
+    const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: "OpenRouter API key is missing" }, { status: 500 });
+      return NextResponse.json({ error: "OpenRouter API key is not configured" }, { status: 500 });
     }
 
     const payload = {
-      model: "google/gemini-2.0-flash-exp:free",
+      model: "nvidia/nemotron-3-super-120b-a12b:free",
       messages: [
         {
           role: "system",
@@ -39,14 +39,14 @@ Quy tắc hỗ trợ (Support Rules):
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': process.env.APP_URL || 'http://localhost:3000', 
+        'HTTP-Referer': process.env.APP_URL || 'http://localhost:3000',
         'X-Title': 'F.R.E.S.H Platform',
       },
       body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
-        return NextResponse.json({ error: "OpenRouter API error" }, { status: response.status });
+      return NextResponse.json({ error: "OpenRouter API error" }, { status: response.status });
     }
 
     // Pass the stream directly to the client

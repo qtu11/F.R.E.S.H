@@ -42,20 +42,22 @@ export function loadConfig(): SupabaseConfig {
   return envConfig;
 }
 
-export function saveConfig(config: Partial<SupabaseConfig>): SupabaseConfig {
-  const dir = path.dirname(CONFIG_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  const existing = loadConfig();
-  const merged = { ...existing, ...config, configured: true };
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(merged, null, 2), 'utf-8');
-  return merged;
-}
-
 export function getProjectRef(url: string): string {
   const match = url.match(/https?:\/\/([^.]+)\./);
   return match ? match[1] : '';
+}
+
+export function saveConfig(input: Partial<SupabaseConfig>): SupabaseConfig {
+  try {
+    const dir = path.dirname(CONFIG_PATH);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const existing = loadConfig();
+    const merged = { ...existing, ...input, configured: true };
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(merged, null, 2));
+    return merged;
+  } catch {
+    return { ...loadConfig(), ...input, configured: false };
+  }
 }
 
 export function getConnectionString(config: SupabaseConfig): string {

@@ -1,10 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Ticket, Copy, Check, Clock, Gift, Zap, Truck } from 'lucide-react';
+import { Ticket, Copy, Check, Clock, Gift, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGlobal } from '@/app/providers';
+import { useAuth } from '@/app/contexts/AuthContext';
 import { showToast } from '@/lib/data/notifications';
+import { voucherService } from '@/lib/data/vouchers';
+import { transactionService } from '@/lib/data/transactions';
 
 type VoucherTab = 'available' | 'used' | 'expired';
 
@@ -27,28 +30,77 @@ interface Voucher {
   icon: string;
 }
 
-const allVouchers: Voucher[] = [
-  { id: 'v1', code: 'FRESH50', title: '50% OFF Bakery', store: 'WinMart+', discount: '50% OFF', discountValue: 50, minOrder: '50,000đ', expiry: '2026-05-20', status: 'available', icon: '🎂' },
-  { id: 'v2', code: 'GREEN30', title: '30% Off Everything', store: 'Co.opmart', discount: '30% OFF', discountValue: 30, minOrder: '100,000đ', expiry: '2026-05-25', status: 'available', icon: '🛒' },
-  { id: 'v3', code: 'AEON20', title: '20% Off Frozen', store: 'AEON', discount: '20% OFF', discountValue: 20, minOrder: '200,000đ', expiry: '2026-05-18', status: 'available', icon: '❄️' },
-  { id: 'v4', code: 'FREESHIP', title: 'Free Shipping', store: 'All Stores', discount: 'Free Ship', discountValue: 0, minOrder: '30,000đ', expiry: '2026-05-22', status: 'available', icon: '🚚' },
-  { id: 'v5', code: 'WEEKEND20', title: 'Weekend Special 20%', store: 'FamilyMart', discount: '20% OFF', discountValue: 20, minOrder: '0đ', expiry: '2026-05-16', status: 'available', icon: '🎉' },
-  { id: 'v6', code: 'MEGA70', title: '70% Off Selected', store: 'MM Mega Market', discount: '70% OFF', discountValue: 70, minOrder: '150,000đ', expiry: '2026-05-30', status: 'available', icon: '🔥' },
-  { id: 'v7', code: 'BDAY30', title: 'Birthday Voucher', store: 'All Stores', discount: '30% OFF', discountValue: 30, minOrder: '0đ', expiry: '2026-05-10', status: 'used', icon: '🎂' },
-  { id: 'v8', code: 'FRESH20', title: 'Welcome 20% Off', store: 'WinMart+', discount: '20% OFF', discountValue: 20, minOrder: '0đ', expiry: '2026-04-30', status: 'used', icon: '👋' },
-  { id: 'v9', code: 'VIP50', title: 'VIP 50% Off', store: 'All Stores', discount: '50% OFF', discountValue: 50, minOrder: '500,000đ', expiry: '2026-04-15', status: 'expired', icon: '💎' },
-  { id: 'v10', code: 'SPRING25', title: 'Spring Sale 25%', store: 'Lotte Mart', discount: '25% OFF', discountValue: 25, minOrder: '100,000đ', expiry: '2026-04-01', status: 'expired', icon: '🌸' },
-];
-
 export default function CustomerVouchers() {
   const { t } = useGlobal();
+  const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<VoucherTab>('available');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [spentToUnlock, setSpentToUnlock] = useState(50000);
+  const [currentSpend, setCurrentSpend] = useState(0);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    const uid = user?.id || '';
+    transactionService.getByUser(uid).then(txs => {
+      const total = (txs || []).reduce((s: number, tx: any) => s + (tx.amount || 0), 0);
+      setCurrentSpend(total);
+    }).catch(err => {
+      console.error(err);
+    });
+    Promise.all([
+      voucherService.getByUser(uid),
+      voucherService.getAll(),
+    ]).then(([userVouchers, allVouchers]) => {
+      const now = new Date();
+      const claimedIds = new Set(userVouchers.map((uv: any) => uv.voucherId));
+      const mapped: Voucher[] = [
+        ...userVouchers.map((uv: any) => {
+          const v = uv.voucher || {};
+          const isUsed = !!uv.usedAt;
+          const isExpired = v.validUntil && new Date(v.validUntil) < now;
+          const status: VoucherTab = isUsed ? 'used' : isExpired ? 'expired' : 'available';
+          return {
+            id: uv.id,
+            code: v.code || '',
+            title: v.title || 'Voucher',
+            store: v.description || 'All Stores',
+            discount: v.discountValue ? `${v.discountValue}% OFF` : 'Special',
+            discountValue: v.discountValue || 0,
+            minOrder: v.minOrder ? `${v.minOrder.toLocaleString()}đ` : '0đ',
+            expiry: v.validUntil ? new Date(v.validUntil).toLocaleDateString() : 'N/A',
+            status,
+            icon: '🎫',
+          };
+        }),
+        ...allVouchers
+          .filter((v: any) => !claimedIds.has(v.id))
+          .slice(0, 10)
+          .map((v: any) => ({
+            id: v.id,
+            code: v.code || '',
+            title: v.title || 'Voucher',
+            store: v.description || 'All Stores',
+            discount: v.discountValue ? `${v.discountValue}% OFF` : 'Special',
+            discountValue: v.discountValue || 0,
+            minOrder: v.minOrder ? `${v.minOrder.toLocaleString()}đ` : '0đ',
+            expiry: v.validUntil ? new Date(v.validUntil).toLocaleDateString() : 'N/A',
+            status: (v.status === 'expired' ? 'expired' : 'available') as VoucherTab,
+            icon: '🎫',
+          })),
+      ];
+      setVouchers(mapped);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      showToast('error', 'Failed to load vouchers');
+      setLoading(false);
+    });
+  }, [user]);
 
-  const filtered = allVouchers.filter(v => v.status === activeTab);
+  const filtered = vouchers.filter(v => v.status === activeTab);
 
   const copyCode = (voucher: Voucher) => {
     navigator.clipboard.writeText(voucher.code);
@@ -56,9 +108,6 @@ export default function CustomerVouchers() {
     showToast('success', 'Code copied!', `${voucher.code} copied to clipboard.`);
     setTimeout(() => setCopiedId(null), 2000);
   };
-
-  const spentToUnlock = 50000;
-  const currentSpend = 32000;
 
   return (
     <div className="bg-[#f0f2f5] dark:bg-slate-950 min-h-screen pb-20 font-sans transition-colors duration-300">
@@ -102,7 +151,7 @@ export default function CustomerVouchers() {
           ))}
         </div>
 
-        {!mounted ? null : filtered.length === 0 ? (
+        {!mounted || loading ? null : filtered.length === 0 ? (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-slate-800 rounded-3xl p-12 text-center shadow-sm border border-gray-100 dark:border-slate-700">
             <Ticket className="w-16 h-16 mx-auto text-gray-300 dark:text-slate-600 mb-4" />
             <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">No {activeTab} vouchers</h3>

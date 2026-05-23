@@ -13,18 +13,35 @@ export default function CustomerImpact() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    orderService.getByUser(user?.id || 'u1').then(data => {
+    orderService.getByUser(user?.id || '').then(data => {
       setOrders(data.filter(o => o.status === 'delivered'));
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
       setLoading(false);
     });
   }, [user]);
 
+  // ~0.003 kg CO2 per VND spent (estimation constant based on avg food emissions)
   const totalCO2 = orders.reduce((sum, o) => sum + o.total * 0.003, 0);
   const totalFoodSaved = orders.reduce((sum, o) => sum + o.items.reduce((s, i) => s + i.quantity, 0), 0);
+  // ~21 kg CO2 absorbed per mature tree per year (estimation constant)
   const treeEquivalent = Math.round(totalCO2 / 21);
+  // Each rescued item saves ~2 meals (estimation constant based on avg portion size)
   const mealEquivalent = totalFoodSaved * 2;
 
-  const monthlyData = [30, 45, 25, 60, 40, 75];
+  const monthlyData = (() => {
+    const months = Array(6).fill(0);
+    const now = new Date();
+    orders.forEach(o => {
+      const d = new Date(o.createdAt);
+      const monthIndex = now.getMonth() - d.getMonth() + (now.getFullYear() - d.getFullYear()) * 12;
+      if (monthIndex >= 0 && monthIndex < 6) {
+        months[5 - monthIndex] += Math.round(o.total * 0.003); // 0.003 kg CO2/VND estimation
+      }
+    });
+    return months;
+  })();
 
   return (
     <div className="bg-[#f0f2f5] dark:bg-slate-950 min-h-screen pb-20 font-sans transition-colors duration-300">
@@ -86,7 +103,10 @@ export default function CustomerImpact() {
                 ))}
               </div>
               <div className="flex justify-between mt-2 text-[10px] font-bold text-gray-400 dark:text-slate-500">
-                <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span>
+                {Array.from({ length: 6 }, (_, i) => {
+                  const d = new Date(); d.setMonth(d.getMonth() - 5 + i);
+                  return <span key={i}>{d.toLocaleString('en', { month: 'short' })}</span>;
+                })}
               </div>
             </div>
 

@@ -15,23 +15,38 @@ export default function AdminPartners() {
 
   useEffect(() => {
     partnerService.getAll().then(data => {
-      setPartners(data);
+      setPartners(data || []);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
       setLoading(false);
     });
   }, []);
 
   const handleApprove = async (id: string) => {
-    await partnerService.approve(id);
-    setPartners(prev => prev.map(p => p.id === id ? { ...p, status: 'approved', approvedAt: new Date().toISOString() } : p));
-    setConfirmAction(null);
-    showToast('success', 'Partner Approved', 'The partner has been approved successfully');
+    try {
+      await partnerService.approve(id);
+      setPartners(prev => prev.map(p => p.id === id ? { ...p, status: 'approved', approvedAt: new Date().toISOString() } : p));
+      setConfirmAction(null);
+      showToast('success', 'Partner Approved', 'The partner has been approved successfully');
+    } catch (err) {
+      console.error(err);
+      showToast('error', 'Error', 'Failed to approve partner');
+      setConfirmAction(null);
+    }
   };
 
   const handleReject = async (id: string) => {
-    await partnerService.reject(id);
-    setPartners(prev => prev.map(p => p.id === id ? { ...p, status: 'rejected' } : p));
-    setConfirmAction(null);
-    showToast('info', 'Partner Rejected', 'The partner request has been rejected');
+    try {
+      await partnerService.reject(id);
+      setPartners(prev => prev.map(p => p.id === id ? { ...p, status: 'rejected' } : p));
+      setConfirmAction(null);
+      showToast('info', 'Partner Rejected', 'The partner request has been rejected');
+    } catch (err) {
+      console.error(err);
+      showToast('error', 'Error', 'Failed to reject partner');
+      setConfirmAction(null);
+    }
   };
 
   const pending = partners.filter(p => p.status === 'pending');

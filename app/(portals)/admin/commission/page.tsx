@@ -2,46 +2,52 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { DollarSign, CreditCard, TrendingUp, Percent, Download, CheckCircle, Filter, BarChart3, FileText } from 'lucide-react';
+import { DollarSign, CreditCard, TrendingUp, Percent, Download, CheckCircle, Filter, BarChart3, FileText, Loader2 } from 'lucide-react';
 import { useGlobal } from '@/app/providers';
+import { adminService } from '@/lib/data/admin';
 
 const MONTHS = ['Dec', 'Nov', 'Oct', 'Sep', 'Aug', 'Jul'];
-const MONTHLY_REVENUE = [142000000, 128000000, 156000000, 138000000, 145000000, 132000000];
-
-const TRANSACTIONS = [
-  { id: 'TXN-001', store: 'Bakery Delights', earned: 12500000, fee: 1875000, net: 10625000, status: 'Paid', date: '2026-05-15' },
-  { id: 'TXN-002', store: 'Green Garden Produce', earned: 8900000, fee: 1335000, net: 7565000, status: 'Pending', date: '2026-05-14' },
-  { id: 'TXN-003', store: 'Pho Express', earned: 15200000, fee: 2280000, net: 12920000, status: 'Pending', date: '2026-05-13' },
-  { id: 'TXN-004', store: 'Saigon Seafood', earned: 6700000, fee: 1005000, net: 5695000, status: 'Paid', date: '2026-05-12' },
-  { id: 'TXN-005', store: 'Organic Market', earned: 20400000, fee: 3060000, net: 17340000, status: 'Pending', date: '2026-05-11' },
-  { id: 'TXN-006', store: 'Bun Bo Hue Central', earned: 9800000, fee: 1470000, net: 8330000, status: 'Paid', date: '2026-05-10' },
-  { id: 'TXN-007', store: 'Tropical Smoothies', earned: 4500000, fee: 675000, net: 3825000, status: 'Pending', date: '2026-05-09' },
-  { id: 'TXN-008', store: 'Dim Sum House', earned: 17600000, fee: 2640000, net: 14960000, status: 'Paid', date: '2026-05-08' },
-  { id: 'TXN-009', store: 'Coffee & Tea Co.', earned: 3200000, fee: 480000, net: 2720000, status: 'Pending', date: '2026-05-07' },
-];
-
-const INVOICES = [
-  { id: 'INV-2026-001', store: 'Bakery Delights', amount: 10625000, period: 'April 2026', issued: '2026-05-01' },
-  { id: 'INV-2026-002', store: 'Saigon Seafood', amount: 5695000, period: 'April 2026', issued: '2026-05-01' },
-  { id: 'INV-2026-003', store: 'Bun Bo Hue Central', amount: 8330000, period: 'April 2026', issued: '2026-05-01' },
-  { id: 'INV-2026-004', store: 'Dim Sum House', amount: 14960000, period: 'April 2026', issued: '2026-05-01' },
-];
 
 const FILTERS = ['All', 'Pending', 'Paid'];
-const maxRev = Math.max(...MONTHLY_REVENUE);
 
 function formatVND(n: number) {
   return n.toLocaleString('vi-VN') + 'đ';
 }
 
+function compactVND(n: number): string {
+  if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(1) + 'B₫';
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(0) + 'M₫';
+  if (n >= 1_000) return (n / 1_000).toFixed(0) + 'K₫';
+  return n.toLocaleString('vi-VN') + '₫';
+}
+
 export default function AdminCommission() {
   const { t } = useGlobal();
   const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
-  const [transactions, setTransactions] = useState(TRANSACTIONS);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [monthlyRevenue, setMonthlyRevenue] = useState<number[]>([]);
   const [feeRate, setFeeRate] = useState(15);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    setLoading(true);
+    adminService.getCommission().then(data => {
+      if (!data) {
+        setLoading(false);
+        return;
+      }
+      if (Array.isArray(data.transactions)) setTransactions(data.transactions);
+      if (Array.isArray(data.invoices)) setInvoices(data.invoices);
+      if (Array.isArray(data.monthlyRevenue)) setMonthlyRevenue(data.monthlyRevenue);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, []);
 
   const filtered = transactions.filter(tx => {
     if (filter === 'Pending') return tx.status === 'Pending';
@@ -53,11 +59,36 @@ export default function AdminCommission() {
   const totalPaid = transactions.filter(tx => tx.status === 'Paid').reduce((s, tx) => s + tx.net, 0);
   const revenueThisMonth = transactions.reduce((s, tx) => s + tx.fee, 0);
 
-  const handleMarkPaid = (id: string) => {
-    setTransactions(prev => prev.map(tx => tx.id === id ? { ...tx, status: 'Paid' as const } : tx));
+  const maxRev = Math.max(...monthlyRevenue, 1);
+  const hasRevenueData = monthlyRevenue.length > 0;
+  const yLabels = hasRevenueData
+    ? (() => {
+        const order = Math.pow(10, Math.floor(Math.log10(maxRev)));
+        const ceiling = Math.ceil(maxRev / order) * order;
+        const step = ceiling / 4;
+        return Array.from({ length: 5 }, (_, i) => Math.round(step * (4 - i)));
+      })()
+    : null;
+
+  const handleMarkPaid = async (id: string) => {
+    try {
+      await adminService.updateInvoice(id, { status: 'Paid' });
+      setTransactions(prev => prev.map(tx => tx.id === id ? { ...tx, status: 'Paid' as const } : tx));
+    } catch { /* ignore */ }
   };
 
   if (!mounted) return null;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0A0F1C] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+          <div className="text-slate-300 text-sm font-medium">Loading commission reports...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#f0f2f5] dark:bg-slate-950 min-h-screen pb-20 font-sans transition-colors duration-300">
@@ -112,10 +143,10 @@ export default function AdminCommission() {
             </div>
             <div className="relative h-48">
               <div className="absolute left-0 top-0 bottom-8 w-10 flex flex-col justify-between text-[10px] text-gray-400 dark:text-slate-500 font-bold items-end pr-2">
-                <span>200M</span><span>150M</span><span>100M</span><span>50M</span><span>0</span>
+                {hasRevenueData ? yLabels!.map(v => <span key={v}>{compactVND(v)}</span>) : <><span>—</span><span>—</span><span>—</span><span>—</span><span>—</span></>}
               </div>
               <div className="absolute left-10 right-0 top-0 bottom-8 flex items-end justify-around gap-2">
-                {MONTHLY_REVENUE.map((val, i) => (
+                {monthlyRevenue.map((val, i) => (
                   <div key={i} className="w-full flex flex-col items-center gap-1 group">
                     <span className="text-[8px] font-bold text-gray-400 dark:text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">{formatVND(val)}</span>
                     <motion.div
@@ -136,7 +167,7 @@ export default function AdminCommission() {
               <FileText className="w-4 h-5 text-slate-600 dark:text-slate-400" /> Recent Invoices
             </h3>
             <div className="space-y-3">
-              {INVOICES.map(inv => (
+              {invoices.map(inv => (
                 <div key={inv.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-900/50 rounded-2xl border border-gray-100 dark:border-slate-700">
                   <div>
                     <div className="text-xs font-bold text-gray-900 dark:text-white">{inv.store}</div>

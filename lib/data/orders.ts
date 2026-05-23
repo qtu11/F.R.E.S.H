@@ -36,14 +36,19 @@ export interface Order {
 async function api(path: string, options?: RequestInit) {
   const res = await fetch(`/api${path}`, {
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     ...options,
   });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || 'Request failed');
+  }
   return res.json();
 }
 
 export const orderService = {
   async getByUser(userId: string): Promise<Order[]> {
-    return api(`/orders/by-user?userId=${userId}`);
+    return api(`/orders/by-user?userId=${encodeURIComponent(userId)}`);
   },
 
   async getById(id: string): Promise<Order | undefined> {
@@ -52,12 +57,11 @@ export const orderService = {
   },
 
   async getByStore(storeId: string): Promise<Order[]> {
-    return api(`/orders/by-store?storeId=${storeId}`);
+    return api(`/orders/by-store?storeId=${encodeURIComponent(storeId)}`);
   },
 
   async getByStatus(status: OrderStatus): Promise<Order[]> {
-    const all = await api('/orders');
-    return (all || []).filter((o: Order) => o.status === status);
+    return api(`/orders?status=${encodeURIComponent(status)}`);
   },
 
   async create(order: Omit<Order, 'id' | 'createdAt' | 'status' | 'estimatedDelivery' | 'trackingSteps'>): Promise<Order> {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ShieldAlert, AlertTriangle, Terminal, Map as MapIcon, RefreshCw, ChevronRight, Search } from 'lucide-react';
+import { ShieldAlert, AlertTriangle, Terminal, Map as MapIcon, RefreshCw, ChevronRight, Search, Loader2 } from 'lucide-react';
 import { useGlobal } from '@/app/providers';
 import { alertService, FraudAlert } from '@/lib/data/alerts';
 import { showToast } from '@/lib/data/notifications';
@@ -13,8 +13,12 @@ export default function AdminFraud() {
   const [selectedAlert, setSelectedAlert] = useState<FraudAlert | null>(null);
 
   useEffect(() => {
+    setLoading(true);
     alertService.getFraudAlerts().then(data => {
-      setAlerts(data);
+      setAlerts(data || []);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
       setLoading(false);
     });
   }, []);
@@ -27,9 +31,12 @@ export default function AdminFraud() {
   const handleRefresh = () => {
     setLoading(true);
     alertService.getFraudAlerts().then(data => {
-      setAlerts(data);
+      setAlerts(data || []);
       setLoading(false);
       showToast('success', 'Alerts Refreshed');
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
     });
   };
 
@@ -39,6 +46,17 @@ export default function AdminFraud() {
     High: 'bg-red-50 dark:bg-red-900/30 text-red-600',
     Critical: 'bg-red-100 dark:bg-red-900/50 text-red-700 animate-pulse',
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0A0F1C] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+          <div className="text-slate-300 text-sm font-medium">Scanning for anomalous platform activity...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#f0f2f5] dark:bg-slate-950 min-h-screen pb-20 font-sans transition-colors duration-300">
@@ -68,12 +86,19 @@ export default function AdminFraud() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <div className="text-emerald-400">[DEBUG] Initializing Anomaly Scanner...</div>
-              <div className="text-emerald-400">[INFO] Pattern matching against 15.4k transactions...</div>
-              <div className="text-yellow-400 font-bold">[WARN] Potential Sybil Attack detected at store_id: 8829</div>
-              <div className="text-red-500 font-black animate-pulse">[FATAL] High Frequency Vulnerability triggered (Score: 98)</div>
-              <div className="text-emerald-400">[INFO] Blocking IP: 112.44.55.xxx...</div>
-              <div className="text-emerald-400">[INFO] Session terminated for uid: user_88219</div>
+              {alerts.length === 0 ? (
+                <div className="text-slate-500">No active alerts. System nominal.</div>
+              ) : (
+                alerts.slice(0, 5).map((alert, i) => (
+                  <div key={alert.id} className={
+                    alert.risk === 'Critical' ? 'text-red-500 font-black animate-pulse' :
+                    alert.risk === 'High' ? 'text-yellow-400 font-bold' :
+                    'text-emerald-400'
+                  }>
+                    [{alert.risk === 'Critical' ? 'FATAL' : alert.risk === 'High' ? 'WARN' : 'INFO'}] {alert.type} - Score: {alert.score} | {alert.store}
+                  </div>
+                ))
+              )}
               <div className="text-slate-500 animate-pulse mt-4">_</div>
             </div>
           </div>

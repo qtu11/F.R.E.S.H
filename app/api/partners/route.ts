@@ -2,9 +2,13 @@ import { NextResponse } from 'next/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { handleError } from '@/lib/supabase/helpers';
 import { toCamelCase, toSnakeCase } from '@/lib/supabase/transform';
+import { requireRole } from '@/lib/auth/middleware';
 
 export async function GET() {
   try {
+    const auth = await requireRole('admin');
+    if ('status' in auth) return auth;
+
     const supabase = getServerClient();
     if (!supabase) return NextResponse.json({ error: 'Not configured' }, { status: 503 });
 
@@ -16,6 +20,9 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   try {
+    const auth = await requireRole('admin');
+    if ('status' in auth) return auth;
+
     const supabase = getServerClient();
     if (!supabase) return NextResponse.json({ error: 'Not configured' }, { status: 503 });
 

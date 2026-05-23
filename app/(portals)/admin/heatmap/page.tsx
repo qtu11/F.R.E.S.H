@@ -2,54 +2,66 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Map, Layers, TrendingUp, Leaf, TriangleAlert, Award, AlertTriangle } from 'lucide-react';
+import { Map, Layers, TrendingUp, Leaf, TriangleAlert, Award, AlertTriangle, Loader2 } from 'lucide-react';
 import { useGlobal } from '@/app/providers';
-
-const DISTRICTS = [
-  { name: 'District 1', orders: 12540, waste: 145, rescueRate: 92, lat: 10.7769, lng: 106.7009 },
-  { name: 'District 2', orders: 8930, waste: 112, rescueRate: 78, lat: 10.7933, lng: 106.7494 },
-  { name: 'District 3', orders: 10780, waste: 89, rescueRate: 85, lat: 10.7797, lng: 106.6917 },
-  { name: 'District 7', orders: 15420, waste: 76, rescueRate: 95, lat: 10.7373, lng: 106.7261 },
-  { name: 'Binh Thanh', orders: 9670, waste: 134, rescueRate: 72, lat: 10.8038, lng: 106.7079 },
-  { name: 'Thu Duc', orders: 11230, waste: 62, rescueRate: 88, lat: 10.8536, lng: 106.7623 },
-  { name: 'Tan Binh', orders: 6850, waste: 48, rescueRate: 81, lat: 10.8021, lng: 106.6469 },
-  { name: 'Phu Nhuan', orders: 7940, waste: 35, rescueRate: 90, lat: 10.7967, lng: 106.6787 },
-  { name: 'Go Vap', orders: 5430, waste: 28, rescueRate: 86, lat: 10.8378, lng: 106.6648 },
-  { name: 'District 5', orders: 4560, waste: 52, rescueRate: 74, lat: 10.7558, lng: 106.6613 },
-];
-
-const MAX_WASTE = Math.max(...DISTRICTS.map(d => d.waste));
-const MIN_WASTE = Math.min(...DISTRICTS.map(d => d.waste));
-
-function getWasteColor(waste: number): string {
-  const ratio = (waste - MIN_WASTE) / (MAX_WASTE - MIN_WASTE);
-  if (ratio < 0.33) return 'bg-green-100 dark:bg-green-900/20 border-green-200 dark:border-green-800/30';
-  if (ratio < 0.66) return 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800/30';
-  return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/30';
-}
-
-function getWasteDot(waste: number): string {
-  const ratio = (waste - MIN_WASTE) / (MAX_WASTE - MIN_WASTE);
-  if (ratio < 0.33) return 'bg-green-500';
-  if (ratio < 0.66) return 'bg-yellow-500';
-  return 'bg-red-500';
-}
+import { adminService } from '@/lib/data/admin';
 
 export default function AdminHeatmap() {
   const { t } = useGlobal();
   const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [districts, setDistricts] = useState<any[]>([]);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    setLoading(true);
+    adminService.getHeatmap().then(data => {
+      if (Array.isArray(data)) setDistricts(data);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, []);
 
-  const sortedByRescue = [...DISTRICTS].sort((a, b) => b.rescueRate - a.rescueRate);
-  const sortedByWaste = [...DISTRICTS].sort((a, b) => b.waste - a.waste);
+  const wasteValues = districts.map(d => d.waste || 0);
+  const MAX_WASTE = Math.max(...wasteValues, 1);
+  const MIN_WASTE = Math.min(...wasteValues, 0);
+
+  function getWasteColor(waste: number): string {
+    const ratio = (waste - MIN_WASTE) / (MAX_WASTE - MIN_WASTE);
+    if (ratio < 0.33) return 'bg-green-100 dark:bg-green-900/20 border-green-200 dark:border-green-800/30';
+    if (ratio < 0.66) return 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800/30';
+    return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/30';
+  }
+
+  function getWasteDot(waste: number): string {
+    const ratio = (waste - MIN_WASTE) / (MAX_WASTE - MIN_WASTE);
+    if (ratio < 0.33) return 'bg-green-500';
+    if (ratio < 0.66) return 'bg-yellow-500';
+    return 'bg-red-500';
+  }
+
+  const sortedByRescue = [...districts].sort((a, b) => (b.rescueRate || 0) - (a.rescueRate || 0));
+  const sortedByWaste = [...districts].sort((a, b) => (b.waste || 0) - (a.waste || 0));
   const top5Rescue = sortedByRescue.slice(0, 5);
   const bottom5Waste = sortedByWaste.slice(-5).reverse();
-  const totalOrders = DISTRICTS.reduce((s, d) => s + d.orders, 0);
-  const avgRescue = Math.round(DISTRICTS.reduce((s, d) => s + d.rescueRate, 0) / DISTRICTS.length);
-  const totalSaved = DISTRICTS.reduce((s, d) => s + d.orders, 0) * 2.5;
+  const totalOrders = districts.reduce((s, d) => s + (d.orders || 0), 0);
+  const avgRescue = districts.length ? Math.round(districts.reduce((s, d) => s + (d.rescueRate || 0), 0) / districts.length) : 0;
+  const totalSaved = districts.reduce((s, d) => s + (d.orders || 0), 0) * 2.5;
 
   if (!mounted) return null;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0A0F1C] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+          <div className="text-slate-300 text-sm font-medium">Generating regional activity heatmap...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#f0f2f5] dark:bg-slate-950 min-h-screen pb-20 font-sans transition-colors duration-300">
@@ -59,7 +71,7 @@ export default function AdminHeatmap() {
             <Map className="w-6 h-6" /> Heatmap & GIS
           </h1>
           <div className="bg-white/10 px-5 py-2.5 rounded-xl text-white text-xs font-bold border border-white/10 backdrop-blur-md flex items-center gap-2">
-            <Layers className="w-3 h-3" /> {DISTRICTS.length} Districts
+            <Layers className="w-3 h-3" /> {districts.length} Districts
           </div>
         </div>
       </div>
@@ -83,7 +95,7 @@ export default function AdminHeatmap() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-          {DISTRICTS.map((district, i) => (
+          {districts.map((district, i) => (
             <motion.div
               key={district.name}
               initial={{ opacity: 0, y: 20 }}

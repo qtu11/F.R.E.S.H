@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Zap, TrendingUp, BarChart3, Info, PlayCircle, Settings, PauseCircle, ArrowUp, ArrowDown, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Zap, TrendingUp, BarChart3, Info, PlayCircle, Settings, PauseCircle, ArrowUp, ArrowDown, Clock, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useGlobal } from '@/app/providers';
+import { useAuth } from '@/app/contexts/AuthContext';
+import { productService, Product } from '@/lib/data/products';
 import { showToast } from '@/lib/data/notifications';
 
 interface PriceItem {
@@ -11,30 +13,29 @@ interface PriceItem {
   name: string;
   originalPrice: number;
   aiPrice: number;
-  confidence: number;
+  confidence: number | null;
   expiryHours: number;
-  demand: 'high' | 'medium' | 'low';
-  trend: 'up' | 'down' | 'stable';
+  demand: string | null;
+  trend: string | null;
   stock: number;
 }
 
-const priceItems: PriceItem[] = [
-  { id: '1', name: 'Bánh Mì Thịt Nguội', originalPrice: 25000, aiPrice: 12500, confidence: 97, expiryHours: 2, demand: 'high', trend: 'down', stock: 8 },
-  { id: '2', name: 'Rau Củ Tổng Hợp', originalPrice: 45000, aiPrice: 18000, confidence: 94, expiryHours: 4, demand: 'medium', trend: 'stable', stock: 15 },
-  { id: '3', name: 'Sữa Tươi Vinamilk 1L', originalPrice: 32000, aiPrice: 16000, confidence: 99, expiryHours: 6, demand: 'high', trend: 'down', stock: 20 },
-  { id: '4', name: 'Kem Tràng Tiền Vanilla', originalPrice: 55000, aiPrice: 33000, confidence: 91, expiryHours: 12, demand: 'low', trend: 'up', stock: 5 },
-  { id: '5', name: 'Gà Rán KFC Combo', originalPrice: 89000, aiPrice: 44500, confidence: 96, expiryHours: 1, demand: 'high', trend: 'down', stock: 3 },
-  { id: '6', name: 'Pizza Pepperoni Slice', originalPrice: 65000, aiPrice: 32500, confidence: 88, expiryHours: 3, demand: 'medium', trend: 'stable', stock: 10 },
-];
-
-const chartData = [
-  { hour: '08:00', aiPrice: 22000, fixedPrice: 25000, sales: 12 },
-  { hour: '10:00', aiPrice: 18000, fixedPrice: 25000, sales: 28 },
-  { hour: '12:00', aiPrice: 15000, fixedPrice: 25000, sales: 45 },
-  { hour: '14:00', aiPrice: 12000, fixedPrice: 25000, sales: 38 },
-  { hour: '16:00', aiPrice: 10000, fixedPrice: 25000, sales: 52 },
-  { hour: '18:00', aiPrice: 8000, fixedPrice: 25000, sales: 61 },
-];
+function mapToPriceItem(p: Product): PriceItem {
+  const expiryDate = p.expiry ? new Date(p.expiry) : new Date();
+  const now = new Date();
+  const expiryHours = Math.max(0, Math.round((expiryDate.getTime() - now.getTime()) / 3600000));
+  return {
+    id: p.id,
+    name: p.name,
+    originalPrice: p.originalPrice,
+    aiPrice: p.aiPrice,
+    confidence: p.rescuedScore ?? null,
+    expiryHours,
+    demand: null,
+    trend: null,
+    stock: p.stock,
+  };
+}
 
 function ExpiryBar({ hours }: { hours: number }) {
   const { t } = useGlobal();
@@ -62,21 +63,76 @@ function ExpiryBar({ hours }: { hours: number }) {
 
 export default function PartnerPricing() {
   const { t, lang } = useGlobal();
+  const { user } = useAuth();
   const [autoPilot, setAutoPilot] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const [priceItems, setPriceItems] = useState<PriceItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { setMounted(true); }, []);
+  const storeId = user?.storeId || '';
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!storeId) return;
+    setLoading(true);
+    productService.getByStore(storeId).then(data => {
+      setPriceItems((data || []).filter(p => p.status === 'live').map(mapToPriceItem));
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, [storeId]);
 
   const handleToggleAutoPilot = () => {
     setAutoPilot(!autoPilot);
     showToast(autoPilot ? 'warning' : 'success', autoPilot ? 'Auto-Pilot Disabled' : 'Auto-Pilot Enabled', autoPilot ? 'AI pricing paused' : 'AI pricing is now active');
   };
 
+  const chartData = useMemo(() => {
+    const sorted = [...priceItems].sort((a, b) => a.expiryHours - b.expiryHours);
+    return sorted.slice(0, 6).map((item, i) => ({
+      hour: `${8 + i * 2}:00`.padStart(5, '0'),
+      aiPrice: item.aiPrice,
+      fixedPrice: item.originalPrice,
+      sales: Math.max(1, item.stock * (i + 1)),
+    }));
+  }, [priceItems]);
+
   const totalRevenue = chartData.reduce((sum, d) => sum + d.aiPrice * d.sales, 0);
   const fixedRevenue = chartData.reduce((sum, d) => sum + d.fixedPrice * d.sales, 0);
-  const revenueLift = ((totalRevenue - fixedRevenue) / fixedRevenue * 100).toFixed(1);
-  const avgConfidence = Math.round(priceItems.reduce((sum, p) => sum + p.confidence, 0) / priceItems.length);
+  const revenueLift = fixedRevenue > 0 ? ((totalRevenue - fixedRevenue) / fixedRevenue * 100).toFixed(1) : '0.0';
+  const validConfidences = priceItems.filter(p => p.confidence != null).map(p => p.confidence as number);
+  const avgConfidence = validConfidences.length > 0 ? Math.round(validConfidences.reduce((sum, c) => sum + c, 0) / validConfidences.length) : null;
+
+  const chartPaths = useMemo(() => {
+    if (chartData.length < 2) return { ai: 'M 0 35 L 100 5', fixed: 'M 0 35 L 100 35' };
+    const maxPrice = Math.max(...chartData.flatMap(d => [d.aiPrice, d.fixedPrice]), 1);
+    const vbH = 40;
+    const pad = 5;
+    const range = vbH - pad * 2;
+    const step = 100 / (chartData.length - 1);
+    const toPath = (key: 'aiPrice' | 'fixedPrice') =>
+      chartData.map((d, i) => `${i === 0 ? 'M' : 'L'} ${(i * step).toFixed(1)} ${(vbH - pad - (d[key] / maxPrice) * range).toFixed(1)}`).join(' ');
+    return { ai: toPath('aiPrice'), fixed: toPath('fixedPrice') };
+  }, [chartData]);
+
+  if (!mounted) return null;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+          <div className="text-gray-900 dark:text-white text-sm font-medium">Loading pricing data...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#f0f2f5] dark:bg-slate-950 min-h-screen pb-20 font-sans transition-colors duration-300">
@@ -121,7 +177,7 @@ export default function PartnerPricing() {
               <Info className="w-4 h-4 text-gray-300 dark:text-slate-600" />
             </div>
             <div className="text-gray-500 dark:text-slate-400 text-xs font-bold uppercase mb-1">{t('ai_confidence')}</div>
-            <div className="text-black dark:text-white font-black text-3xl">{avgConfidence}%</div>
+            <div className="text-black dark:text-white font-black text-3xl">{avgConfidence != null ? `${avgConfidence}%` : '\u2014'}</div>
           </div>
 
           <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 transition-all">
@@ -132,7 +188,7 @@ export default function PartnerPricing() {
               <Info className="w-4 h-4 text-gray-300 dark:text-slate-600" />
             </div>
             <div className="text-gray-500 dark:text-slate-400 text-xs font-bold uppercase mb-1">{lang === 'vi' ? 'Tối ưu hóa' : 'Optimizations'}</div>
-            <div className="text-black dark:text-white font-black text-3xl">1,240</div>
+            <div className="text-black dark:text-white font-black text-3xl">{priceItems.length}</div>
           </div>
         </div>
 
@@ -171,7 +227,7 @@ export default function PartnerPricing() {
                       </div>
                       <div className="flex items-center justify-end gap-1.5 mt-0.5">
                         <span className="text-[10px] font-bold bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-2 py-0.5 rounded-full">-{discount}%</span>
-                        <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500">{item.confidence}% AI</span>
+                        <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500">{item.confidence != null ? `${item.confidence}% AI` : '\u2014'}</span>
                       </div>
                     </div>
                   </div>
@@ -185,24 +241,23 @@ export default function PartnerPricing() {
                       </div>
                       <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3">
                         <div className="text-[10px] text-gray-400 dark:text-slate-500 font-bold uppercase">{lang === 'vi' ? 'Nhu cầu' : 'Demand'}</div>
-                        <div className={`text-sm font-black ${item.demand === 'high' ? 'text-red-500' : item.demand === 'medium' ? 'text-orange-500' : 'text-green-500'}`}>
-                          {item.demand === 'high' ? (lang === 'vi' ? 'Cao' : 'High') : item.demand === 'medium' ? (lang === 'vi' ? 'TB' : 'Medium') : (lang === 'vi' ? 'Thấp' : 'Low')}
+                        <div className="text-sm font-black text-gray-400">
+                          {item.demand ?? '\u2014'}
                         </div>
                       </div>
                       <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3">
                         <div className="text-[10px] text-gray-400 dark:text-slate-500 font-bold uppercase">{lang === 'vi' ? 'Xu hướng' : 'Trend'}</div>
                         <div className="flex items-center gap-1">
-                          {item.trend === 'up' ? <ArrowUp className="w-4 h-4 text-green-500" /> : item.trend === 'down' ? <ArrowDown className="w-4 h-4 text-red-500" /> : <div className="w-4 h-0.5 bg-gray-400" />}
-                          <span className={`text-sm font-black ${item.trend === 'up' ? 'text-green-500' : item.trend === 'down' ? 'text-red-500' : 'text-gray-400'}`}>
-                            {item.trend === 'up' ? (lang === 'vi' ? 'Tăng' : 'Up') : item.trend === 'down' ? (lang === 'vi' ? 'Giảm' : 'Down') : (lang === 'vi' ? 'Ổn định' : 'Stable')}
+                          <span className="text-sm font-black text-gray-400">
+                            {item.trend ?? '\u2014'}
                           </span>
                         </div>
                       </div>
                       <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3">
                         <div className="text-[10px] text-gray-400 dark:text-slate-500 font-bold uppercase">{t('ai_confidence')}</div>
                         <div className="flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 text-emerald-500" />
-                          <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">{item.confidence}%</span>
+                          {item.confidence != null ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : null}
+                          <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">{item.confidence != null ? `${item.confidence}%` : '\u2014'}</span>
                         </div>
                       </div>
                     </motion.div>
@@ -229,8 +284,8 @@ export default function PartnerPricing() {
 
           <div className="relative flex-1 border-l-2 border-b-2 border-gray-100 dark:border-slate-700 mt-4 mb-8">
             <svg viewBox="0 0 100 40" className="w-full h-full preserve-3d" preserveAspectRatio="none">
-              <path d="M 0 35 L 20 28 L 40 32 L 60 15 L 80 18 L 100 5" fill="none" stroke="#057A42" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-              <path d="M 0 35 L 100 35" fill="none" stroke="#e2e8f0" strokeWidth="0.5" vectorEffect="non-scaling-stroke" strokeDasharray="4 4" />
+              <path d={chartPaths.ai} fill="none" stroke="#057A42" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+              <path d={chartPaths.fixed} fill="none" stroke="#e2e8f0" strokeWidth="0.5" vectorEffect="non-scaling-stroke" strokeDasharray="4 4" />
             </svg>
             <div className="absolute inset-0 flex justify-around items-end pt-4 pb-1">
               {chartData.map((d, i) => (

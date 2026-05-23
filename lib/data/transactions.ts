@@ -17,18 +17,23 @@ export interface Transaction {
 async function api(path: string, options?: RequestInit) {
   const res = await fetch(`/api${path}`, {
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     ...options,
   });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || 'Request failed');
+  }
   return res.json();
 }
 
 export const transactionService = {
   async getByUser(userId: string): Promise<Transaction[]> {
-    return api(`/transactions?userId=${userId}`);
+    return api(`/transactions?userId=${encodeURIComponent(userId)}`);
   },
 
   async getBalance(userId: string): Promise<number> {
-    return api(`/transactions/balance?userId=${userId}`);
+    return api(`/transactions/balance?userId=${encodeURIComponent(userId)}`);
   },
 
   async addTransaction(tx: Omit<Transaction, 'id'>): Promise<Transaction> {
@@ -43,17 +48,21 @@ export const transactionService = {
   },
 
   async getByType(type: TransactionType): Promise<Transaction[]> {
-    return api(`/transactions?type=${type}`);
+    return api(`/transactions?type=${encodeURIComponent(type)}`);
   },
 
   async getStats(): Promise<any> {
-    const all = await api('/transactions');
-    const arr = all || [];
-    return {
-      totalRevenue: arr.filter((t: Transaction) => t.type === 'revenue' && t.status === 'completed').reduce((s: number, t: Transaction) => s + t.amount, 0),
-      totalWithdrawals: Math.abs(arr.filter((t: Transaction) => t.type === 'withdrawal' && t.status === 'completed').reduce((s: number, t: Transaction) => s + t.amount, 0)),
-      totalTopups: arr.filter((t: Transaction) => t.type === 'topup' && t.status === 'completed').reduce((s: number, t: Transaction) => s + t.amount, 0),
-      pendingCount: arr.filter((t: Transaction) => t.status === 'pending').length,
-    };
+    try {
+      const all = await api('/transactions');
+      const arr = all || [];
+      return {
+        totalRevenue: arr.filter((t: Transaction) => t.type === 'revenue' && t.status === 'completed').reduce((s: number, t: Transaction) => s + t.amount, 0),
+        totalWithdrawals: Math.abs(arr.filter((t: Transaction) => t.type === 'withdrawal' && t.status === 'completed').reduce((s: number, t: Transaction) => s + t.amount, 0)),
+        totalTopups: arr.filter((t: Transaction) => t.type === 'topup' && t.status === 'completed').reduce((s: number, t: Transaction) => s + t.amount, 0),
+        pendingCount: arr.filter((t: Transaction) => t.status === 'pending').length,
+      };
+    } catch {
+      return { totalRevenue: 0, totalWithdrawals: 0, totalTopups: 0, pendingCount: 0 };
+    }
   },
 };

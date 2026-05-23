@@ -37,8 +37,11 @@ export default function CustomerOrders() {
 
   useEffect(() => {
     setMounted(true);
-    orderService.getByUser(user?.id || 'u1').then(data => {
+    orderService.getByUser(user?.id || '').then(data => {
       setOrders(data);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
       setLoading(false);
     });
   }, [user]);
@@ -52,6 +55,18 @@ export default function CustomerOrders() {
     const interval = setInterval(update, 10000);
     return () => clearInterval(interval);
   }, [mounted, orders]);
+
+  const getProgressWidth = (status: string) => {
+    const map: Record<string, string> = {
+      pending: 'w-[10%]',
+      confirmed: 'w-[25%]',
+      preparing: 'w-[45%]',
+      ready: 'w-[60%]',
+      in_transit: 'w-[80%]',
+      delivered: 'w-[100%]',
+    };
+    return map[status] || 'w-[0%]';
+  };
 
   const activeOrder = orders.find(o => o.status === 'in_transit' || o.status === 'confirmed');
   const pastOrders = orders.filter(o => o.status === 'delivered' || o.status === 'cancelled');
@@ -107,9 +122,9 @@ export default function CustomerOrders() {
                     <div>
                       <div className="font-bold text-gray-900 dark:text-white">{t('on_the_way')}</div>
                       <div className="text-xs text-orange-600 dark:text-orange-400 font-semibold mb-1">{t('ai_prediction')} {mounted ? remainingMin : 0} mins</div>
-                      <div className="w-full bg-gray-100 dark:bg-slate-700 rounded-full h-1.5 mt-2">
-                        <div className="bg-orange-500 h-1.5 rounded-full w-[60%]" />
-                      </div>
+                        <div className="w-full bg-gray-100 dark:bg-slate-700 rounded-full h-1.5 mt-2">
+                          <div className={`bg-orange-500 h-1.5 rounded-full ${getProgressWidth(activeOrder.status)}`} />
+                        </div>
                     </div>
                   </div>
 
@@ -144,7 +159,7 @@ export default function CustomerOrders() {
                            {order.items[0]?.productImage || '📦'}
                          </div>
                          <div>
-                           <div className="font-bold text-gray-900 dark:text-white">{order.items.map(i => i.productName).join(', ')}</div>
+                            <div className="font-bold text-gray-900 dark:text-white">{(order.items || []).map(i => i.productName).join(', ')}</div>
                           <div className="text-xs text-gray-500 dark:text-slate-400 font-medium flex items-center gap-1 mt-1">
                             <Clock className="w-3 h-3" /> {new Date(order.createdAt).toLocaleDateString()}
                           </div>

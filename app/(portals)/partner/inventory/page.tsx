@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Edit2, Trash2, Calendar, Package, X, Check } from 'lucide-react';
+import { Plus, Search, Filter, Edit2, Trash2, Calendar, Package, X, Check, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGlobal } from '@/app/providers';
+import { useAuth } from '@/app/contexts/AuthContext';
 import { productService, Product, ProductCategory } from '@/lib/data/products';
 import { showToast } from '@/lib/data/notifications';
 import {
@@ -13,9 +14,13 @@ import {
 
 export default function PartnerInventory() {
   const { t } = useGlobal();
+  const { user } = useAuth();
+  const storeId = user?.storeId || '';
+  const storeName = (user as any)?.storeName || (user as any)?.partnerStoreName || 'Store';
   const [products, setProducts] = useState<Product[]>([]);
   const [filtered, setFiltered] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -27,12 +32,17 @@ export default function PartnerInventory() {
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
-    productService.getByStore('s1').then(data => {
-      setProducts(data);
-      setFiltered(data);
+    if (!storeId) return;
+    setLoading(true);
+    productService.getByStore(storeId).then(data => {
+      setProducts(data || []);
+      setFiltered(data || []);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
       setLoading(false);
     });
-  }, []);
+  }, [storeId]);
 
   useEffect(() => {
     if (!search.trim()) {
@@ -53,48 +63,71 @@ export default function PartnerInventory() {
       showToast('error', 'Please fill in all required fields');
       return;
     }
-    const newProduct = await productService.create({
-      name: form.name,
-      category: form.category as ProductCategory,
-      stock: form.stock,
-      originalPrice: form.originalPrice,
-      aiPrice: form.aiPrice || Math.round(form.originalPrice * 0.5),
-      expiry: form.expiry,
-      status: 'live',
-      image: '📦',
-      storeId: 's1',
-      storeName: 'WinMart+ D1',
-      discount: Math.round((1 - (form.aiPrice || form.originalPrice * 0.5) / form.originalPrice) * 100),
-    });
-    setProducts(prev => [...prev, newProduct]);
-    setShowAddModal(false);
-    resetForm();
-    showToast('success', 'Product Added', `${newProduct.name} added to inventory`);
+    setSubmitting(true);
+    try {
+      const newProduct = await productService.create({
+        name: form.name,
+        category: form.category as ProductCategory,
+        stock: form.stock,
+        originalPrice: form.originalPrice,
+        aiPrice: form.aiPrice || 0,
+        expiry: form.expiry,
+        status: 'live',
+        image: '📦',
+        storeId,
+        storeName,
+        discount: form.aiPrice ? Math.round((1 - form.aiPrice / form.originalPrice) * 100) : 0,
+      });
+      if (newProduct) {
+        setProducts(prev => [...prev, newProduct]);
+        setShowAddModal(false);
+        resetForm();
+        showToast('success', 'Product Added', `${newProduct.name} added to inventory`);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('error', 'Error', 'Failed to add product');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleEdit = async () => {
     if (!editingProduct) return;
-    const updated = await productService.update(editingProduct.id, {
-      name: form.name,
-      category: form.category as ProductCategory,
-      stock: form.stock,
-      originalPrice: form.originalPrice,
-      aiPrice: form.aiPrice,
-      expiry: form.expiry,
-      discount: Math.round((1 - form.aiPrice / form.originalPrice) * 100),
-    });
-    if (updated) {
-      setProducts(prev => prev.map(p => p.id === updated.id ? updated : p));
-      showToast('success', 'Product Updated');
+    setSubmitting(true);
+    try {
+      const updated = await productService.update(editingProduct.id, {
+        name: form.name,
+        category: form.category as ProductCategory,
+        stock: form.stock,
+        originalPrice: form.originalPrice,
+        aiPrice: form.aiPrice,
+        expiry: form.expiry,
+        discount: Math.round((1 - form.aiPrice / form.originalPrice) * 100),
+      });
+      if (updated) {
+        setProducts(prev => prev.map(p => p.id === updated.id ? updated : p));
+        showToast('success', 'Product Updated');
+      }
+      setEditingProduct(null);
+      resetForm();
+    } catch (err) {
+      console.error(err);
+      showToast('error', 'Error', 'Failed to update product');
+    } finally {
+      setSubmitting(false);
     }
-    setEditingProduct(null);
-    resetForm();
   };
 
   const handleDelete = async (id: string) => {
-    await productService.delete(id);
-    setProducts(prev => prev.filter(p => p.id !== id));
-    showToast('success', 'Product Deleted');
+    try {
+      await productService.delete(id);
+      setProducts(prev => prev.filter(p => p.id !== id));
+      showToast('success', 'Product Deleted');
+    } catch (err) {
+      console.error(err);
+      showToast('error', 'Error', 'Failed to delete product');
+    }
   };
 
   const openEdit = (product: Product) => {
@@ -296,11 +329,23 @@ export default function PartnerInventory() {
                     />
                   </div>
                 </motion.div>
-                <motion.button variants={staggerItem} onClick={editingProduct ? handleEdit : handleAdd}
-                  whileHover={reduced ? {} : { scale: 1.01 }} whileTap={buttonTap}
-                  className="w-full bg-gradient-to-r from-[#057A42] to-emerald-600 text-white font-bold py-4 rounded-xl hover:from-[#046034] hover:to-emerald-700 transition-all flex items-center justify-center gap-2 shadow-md"
+                <motion.button 
+                  variants={staggerItem} 
+                  onClick={editingProduct ? handleEdit : handleAdd}
+                  disabled={submitting}
+                  whileHover={submitting ? {} : (reduced ? {} : { scale: 1.01 })} 
+                  whileTap={submitting ? {} : buttonTap}
+                  className="w-full bg-gradient-to-r from-[#057A42] to-emerald-600 text-white font-bold py-4 rounded-xl hover:from-[#046034] hover:to-emerald-700 transition-all flex items-center justify-center gap-2 shadow-md disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed"
                 >
-                  <Check className="w-5 h-5" /> {editingProduct ? t('save_changes') : t('add_product')}
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" /> {editingProduct ? (t('saving') || 'Saving...') : (t('adding') || 'Adding...')}
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-5 h-5" /> {editingProduct ? t('save_changes') : t('add_product')}
+                    </>
+                  )}
                 </motion.button>
               </motion.div>
             </motion.div>

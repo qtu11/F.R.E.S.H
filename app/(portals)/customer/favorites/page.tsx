@@ -5,29 +5,75 @@ import { Heart, ShoppingBag, MapPin, Clock, X } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGlobal } from '@/app/providers';
+import { useAuth } from '@/app/contexts/AuthContext';
 import { showToast } from '@/lib/data/notifications';
-
-const savedDeals = [
-  { id: 'd1', name: 'Bánh Mì Thịt Nguội', store: 'WinMart+ D1', originalPrice: 30000, discountedPrice: 12000, discount: 60, timeLeft: '45m', gradient: 'from-amber-400 to-orange-500' },
-  { id: 'd3', name: 'Gà Rán Cay', store: 'Circle K D1', originalPrice: 55000, discountedPrice: 22000, discount: 60, timeLeft: '30m', gradient: 'from-red-400 to-orange-600' },
-  { id: 'd5', name: 'Rau Củ Tổng Hợp', store: 'Co.opmart D1', originalPrice: 45000, discountedPrice: 13500, discount: 70, timeLeft: '3h', gradient: 'from-green-400 to-emerald-600' },
-  { id: 'd7', name: 'Trái Cây Tươi', store: 'MM Mega Market', originalPrice: 60000, discountedPrice: 18000, discount: 70, timeLeft: '4h', gradient: 'from-pink-400 to-red-400' },
-  { id: 'd9', name: 'Kem Vanilla Hộp', store: 'AEON Tân Phú', originalPrice: 80000, discountedPrice: 32000, discount: 60, timeLeft: '5h', gradient: 'from-blue-300 to-indigo-500' },
-  { id: 'd2', name: 'Croissant Bơ', store: 'FamilyMart D3', originalPrice: 25000, discountedPrice: 10000, discount: 60, timeLeft: '1h', gradient: 'from-yellow-300 to-amber-500' },
-  { id: 'd11', name: 'Bánh Bao Nhân Thịt', store: 'FamilyMart D3', originalPrice: 20000, discountedPrice: 6000, discount: 70, timeLeft: '1h', gradient: 'from-gray-300 to-gray-500' },
-  { id: 'd10', name: 'Cá Hồi Đông Lạnh', store: 'Big C D2', originalPrice: 150000, discountedPrice: 60000, discount: 60, timeLeft: '6h', gradient: 'from-teal-400 to-blue-600' },
-];
+import { favoriteService } from '@/lib/data/favorites';
 
 export default function CustomerFavorites() {
   const { t } = useGlobal();
+  const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
-  const [favorites, setFavorites] = useState(savedDeals);
+  const [favorites, setFavorites] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { setMounted(true); }, []);
+  const getTimeLeft = (expiry?: string) => {
+    if (!expiry) return 'N/A';
+    const diff = new Date(expiry).getTime() - Date.now();
+    if (diff <= 0) return 'Expired';
+    const mins = Math.floor(diff / 60000);
+    if (mins >= 60) {
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      return `${h}h ${m}m`;
+    }
+    return `${mins}m`;
+  };
 
-  const removeFavorite = (id: string) => {
-    setFavorites(prev => prev.filter(d => d.id !== id));
-    showToast('info', 'Removed from favorites');
+  const categoryGradients: Record<string, string> = {
+    Bakery: 'from-amber-400 to-orange-600',
+    'Fast Food': 'from-orange-400 to-red-600',
+    Vegetables: 'from-emerald-400 to-green-600',
+    Fruits: 'from-yellow-400 to-green-600',
+    Frozen: 'from-cyan-400 to-blue-600',
+    Beverages: 'from-sky-400 to-blue-600',
+    Dairy: 'from-blue-100 to-blue-500',
+    Meals: 'from-orange-400 to-red-500',
+    Snacks: 'from-yellow-300 to-amber-600',
+    Produce: 'from-lime-400 to-green-600',
+  };
+
+  useEffect(() => {
+    setMounted(true);
+    const uid = user?.id || '';
+    favoriteService.getByUser(uid).then(data => {
+      setFavorites((data || []).map((f: any) => {
+        const p = f.product || f;
+        return {
+          id: p.id || f.id,
+          name: p.name || 'Product',
+          store: p.storeName || 'Store',
+          storeId: p.storeId || '',
+          originalPrice: p.originalPrice || 0,
+          discountedPrice: p.aiPrice || p.discountedPrice || 0,
+          discount: p.discount || 0,
+          timeLeft: getTimeLeft(p.expiry),
+          gradient: categoryGradients[p.category] || 'from-emerald-400 to-green-600',
+        };
+      }));
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      showToast('error', 'Failed to load favorites');
+      setLoading(false);
+    });
+  }, [user]);
+
+  const removeFavorite = async (id: string) => {
+    try {
+      await favoriteService.remove(user?.id || '', id);
+      setFavorites(prev => prev.filter(d => d.id !== id));
+      showToast('info', 'Removed from favorites');
+    } catch { showToast('error', 'Failed to remove'); }
   };
 
   return (
@@ -40,7 +86,7 @@ export default function CustomerFavorites() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 mt-6">
-        {!mounted ? null : favorites.length === 0 ? (
+        {!mounted || loading ? null : favorites.length === 0 ? (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-slate-800 rounded-3xl p-12 text-center shadow-sm border border-gray-100 dark:border-slate-700">
             <Heart className="w-16 h-16 mx-auto text-gray-300 dark:text-slate-600 mb-4" />
             <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">No favorites yet</h3>
@@ -84,7 +130,28 @@ export default function CustomerFavorites() {
                         <span className="text-gray-400 dark:text-slate-500 line-through text-xs mr-2">{deal.originalPrice.toLocaleString()}đ</span>
                         <span className="text-gray-900 dark:text-white font-black text-lg">{deal.discountedPrice.toLocaleString()}đ</span>
                       </div>
-                      <button onClick={() => { showToast('success', 'Added to cart!'); }}
+                      <button onClick={() => {
+                        const currentCart = localStorage.getItem('fresh_cart');
+                        const cartItems = currentCart ? JSON.parse(currentCart) : [];
+                        const existing = cartItems.find((item: any) => item.id === deal.id);
+                        if (existing) {
+                          existing.quantity += 1;
+                        } else {
+                          cartItems.push({
+                            id: deal.id,
+                            name: deal.name,
+                            store: deal.store,
+                            storeId: deal.storeId || '',
+                            price: deal.discountedPrice,
+                            originalPrice: deal.originalPrice,
+                            quantity: 1,
+                            gradient: deal.gradient,
+                            discount: deal.discount
+                          });
+                        }
+                        localStorage.setItem('fresh_cart', JSON.stringify(cartItems));
+                        showToast('success', 'Added to cart!', `${deal.name} added to cart`);
+                      }}
                         className="text-[10px] bg-[#057A42] text-white px-4 py-2 rounded-xl font-bold hover:bg-[#046034] transition-colors shadow-md shadow-[#057A42]/20"
                       >
                         Add to Cart

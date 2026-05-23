@@ -4,14 +4,22 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Map, ShoppingBag, Leaf, User, Search, ShoppingCart, Award, Bell, Heart, Ticket, Store, Wallet, Menu, ArrowLeft, X } from 'lucide-react';
+import { Map, ShoppingBag, Leaf, User, Search, ShoppingCart, Award, Bell, Heart, Ticket, Store, Wallet, Menu, ArrowLeft, X, LogOut } from 'lucide-react';
 import { useGlobal } from '@/app/providers';
+import { useAuth } from '@/app/contexts/AuthContext';
 
 export function CustomerNavigation() {
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useGlobal();
+  const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showLogoutMobile, setShowLogoutMobile] = useState(false);
+  const [showLogoutDesktop, setShowLogoutDesktop] = useState(false);
+
+  const nameAbbr = user?.name 
+    ? user.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() 
+    : 'U';
 
   const navItems = [
     { icon: Map, label: t('explore'), href: '/customer' },
@@ -27,6 +35,11 @@ export function CustomerNavigation() {
     { icon: Leaf, label: t('impact'), href: '/customer/impact' },
     { icon: User, label: t('profile'), href: '/customer/profile' },
   ];
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/customer/login');
+  };
 
   return (
     <>
@@ -78,11 +91,44 @@ export function CustomerNavigation() {
                   );
                 })}
               </nav>
-              <div className="p-4 border-t border-gray-100 dark:border-slate-800">
-                <div className="flex items-center gap-3 bg-gray-50 dark:bg-slate-800 p-3 rounded-2xl">
-                  <div className="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center text-yellow-700 dark:text-yellow-500 font-bold text-lg">JD</div>
+              <div className="p-4 border-t border-gray-100 dark:border-slate-800 relative">
+                {/* Mobile Logout Dropdown Overlay */}
+                {showLogoutMobile && (
+                  <div className="fixed inset-0 z-40" onClick={() => setShowLogoutMobile(false)} />
+                )}
+
+                <AnimatePresence>
+                  {showLogoutMobile && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="absolute bottom-20 left-4 right-4 bg-white dark:bg-slate-850 border border-gray-200 dark:border-slate-800 rounded-2xl p-2 shadow-2xl z-50"
+                    >
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-bold text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-colors cursor-pointer"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Đăng xuất
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div 
+                  onClick={() => setShowLogoutMobile(!showLogoutMobile)}
+                  className="flex items-center gap-3 bg-gray-50 dark:bg-slate-800 p-3 rounded-2xl cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors select-none"
+                >
+                  {user?.avatar && user.avatar.startsWith('http') ? (
+                    <img src={user.avatar} alt={user.name || 'User'} className="w-10 h-10 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center text-yellow-700 dark:text-yellow-500 font-bold text-lg">
+                      {nameAbbr}
+                    </div>
+                  )}
                   <div>
-                    <div className="text-sm font-bold text-gray-900 dark:text-white">John Doe</div>
+                    <div className="text-sm font-bold text-gray-900 dark:text-white">{user?.name || 'Guest'}</div>
                     <div className="text-xs font-semibold text-[#057A42] dark:text-emerald-400">{t('gold_member')}</div>
                   </div>
                 </div>
@@ -107,7 +153,7 @@ export function CustomerNavigation() {
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
-              <Link key={item.href} href={item.href} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all relative ${isActive ? 'bg-[#e8f5e9] dark:bg-emerald-500/10 text-[#057A42] dark:text-emerald-400 font-semibold border border-[#c8e6c9] dark:border-emerald-500/20' : 'text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white border border-transparent'}`}>
+              <Link key={item.href} href={item.href} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all relative ${isActive ? 'bg-[#e8f5e9] dark:bg-emerald-500/10 text-[#057A42] dark:text-emerald-400 font-semibold border border-[#c8e6c9] dark:border-emerald-500/20' : 'text-gray-50 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white border border-transparent'}`}>
                 <item.icon className="w-5 h-5 z-10" />
                 <span className="z-10">{item.label}</span>
                 {isActive && (
@@ -118,13 +164,44 @@ export function CustomerNavigation() {
           })}
         </nav>
 
-        <div className="p-6 border-t border-gray-100 dark:border-slate-800">
-          <div className="flex items-center gap-3 w-full bg-gray-50 dark:bg-slate-800 p-3 rounded-2xl border border-gray-200 dark:border-slate-700">
-             <div className="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center text-yellow-700 dark:text-yellow-500 font-bold text-lg shadow-sm border border-yellow-200 dark:border-yellow-700/50">
-                JD
-             </div>
+        <div className="p-6 border-t border-gray-100 dark:border-slate-800 relative">
+          {/* Desktop Logout Dropdown Overlay */}
+          {showLogoutDesktop && (
+            <div className="fixed inset-0 z-40" onClick={() => setShowLogoutDesktop(false)} />
+          )}
+
+          <AnimatePresence>
+            {showLogoutDesktop && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute bottom-20 left-6 right-6 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-1.5 shadow-xl z-50"
+              >
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-colors cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Đăng xuất
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div 
+            onClick={() => setShowLogoutDesktop(!showLogoutDesktop)}
+            className="flex items-center gap-3 w-full bg-gray-50 dark:bg-slate-800 p-3 rounded-2xl border border-gray-200 dark:border-slate-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors select-none"
+          >
+             {user?.avatar && user.avatar.startsWith('http') ? (
+               <img src={user.avatar} alt={user.name || 'User'} className="w-10 h-10 rounded-full object-cover" />
+             ) : (
+               <div className="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center text-yellow-700 dark:text-yellow-500 font-bold text-lg shadow-sm border border-yellow-200 dark:border-yellow-700/50">
+                  {nameAbbr}
+               </div>
+             )}
              <div>
-                <div className="text-sm font-bold text-gray-900 dark:text-white">John Doe</div>
+                <div className="text-sm font-bold text-gray-900 dark:text-white">{user?.name || 'Guest'}</div>
                 <div className="text-xs font-semibold text-[#057A42] dark:text-emerald-400">{t('gold_member')}</div>
              </div>
           </div>

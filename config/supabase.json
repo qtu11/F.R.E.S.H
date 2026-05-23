@@ -1,7 +1,7 @@
 {
-  "supabaseUrl": "",
-  "supabaseAnonKey": "",
-  "serviceRoleKey": "",
-  "dbPassword": "",
-  "configured": false
+  "supabaseUrl": "https://ktnhoiqqecygxztsugkx.supabase.co",
+  "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0bmhvaXFxZWN5Z3h6dHN1Z2t4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNzMxMjMsImV4cCI6MjA5NDY0OTEyM30.wcM-jbK5v1oTvLe49yhLTsUaLUsMxWBa0uYGbJoDyfM",
+  "serviceRoleKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0bmhvaXFxZWN5Z3h6dHN1Z2t4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTA3MzEyMywiZXhwIjoyMDk0NjQ5MTIzfQ.gfeY57zD2DqZw857wMTF8H0rgcexw6dElvAA-fVfhhk",
+  "dbPassword": "motminhcungonma",
+  "configured": true
 }

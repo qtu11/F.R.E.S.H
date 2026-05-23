@@ -7,25 +7,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGlobal } from '@/app/providers';
 import { showToast } from '@/lib/data/notifications';
 import { ExpiryBar } from '@/components/ExpiryBar';
+import { productService, Product } from '@/lib/data/products';
 import {
   staggerContainer, staggerItem, cardHover, cardTap, buttonTap, scaleIn,
   fadeUp, useSafeReducedMotion,
 } from '@/lib/animation';
-
-const allDeals = [
-  { id: 'd1', name: 'Bánh Mì Thịt Nguội', category: 'Bakery', store: 'WinMart+ D1', originalPrice: 30000, discountedPrice: 12000, discount: 60, timeLeft: 45, gradient: 'from-amber-400 to-orange-500', nearest: 0.3 },
-  { id: 'd2', name: 'Croissant Bơ', category: 'Bakery', store: 'FamilyMart D3', originalPrice: 25000, discountedPrice: 10000, discount: 60, timeLeft: 60, gradient: 'from-yellow-300 to-amber-500', nearest: 0.5 },
-  { id: 'd3', name: 'Gà Rán Cay', category: 'Fast Food', store: 'Circle K D1', originalPrice: 55000, discountedPrice: 22000, discount: 60, timeLeft: 30, gradient: 'from-red-400 to-orange-600', nearest: 0.2 },
-  { id: 'd4', name: 'Khoai Tây Chiên', category: 'Fast Food', store: 'AEON Tân Phú', originalPrice: 35000, discountedPrice: 14000, discount: 60, timeLeft: 120, gradient: 'from-yellow-400 to-yellow-600', nearest: 2.1 },
-  { id: 'd5', name: 'Rau Củ Tổng Hợp', category: 'Vegetables', store: 'Co.opmart D1', originalPrice: 45000, discountedPrice: 13500, discount: 70, timeLeft: 180, gradient: 'from-green-400 to-emerald-600', nearest: 0.8 },
-  { id: 'd6', name: 'Salad Rau Trộn', category: 'Vegetables', store: 'WinMart+ D1', originalPrice: 40000, discountedPrice: 12000, discount: 70, timeLeft: 60, gradient: 'from-lime-400 to-green-500', nearest: 0.3 },
-  { id: 'd7', name: 'Trái Cây Tươi', category: 'Fruits', store: 'MM Mega Market', originalPrice: 60000, discountedPrice: 18000, discount: 70, timeLeft: 240, gradient: 'from-pink-400 to-red-400', nearest: 1.5 },
-  { id: 'd8', name: 'Sinh Tố Trái Cây', category: 'Fruits', store: 'Lotte Mart D7', originalPrice: 50000, discountedPrice: 25000, discount: 50, timeLeft: 120, gradient: 'from-purple-400 to-pink-500', nearest: 3.2 },
-  { id: 'd9', name: 'Kem Vanilla Hộp', category: 'Frozen', store: 'AEON Tân Phú', originalPrice: 80000, discountedPrice: 32000, discount: 60, timeLeft: 300, gradient: 'from-blue-300 to-indigo-500', nearest: 2.1 },
-  { id: 'd10', name: 'Cá Hồi Đông Lạnh', category: 'Frozen', store: 'Big C D2', originalPrice: 150000, discountedPrice: 60000, discount: 60, timeLeft: 360, gradient: 'from-teal-400 to-blue-600', nearest: 4.0 },
-  { id: 'd11', name: 'Bánh Bao Nhân Thịt', category: 'Frozen', store: 'FamilyMart D3', originalPrice: 20000, discountedPrice: 6000, discount: 70, timeLeft: 60, gradient: 'from-gray-300 to-gray-500', nearest: 0.5 },
-  { id: 'd12', name: 'Xôi Gà', category: 'Fast Food', store: 'Circle K D1', originalPrice: 25000, discountedPrice: 12500, discount: 50, timeLeft: 20, gradient: 'from-orange-300 to-red-500', nearest: 0.2 },
-];
 
 const categories = ['All', 'Bakery', 'Fast Food', 'Vegetables', 'Fruits', 'Frozen'];
 type SortKey = 'ending' | 'discount' | 'nearest';
@@ -36,16 +22,30 @@ export default function CustomerDeals() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sort, setSort] = useState<SortKey>('ending');
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [deals, setDeals] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const reduced = useSafeReducedMotion();
 
   useEffect(() => { setMounted(true); }, []);
 
-  const filtered = allDeals
+  useEffect(() => {
+    productService.getLive().then(data => {
+      setDeals(data);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      showToast('error', 'Failed to load deals');
+      setLoading(false);
+    });
+  }, []);
+
+  const filtered = deals
     .filter(d => selectedCategory === 'All' || d.category === selectedCategory)
     .sort((a, b) => {
-      if (sort === 'ending') return a.timeLeft - b.timeLeft;
       if (sort === 'discount') return b.discount - a.discount;
-      return a.nearest - b.nearest;
+      if (sort === 'ending') return new Date(a.expiry).getTime() - new Date(b.expiry).getTime();
+      if (sort === 'nearest') return (a.distance ?? 999) - (b.distance ?? 999);
+      return b.discount - a.discount;
     });
 
   const sortLabels: Record<SortKey, string> = {
@@ -109,19 +109,53 @@ export default function CustomerDeals() {
           </div>
         </motion.div>
 
-        {!mounted ? null : (
+        {!mounted ? null : loading ? (
+          <motion.div variants={staggerContainer} initial="hidden" animate="visible"
+            className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2"
+          >
+            {[1,2,3,4].map(i => (
+              <motion.div key={i} variants={staggerItem}
+                className="bg-white dark:bg-slate-800 rounded-3xl overflow-hidden shadow-sm border border-gray-100 dark:border-slate-700 animate-pulse"
+              >
+                <div className="h-36 bg-gray-200 dark:bg-slate-700" />
+                <div className="p-4 space-y-3">
+                  <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-3/4" />
+                  <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-1/2" />
+                  <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-full" />
+                  <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded w-1/3" />
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        ) : filtered.length === 0 ? (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            className="text-center py-16 text-gray-500 dark:text-slate-400"
+          >
+            <ShoppingBag className="w-12 h-12 mx-auto mb-3 opacity-40" />
+            <p className="text-sm font-semibold">{lang === 'vi' ? 'Không có deal nào' : 'No deals found'}</p>
+          </motion.div>
+        ) : (
           <motion.div variants={staggerContainer} initial="hidden" animate="visible"
             className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2"
           >
             <AnimatePresence mode="popLayout">
               {filtered.map((deal) => {
-                const expiryHours = Math.round(deal.timeLeft / 60 * 10) / 10;
+                const catGradients: Record<string, string> = {
+                  Bakery: 'from-amber-400 to-orange-500',
+                  'Fast Food': 'from-red-400 to-orange-600',
+                  Vegetables: 'from-green-400 to-emerald-600',
+                  Fruits: 'from-pink-400 to-red-400',
+                  Frozen: 'from-blue-300 to-indigo-500',
+                };
+                const gradient = catGradients[deal.category] || 'from-gray-400 to-gray-600';
+                const timeLeft = Math.round((new Date(deal.expiry).getTime() - Date.now()) / 60000);
+                const expiryHours = Math.round(timeLeft / 60 * 10) / 10;
                 return (
                   <motion.div key={deal.id} layout variants={staggerItem} whileHover={reduced ? {} : cardHover} whileTap={reduced ? {} : cardTap}
                     className="bg-white dark:bg-slate-800 rounded-3xl overflow-hidden shadow-sm border border-gray-100 dark:border-slate-700 hover:shadow-lg transition-shadow group"
                   >
                     <Link href={`/customer/deals/${deal.id}`}>
-                      <motion.div className={`h-36 bg-gradient-to-br ${deal.gradient} relative flex items-center justify-center overflow-hidden`}>
+                      <motion.div className={`h-36 bg-gradient-to-br ${gradient} relative flex items-center justify-center overflow-hidden`}>
                         <motion.div initial={reduced ? {} : { x: 40, opacity: 0 }} animate={reduced ? {} : { x: 0, opacity: 1 }} transition={{ delay: 0.15 }}
                           className="absolute top-3 right-3 bg-orange-500 text-white text-xs font-black px-3 py-1.5 rounded-lg shadow-lg shadow-orange-500/30"
                         >
@@ -130,7 +164,7 @@ export default function CustomerDeals() {
                         <motion.div initial={reduced ? {} : { x: -40, opacity: 0 }} animate={reduced ? {} : { x: 0, opacity: 1 }} transition={{ delay: 0.1 }}
                           className="absolute top-3 left-3 flex items-center gap-1 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm text-[10px] font-bold px-2 py-1.5 rounded-lg text-gray-700 dark:text-slate-200"
                         >
-                          <Clock className="w-3 h-3" /> {deal.timeLeft}m
+                          <Clock className="w-3 h-3" /> {timeLeft}m
                         </motion.div>
                       </motion.div>
                     </Link>
@@ -141,13 +175,13 @@ export default function CustomerDeals() {
                         </Link>
                       </div>
                       <div className="flex items-center gap-2 text-gray-500 dark:text-slate-400 text-[10px] font-semibold mb-2">
-                        <MapPin className="w-3 h-3" /> {deal.store}
-                        <span className="text-[#057A42] dark:text-emerald-400">{deal.nearest} km</span>
+                        <MapPin className="w-3 h-3" /> {deal.storeName}
+                        <span className="text-[#057A42] dark:text-emerald-400">{deal.distance || 0} km</span>
                       </div>
                       <ExpiryBar hours={expiryHours} size="sm" />
                       <div className="flex items-center justify-between mt-3">
                         <div className="flex items-baseline gap-2">
-                          <span className="text-gray-900 dark:text-white font-black text-lg">{deal.discountedPrice.toLocaleString()}đ</span>
+                          <span className="text-gray-900 dark:text-white font-black text-lg">{deal.aiPrice.toLocaleString()}đ</span>
                           <span className="text-gray-400 dark:text-slate-500 line-through text-xs">{deal.originalPrice.toLocaleString()}đ</span>
                         </div>
                         <Link href={`/customer/deals/${deal.id}`}>

@@ -43,18 +43,27 @@ export interface Store {
 async function api(path: string, options?: RequestInit) {
   const res = await fetch(`/api${path}`, {
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     ...options,
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || 'Request failed');
+  }
   return res.json();
+}
+
+function safeJsonParse(str: string | null | undefined, fallback: any = []) {
+  if (!str) return fallback;
+  try { return JSON.parse(str); } catch { return fallback; }
 }
 
 function parseProduct(p: any): Product {
   return {
     ...p,
-    ingredients: typeof p.ingredients === 'string' ? JSON.parse(p.ingredients || '[]') : p.ingredients || [],
-    allergens: typeof p.allergens === 'string' ? JSON.parse(p.allergens || '[]') : p.allergens || [],
-    nutrition: typeof p.nutrition === 'string' ? JSON.parse(p.nutrition || '{}') : p.nutrition || { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
+    ingredients: typeof p.ingredients === 'string' ? safeJsonParse(p.ingredients) : p.ingredients || [],
+    allergens: typeof p.allergens === 'string' ? safeJsonParse(p.allergens) : p.allergens || [],
+    nutrition: typeof p.nutrition === 'string' ? safeJsonParse(p.nutrition, {}) : p.nutrition || { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
   };
 }
 
@@ -79,7 +88,7 @@ export const productService = {
     return (res || []).map(parseProduct);
   },
 
-  async getByCategory(category: string): Promise<Product[]> {
+  async getByCategory(category: ProductCategory): Promise<Product[]> {
     const res = await api(`/products?category=${encodeURIComponent(category)}`);
     return (res || []).map(parseProduct);
   },
@@ -99,12 +108,12 @@ export const productService = {
     return (res || []).map(parseProduct);
   },
 
-  async create(product: Omit<Product, 'id' | 'createdAt'>): Promise<Product> {
+  async create(product: Omit<Product, 'id' | 'createdAt'>): Promise<Product | null> {
     const res = await api('/products', {
       method: 'POST',
       body: JSON.stringify(product),
     });
-    return res ? parseProduct(res) : {} as Product;
+    return res ? parseProduct(res) : null;
   },
 
   async update(id: string, updates: Partial<Product>): Promise<Product | undefined> {
@@ -116,8 +125,8 @@ export const productService = {
   },
 
   async delete(id: string): Promise<boolean> {
-    await api('/products', { method: 'DELETE', body: JSON.stringify({ id }) });
-    return true;
+    const res = await api('/products', { method: 'DELETE', body: JSON.stringify({ id }) });
+    return !!res;
   },
 
   async search(query: string): Promise<Product[]> {

@@ -65,6 +65,8 @@ export default function SetupPage() {
     }
   };
 
+  if (!mounted) return null;
+
   return (
     <div className="max-w-3xl mx-auto">
       <motion.div variants={fadeUp} initial="hidden" animate={mounted ? 'visible' : 'hidden'} className="mb-8">

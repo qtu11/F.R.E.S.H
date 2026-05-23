@@ -1,37 +1,58 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Wallet, ArrowUpRight, ArrowDownLeft, History, Download, CreditCard, ChevronDown, ChevronUp, TrendingUp } from 'lucide-react';
+import { Wallet, ArrowUpRight, ArrowDownLeft, History, Download, CreditCard, ChevronDown, ChevronUp, TrendingUp, Loader2 } from 'lucide-react';
 import { useGlobal } from '@/app/providers';
+import { useAuth } from '@/app/contexts/AuthContext';
 import { transactionService, Transaction } from '@/lib/data/transactions';
 import { showToast } from '@/lib/data/notifications';
 
 export default function PartnerFinance() {
   const { t } = useGlobal();
+  const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [balance, setBalance] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState(0);
 
   useEffect(() => {
-    transactionService.getByUser('u1').then(setTransactions);
-    transactionService.getBalance('u1').then(setBalance);
-  }, []);
+    if (!user?.id) return;
+    setLoading(true);
+    Promise.all([
+      transactionService.getByUser(user.id),
+      transactionService.getBalance(user.id)
+    ]).then(([txs, bal]) => {
+      setTransactions(txs || []);
+      setBalance(bal || 0);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, [user]);
 
   const handleWithdraw = () => {
+    if (!user?.id) {
+      showToast('error', 'Error', 'User not authenticated');
+      return;
+    }
     if (withdrawAmount <= 0 || withdrawAmount > balance) {
       showToast('error', 'Invalid amount', 'Please enter a valid withdrawal amount');
       return;
     }
     transactionService.addTransaction({
-      userId: 'u1', type: 'withdrawal', amount: -withdrawAmount,
+      userId: user.id, type: 'withdrawal', amount: -withdrawAmount,
       date: new Date().toISOString(), status: 'pending', description: 'Withdrawal to bank account',
     }).then(() => {
       setBalance(prev => prev - withdrawAmount);
       setShowWithdrawModal(false);
       setWithdrawAmount(0);
       showToast('success', 'Withdrawal Requested', `${withdrawAmount.toLocaleString()} VND - Processing (2-4 hours)`);
+    }).catch(err => {
+      console.error(err);
+      showToast('error', 'Error', 'Failed to request withdrawal');
     });
   };
 
@@ -40,6 +61,17 @@ export default function PartnerFinance() {
   };
 
   const displayedTxs = showAll ? transactions : transactions.slice(0, 3);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f0f2f5] dark:bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+          <div className="text-gray-900 dark:text-white text-sm font-medium">Loading financial data...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#f0f2f5] dark:bg-slate-950 min-h-screen pb-20 font-sans transition-colors duration-300">
@@ -66,7 +98,7 @@ export default function PartnerFinance() {
                 <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center animate-pulse">
                   <TrendingUp className="w-4 h-4" />
                 </div>
-                +15.4% from last month
+                {'\u2014'}
               </div>
             </div>
             <div className="flex flex-col gap-3 w-full md:w-auto">

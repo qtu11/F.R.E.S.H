@@ -30,6 +30,10 @@ export function subscribeToasts(listener: (toast: Toast) => void) {
   };
 }
 
+export function clearListeners() {
+  listeners.length = 0;
+}
+
 export function showToast(type: ToastType, title: string, message?: string, duration = 4000) {
   const toast: Toast = { id: `t${Date.now()}`, type, title, message, duration };
   listeners.forEach(l => l(toast));
@@ -38,8 +42,13 @@ export function showToast(type: ToastType, title: string, message?: string, dura
 async function api(path: string, options?: RequestInit) {
   const res = await fetch(`/api${path}`, {
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     ...options,
   });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || 'Request failed');
+  }
   return res.json();
 }
 
@@ -49,7 +58,7 @@ export const notificationService = {
   },
 
   async getByType(type: NotificationType): Promise<AppNotification[]> {
-    return api(`/notifications?type=${type}`);
+    return api(`/notifications?type=${encodeURIComponent(type)}`);
   },
 
   async getUnread(): Promise<AppNotification[]> {

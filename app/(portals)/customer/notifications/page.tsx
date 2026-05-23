@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Bell, BellOff, Tag, ShoppingBag, Ticket, Clock, ChevronRight } from 'lucide-react';
+import { Bell, BellOff, Tag, ShoppingBag, Ticket, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGlobal } from '@/app/providers';
-import { showToast } from '@/lib/data/notifications';
+import { showToast, notificationService } from '@/lib/data/notifications';
 
 type TabType = 'all' | 'deals' | 'orders' | 'vouchers';
 
@@ -15,39 +15,66 @@ const tabs: { key: TabType; label: string }[] = [
   { key: 'vouchers', label: 'Vouchers' },
 ];
 
-const allNotifications = [
-  { id: 'n1', type: 'deals', icon: Tag, title: '🔥 Flash Deal: Bánh Mì 60% OFF!', desc: 'WinMart+ D1 has a flash deal ending in 30 mins.', time: '2m ago', color: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' },
-  { id: 'n2', type: 'deals', icon: Tag, title: 'New Deal at FamilyMart!', desc: 'Croissant Bơ - only 10,000đ! Limited stock.', time: '15m ago', color: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' },
-  { id: 'n3', type: 'orders', icon: ShoppingBag, title: 'Order Confirmed ✅', desc: 'Your Bánh Mì order has been confirmed.', time: '30m ago', color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' },
-  { id: 'n4', type: 'orders', icon: ShoppingBag, title: 'Order In Transit 🚚', desc: 'Your Gà Rán Cay is on the way! ETA: 15 mins.', time: '45m ago', color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' },
-  { id: 'n5', type: 'orders', icon: ShoppingBag, title: 'Order Delivered 🎉', desc: 'Your Rau Củ order has been delivered.', time: '2h ago', color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' },
-  { id: 'n6', type: 'vouchers', icon: Ticket, title: 'New Voucher: 50% OFF!', desc: 'Exclusive voucher for you at AEON Tân Phú.', time: '3h ago', color: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400' },
-  { id: 'n7', type: 'vouchers', icon: Ticket, title: 'Free Shipping Voucher', desc: 'Free delivery on your next 2 orders. Use code: FREESHIP.', time: '5h ago', color: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400' },
-  { id: 'n8', type: 'deals', icon: Tag, title: 'AEON Super Sale!', desc: 'Up to 70% off on frozen items. Hurry!', time: '6h ago', color: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' },
-  { id: 'n9', type: 'vouchers', icon: Ticket, title: 'Birthday Voucher 🎂', desc: 'Happy birthday! Enjoy 30% off any item.', time: '1d ago', color: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400' },
-  { id: 'n10', type: 'orders', icon: ShoppingBag, title: 'Rate Your Experience', desc: 'How was your experience with Circle K?', time: '1d ago', color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' },
-  { id: 'n11', type: 'deals', icon: Tag, title: 'MM Mega Flash Deal', desc: 'Trái Cây Tươi at 70% off. Grab now!', time: '2d ago', color: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' },
-  { id: 'n12', type: 'vouchers', icon: Ticket, title: 'Weekend Special', desc: '20% off all bakery items this weekend.', time: '2d ago', color: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400' },
-];
+const typeIconMap: Record<string, any> = {
+  deal: Tag,
+  order: ShoppingBag,
+  voucher: Ticket,
+};
+
+const typeColorMap: Record<string, string> = {
+  deal: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
+  order: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
+  voucher: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400',
+};
 
 export default function CustomerNotifications() {
   const { t } = useGlobal();
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('all');
   const [readIds, setReadIds] = useState<string[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { setMounted(true); }, []);
+  const typeTabMap: Record<string, string> = {
+    deal: 'deals',
+    order: 'orders',
+    voucher: 'vouchers',
+  };
 
-  const filtered = activeTab === 'all' ? allNotifications : allNotifications.filter(n => n.type === activeTab);
-  const unreadCount = allNotifications.filter(n => !readIds.includes(n.id)).length;
+  useEffect(() => {
+    setMounted(true);
+    notificationService.getAll().then(data => {
+      setNotifications((data || []).map((n: any) => ({
+        id: n.id,
+        type: typeTabMap[n.type] || n.type || 'deals',
+        icon: typeIconMap[n.type] || Tag,
+        title: n.title || '',
+        desc: n.message || '',
+        time: n.time || '',
+        color: typeColorMap[n.type] || 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
+      })));
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      showToast('error', 'Failed to load notifications');
+      setLoading(false);
+    });
+  }, []);
 
-  const markAllRead = () => {
-    setReadIds(allNotifications.map(n => n.id));
+  const filtered = activeTab === 'all' ? notifications : notifications.filter((n: any) => n.type === activeTab);
+  const unreadCount = notifications.filter((n: any) => !readIds.includes(n.id)).length;
+
+  const markAllRead = async () => {
+    setReadIds(notifications.map((n: any) => n.id));
+    await notificationService.markAllAsRead();
     showToast('success', 'All notifications marked as read');
   };
 
   const markRead = (id: string) => {
-    if (!readIds.includes(id)) setReadIds(prev => [...prev, id]);
+    if (!readIds.includes(id)) {
+      setReadIds(prev => [...prev, id]);
+      notificationService.markAsRead(id);
+    }
   };
 
   return (
@@ -84,11 +111,11 @@ export default function CustomerNotifications() {
           ))}
         </div>
 
-        {!mounted ? null : filtered.length === 0 ? (
+        {!mounted || loading ? null : filtered.length === 0 ? (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-slate-800 rounded-3xl p-12 text-center shadow-sm border border-gray-100 dark:border-slate-700 mt-4">
             <Bell className="w-16 h-16 mx-auto text-gray-300 dark:text-slate-600 mb-4" />
             <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">No notifications</h3>
-            <p className="text-gray-500 dark:text-slate-400 font-medium">You're all caught up!</p>
+            <p className="text-gray-500 dark:text-slate-400 font-medium">You&apos;re all caught up!</p>
           </motion.div>
         ) : (
           <div className="space-y-2">

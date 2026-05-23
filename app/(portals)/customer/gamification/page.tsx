@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { Award, Leaf, Star, Flame, Target, Lock, Trophy, ArrowUpCircle, Gem, Shield, Circle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGlobal } from '@/app/providers';
+import { useAuth } from '@/app/contexts/AuthContext';
+import { gamificationService } from '@/lib/data/gamification';
 import {
   staggerContainer, staggerItem, fadeUp, scaleIn, slideUp,
   cardHover, cardTap, buttonTap, useSafeReducedMotion,
@@ -62,46 +64,54 @@ function getCurrentTier(points: number): TierInfo {
   return tiers[0];
 }
 
-const badges = [
-  { name: 'Waste Warrior', icon: '🛡️', desc: 'Rescue 10 items', unlocked: true },
-  { name: 'Eco Hero', icon: '🌿', desc: 'Save 20kg CO2', unlocked: true },
-  { name: 'Plant Savior', icon: '🌱', desc: 'Rescue 50 items', unlocked: false },
-  { name: 'Zero Waste Champion', icon: '🏆', desc: 'Rescue 100 items', unlocked: false },
-];
 
-const leaderboard = [
-  { name: 'Nguyen A.', points: 2850, avatar: 'NA', rank: 1, color: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600' },
-  { name: 'Tran B.', points: 2420, avatar: 'TB', rank: 2, color: 'bg-gray-200 dark:bg-gray-700 text-gray-600' },
-  { name: 'Le C.', points: 2100, avatar: 'LC', rank: 3, color: 'bg-orange-100 dark:bg-orange-900/30 text-orange-600' },
-  { name: 'Pham D.', points: 1890, avatar: 'PD', rank: 4, color: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600' },
-  { name: 'Hoang E.', points: 1650, avatar: 'HE', rank: 5, color: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600' },
-];
-
-const missions = [
-  { name: 'Rescue 5kg Food', current: 3.2, target: 5, unit: 'kg', icon: '🎯', color: 'bg-emerald-500' },
-  { name: 'Rescue 10 Items', current: 7, target: 10, unit: 'items', icon: '📦', color: 'bg-blue-500' },
-  { name: 'Save 50kg CO2', current: 28, target: 50, unit: 'kg', icon: '🌍', color: 'bg-green-500' },
-  { name: 'Invite a Friend', current: 0, target: 1, unit: 'friend', icon: '👥', color: 'bg-purple-500' },
-];
-
-const pointsHistory = [
-  { action: 'Rescued Bánh Mì Thịt Nguội', points: '+50', date: '2 hours ago' },
-  { action: 'Daily login bonus', points: '+10', date: '3 hours ago' },
-  { action: 'Rescued Rau Củ Tổng Hợp', points: '+35', date: '5 hours ago' },
-  { action: 'Rescued 5kg milestone', points: '+100', date: 'Yesterday' },
-  { action: 'Referred a friend', points: '+200', date: '2 days ago' },
-  { action: 'Rescued Kem Vanilla', points: '+40', date: '3 days ago' },
-];
 
 export default function CustomerGamification() {
   const { t, lang } = useGlobal();
+  const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'missions' | 'badges' | 'leaderboard'>('missions');
   const reduced = useSafeReducedMotion();
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    const uid = user?.id || '';
+    gamificationService.getAll(uid).then(result => {
+      setData({
+        streak: result?.streak ?? 7,
+        streakUnit: result?.streakUnit || 'day',
+        userPoints: result?.userPoints || 2450,
+        badges: (result?.badges || []).map((b: any) => ({
+          name: b.badge?.name || b.name || 'Badge',
+          icon: b.badge?.icon || b.icon || '🛡️',
+          desc: b.badge?.description || b.description || '',
+          unlocked: !!b.earnedAt || !!b.unlocked,
+        })),
+        leaderboard: result?.leaderboard || [],
+        missions: (result?.missions || []).map((um: any) => ({
+          name: um.mission?.title || um.title || 'Mission',
+          current: um.progress ?? um.current ?? 0,
+          target: um.mission?.requirementValue || um.requirementValue || um.target || 1,
+          unit: um.mission?.type || um.type || 'items',
+          icon: um.mission?.icon || um.icon || '🎯',
+          color: 'bg-emerald-500',
+        })),
+        pointsHistory: (result?.pointsHistory || result?.points || []).map((p: any) => ({
+          action: p.description || p.source || 'Activity',
+          points: p.points > 0 ? `+${p.points}` : `${p.points}`,
+          date: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : 'Recently',
+        })),
+      });
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, [user]);
 
-  const userPoints = 2450;
+  const userPoints = data?.userPoints ?? 2450;
   const currentTier = getCurrentTier(userPoints);
   const nextTier = tiers[tiers.indexOf(currentTier) + 1];
   const tierProgress = nextTier
@@ -142,14 +152,14 @@ export default function CustomerGamification() {
               <motion.div animate={reduced ? {} : { rotate: [0, -10, 10, -10, 0] }} transition={{ duration: 0.5, delay: 0.5 }}>
                 <Flame className="w-5 h-5 text-yellow-300" />
               </motion.div>
-              <span className="text-white font-bold text-sm">7-day streak!</span>
+              <span className="text-white font-bold text-sm">{data?.streak || 7}-{data?.streakUnit || 'day'} streak!</span>
             </motion.div>
           </div>
         </div>
       </motion.div>
 
       <div className="max-w-5xl mx-auto px-4 -mt-12 relative z-10 space-y-6">
-        {!mounted ? null : (
+        {!mounted || loading ? null : (
           <>
             <motion.div variants={slideUp} initial="hidden" animate="visible"
               className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-slate-700"
@@ -274,7 +284,7 @@ export default function CustomerGamification() {
                     <Target className="w-4 h-4 text-orange-500" /> {t('missions')}
                   </h3>
                   <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-4">
-                    {missions.map((mission) => {
+                    {(data?.missions || []).map((mission: any) => {
                       const progress = Math.min(mission.current / mission.target, 1);
                       return (
                         <motion.div key={mission.name} variants={staggerItem}>
@@ -309,7 +319,7 @@ export default function CustomerGamification() {
                   <motion.div variants={staggerContainer} initial="hidden" animate="visible"
                     className="grid grid-cols-2 md:grid-cols-4 gap-3"
                   >
-                    {badges.map((badge) => (
+                    {(data?.badges || []).map((badge: any) => (
                       <motion.div key={badge.name} variants={staggerItem} whileHover={reduced ? {} : { y: -4, scale: 1.02 }}
                         className={`p-4 rounded-2xl text-center border transition-all ${
                           badge.unlocked
@@ -334,7 +344,7 @@ export default function CustomerGamification() {
                     <Trophy className="w-4 h-4 text-yellow-500" /> {t('leaderboard')}
                   </h3>
                   <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-2">
-                    {leaderboard.map((entry) => (
+                    {(data?.leaderboard || []).map((entry: any) => (
                       <motion.div key={entry.rank} variants={staggerItem} layout whileHover={reduced ? {} : { x: 4 }}
                         className={`flex items-center gap-3 p-3 rounded-2xl transition-all ${entry.rank === 1 ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800' : 'hover:bg-gray-50 dark:hover:bg-slate-700'}`}
                       >
@@ -365,7 +375,7 @@ export default function CustomerGamification() {
                 <Leaf className="w-4 h-4 text-emerald-500" /> {t('points_history')}
               </h3>
               <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-3">
-                {pointsHistory.map((entry, i) => (
+                {(data?.pointsHistory || []).map((entry: any, i: number) => (
                   <motion.div key={i} variants={staggerItem}
                     className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-slate-700 last:border-0"
                   >
@@ -386,20 +396,25 @@ export default function CustomerGamification() {
                 <Star className="w-4 h-4 text-yellow-500" /> {t('daily_streak')}
               </h3>
               <div className="flex gap-1.5 justify-between">
-                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => (
-                  <motion.div key={day} initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: i * 0.05 }}
-                    className="flex flex-col items-center gap-1.5"
-                  >
-                    <motion.div whileHover={reduced ? {} : { scale: 1.15 }}
-                      className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xs font-black transition-all ${
-                        i < 5 ? 'bg-[#057A42] text-white shadow-md shadow-[#057A42]/30' : i === 5 ? 'bg-[#057A42]/60 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-slate-500'
-                      }`}
+                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => {
+                  const streakVal = data?.streak ?? 7;
+                  const active = i < streakVal;
+                  const isToday = i === new Date().getDay() - 1;
+                  return (
+                    <motion.div key={day} initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: i * 0.05 }}
+                      className="flex flex-col items-center gap-1.5"
                     >
-                      {i < 5 ? '✓' : i === 5 ? '🔥' : <Lock className="w-4 h-4" />}
+                      <motion.div whileHover={reduced ? {} : { scale: 1.15 }}
+                        className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xs font-black transition-all ${
+                          active ? 'bg-[#057A42] text-white shadow-md shadow-[#057A42]/30' : isToday ? 'bg-[#057A42]/40 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-slate-500'
+                        }`}
+                      >
+                        {active ? (i === 0 ? '🔥' : '✓') : isToday ? '🔥' : <Lock className="w-4 h-4" />}
+                      </motion.div>
+                      <span className="text-[9px] font-bold text-gray-400 dark:text-slate-500">{day}</span>
                     </motion.div>
-                    <span className="text-[9px] font-bold text-gray-400 dark:text-slate-500">{day}</span>
-                  </motion.div>
-                ))}
+                  );
+                })}
               </div>
             </motion.div>
           </>

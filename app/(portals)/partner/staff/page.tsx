@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, User, Shield, Edit, Users } from 'lucide-react';
+import { Plus, User, Shield, Edit, Users, Loader2 } from 'lucide-react';
 import { useGlobal } from '@/app/providers';
+import { useAuth } from '@/app/contexts/AuthContext';
+import { staffService, StaffMember as ApiStaffMember } from '@/lib/data/staff';
 import {
   staggerContainer, staggerItem, fadeUp, scaleIn,
   buttonTap, useSafeReducedMotion,
@@ -21,32 +23,24 @@ interface StaffMember {
   lastLogin: string;
 }
 
-const roleConfig: Record<Role, { label: string; color: string }> = {
+const roleConfig: Record<string, { label: string; color: string }> = {
   cashier: { label: 'Cashier', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
   manager: { label: 'Manager', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
   operator: { label: 'Operator', color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' },
 };
 
-const permissionMatrix: { permission: string; cashier: boolean; manager: boolean; operator: boolean }[] = [
-  { permission: 'View Orders', cashier: true, manager: true, operator: true },
-  { permission: 'Update Order Status', cashier: true, manager: true, operator: true },
-  { permission: 'View Analytics', cashier: false, manager: true, operator: true },
-  { permission: 'Manage Products', cashier: false, manager: true, operator: true },
-  { permission: 'Manage Staff', cashier: false, manager: true, operator: false },
-  { permission: 'Manage Vouchers', cashier: false, manager: true, operator: true },
-  { permission: 'View Payouts', cashier: false, manager: true, operator: false },
-  { permission: 'Refund Orders', cashier: true, manager: true, operator: false },
-];
 
-const initialStaff: StaffMember[] = [
-  { id: '1', name: 'Minh Tran', email: 'minh@freshfood.com', role: 'manager', status: 'active', lastLogin: '2026-05-16 14:30' },
-  { id: '2', name: 'Lan Nguyen', email: 'lan@freshfood.com', role: 'cashier', status: 'active', lastLogin: '2026-05-16 12:15' },
-  { id: '3', name: 'Hoa Pham', email: 'hoa@freshfood.com', role: 'operator', status: 'active', lastLogin: '2026-05-15 18:45' },
-  { id: '4', name: 'Tuan Le', email: 'tuan@freshfood.com', role: 'cashier', status: 'inactive', lastLogin: '2026-05-10 09:00' },
-  { id: '5', name: 'Anh Vo', email: 'anh@freshfood.com', role: 'manager', status: 'active', lastLogin: '2026-05-16 09:30' },
-  { id: '6', name: 'Bich Dao', email: 'bich@freshfood.com', role: 'operator', status: 'active', lastLogin: '2026-05-14 16:20' },
-  { id: '7', name: 'Cuong Hoang', email: 'cuong@freshfood.com', role: 'cashier', status: 'inactive', lastLogin: '2026-04-28 11:00' },
-];
+
+function mapStaffMember(s: ApiStaffMember): StaffMember {
+  return {
+    id: s.id,
+    name: s.name,
+    email: s.email,
+    role: (['cashier', 'manager', 'operator'].includes(s.role) ? s.role : 'cashier') as Role,
+    status: (s.status === 'active' ? 'active' : 'inactive') as Status,
+    lastLogin: s.lastActive || s.createdAt || '-',
+  };
+}
 
 const roleTabs: { key: Role | 'all'; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -57,37 +51,97 @@ const roleTabs: { key: Role | 'all'; label: string }[] = [
 
 export default function PartnerStaffPage() {
   const { t } = useGlobal();
+  const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
-  const [staff, setStaff] = useState<StaffMember[]>(initialStaff);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [permissionMatrix, setPermissionMatrix] = useState<{ permission: string; cashier: boolean; manager: boolean; operator: boolean }[]>([]);
   const [roleFilter, setRoleFilter] = useState<Role | 'all'>('all');
   const [showForm, setShowForm] = useState(false);
   const [newStaff, setNewStaff] = useState({ name: '', email: '', role: 'cashier' as Role });
+  const [loading, setLoading] = useState(true);
   const reduced = useSafeReducedMotion();
 
-  useEffect(() => { setMounted(true); }, []);
+  const storeId = user?.storeId || '';
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!storeId) return;
+    setLoading(true);
+    staffService.getByStore(storeId).then(data => {
+      const list = data || [];
+      setStaff(list.map(mapStaffMember));
+
+      const permissionSet = new Set<string>();
+      const rolePerms: Record<string, Set<string>> = { cashier: new Set(), manager: new Set(), operator: new Set() };
+      list.forEach((s: any) => {
+        const r = (['cashier', 'manager', 'operator'].includes(s.role) ? s.role : 'cashier');
+        (s.permissions || []).forEach((p: string) => {
+          permissionSet.add(p);
+          rolePerms[r].add(p);
+        });
+      });
+
+      const permDisplay: Record<string, string> = {};
+      [...permissionSet].forEach(p => {
+        permDisplay[p] = p.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      });
+
+      setPermissionMatrix(
+        [...permissionSet].map(p => ({
+          permission: permDisplay[p],
+          cashier: rolePerms.cashier.has(p),
+          manager: rolePerms.manager.has(p),
+          operator: rolePerms.operator.has(p),
+        }))
+      );
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, [storeId]);
 
   const filtered = roleFilter === 'all' ? staff : staff.filter(s => s.role === roleFilter);
 
-  const toggleStatus = (id: string) => {
-    setStaff(prev => prev.map(s => s.id === id ? { ...s, status: s.status === 'active' ? 'inactive' : 'active' } : s));
+  const toggleStatus = async (id: string) => {
+    const member = staff.find(s => s.id === id);
+    if (!member) return;
+    const newStatus = member.status === 'active' ? 'inactive' : 'active';
+    await staffService.update(id, { status: newStatus });
+    setStaff(prev => prev.map(s => s.id === id ? { ...s, status: newStatus as Status } : s));
   };
 
-  const handleAddStaff = () => {
+  const handleAddStaff = async () => {
     if (!newStaff.name || !newStaff.email) return;
-    const member: StaffMember = {
-      id: String(Date.now()),
+    const created = await staffService.create({
       name: newStaff.name,
       email: newStaff.email,
       role: newStaff.role,
       status: 'active',
-      lastLogin: '-',
-    };
-    setStaff(prev => [member, ...prev]);
+      storeId,
+    });
+    if (created) {
+      setStaff(prev => [mapStaffMember(created), ...prev]);
+    }
     setNewStaff({ name: '', email: '', role: 'cashier' });
     setShowForm(false);
   };
 
   if (!mounted) return null;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+          <div className="text-gray-900 dark:text-white text-sm font-medium">Loading staff members...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">

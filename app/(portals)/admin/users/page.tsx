@@ -1,24 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Users, Shield, Ban, CheckCircle, Clock, Eye, ChevronDown, ChevronUp, AlertTriangle, X, ShoppingBag, DollarSign, Flag, Calendar } from 'lucide-react';
+import { Search, Users, Shield, Ban, CheckCircle, Clock, Eye, ChevronDown, ChevronUp, AlertTriangle, X, ShoppingBag, DollarSign, Flag, Calendar, Loader2, CreditCard, Plus, Trash2 } from 'lucide-react';
 import { useGlobal } from '@/app/providers';
-
-const MOCK_USERS = [
-  { id: '1', name: 'Nguyen Van An', email: 'an.nguyen@email.com', role: 'Customer', status: 'Active', joinDate: '2024-01-15', lastActive: '2026-05-16 14:32', totalOrders: 47, totalSpent: 12800000, reportsCount: 0, accountAge: '2y 4m' },
-  { id: '2', name: 'Tran Thi Binh', email: 'binh.tran@email.com', role: 'Partner', status: 'Active', joinDate: '2024-03-22', lastActive: '2026-05-16 10:15', totalOrders: 0, totalSpent: 0, reportsCount: 1, accountAge: '2y 2m' },
-  { id: '3', name: 'Le Hoang Cuong', email: 'cuong.le@email.com', role: 'Admin', status: 'Active', joinDate: '2023-11-01', lastActive: '2026-05-16 16:00', totalOrders: 0, totalSpent: 0, reportsCount: 0, accountAge: '2y 6m' },
-  { id: '4', name: 'Pham Minh Duc', email: 'duc.pham@email.com', role: 'Customer', status: 'Suspended', joinDate: '2024-06-10', lastActive: '2026-04-28 09:45', totalOrders: 12, totalSpent: 3450000, reportsCount: 3, accountAge: '1y 11m' },
-  { id: '5', name: 'Hoang Thi Em', email: 'em.hoang@email.com', role: 'Customer', status: 'Active', joinDate: '2025-02-14', lastActive: '2026-05-15 22:18', totalOrders: 28, totalSpent: 7600000, reportsCount: 0, accountAge: '1y 3m' },
-  { id: '6', name: 'Vo Van Phuc', email: 'phuc.vo@email.com', role: 'Partner', status: 'Banned', joinDate: '2024-08-05', lastActive: '2026-03-10 08:00', totalOrders: 0, totalSpent: 0, reportsCount: 5, accountAge: '1y 9m' },
-  { id: '7', name: 'Dang Thu Ha', email: 'ha.dang@email.com', role: 'Admin', status: 'Active', joinDate: '2023-06-20', lastActive: '2026-05-16 15:30', totalOrders: 0, totalSpent: 0, reportsCount: 0, accountAge: '2y 11m' },
-  { id: '8', name: 'Bui Quang Huy', email: 'huy.bui@email.com', role: 'Customer', status: 'Active', joinDate: '2024-11-30', lastActive: '2026-05-14 17:05', totalOrders: 8, totalSpent: 2100000, reportsCount: 1, accountAge: '1y 5m' },
-  { id: '9', name: 'Ly My Linh', email: 'linh.ly@email.com', role: 'Partner', status: 'Suspended', joinDate: '2024-04-18', lastActive: '2026-05-01 11:20', totalOrders: 0, totalSpent: 0, reportsCount: 2, accountAge: '2y 1m' },
-  { id: '10', name: 'Ngo Thanh Nam', email: 'nam.ngo@email.com', role: 'Customer', status: 'Banned', joinDate: '2024-09-12', lastActive: '2026-02-20 06:45', totalOrders: 5, totalSpent: 980000, reportsCount: 8, accountAge: '1y 8m' },
-  { id: '11', name: 'Do Thuy Oanh', email: 'oanh.do@email.com', role: 'Customer', status: 'Active', joinDate: '2025-05-01', lastActive: '2026-05-16 13:00', totalOrders: 3, totalSpent: 450000, reportsCount: 0, accountAge: '1y 0m' },
-  { id: '12', name: 'Mai Tien Phat', email: 'phat.mai@email.com', role: 'Partner', status: 'Active', joinDate: '2024-02-28', lastActive: '2026-05-15 19:40', totalOrders: 0, totalSpent: 0, reportsCount: 0, accountAge: '2y 3m' },
-];
+import { authService } from '@/lib/data/auth';
+import { bankAccountService, BankAccount } from '@/lib/data/bankAccounts';
 
 const ROLE_FILTERS = ['All', 'Customers', 'Partners', 'Admins'];
 const STATUS_STYLES: Record<string, string> = {
@@ -48,13 +35,111 @@ function GradientAvatar({ name }: { name: string }) {
 export default function AdminUsers() {
   const { t } = useGlobal();
   const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [banModal, setBanModal] = useState<{ id: string; name: string; action: 'ban' | 'unban' } | null>(null);
-  const [users, setUsers] = useState(MOCK_USERS);
+  const [users, setUsers] = useState<any[]>([]);
 
-  useEffect(() => { setMounted(true); }, []);
+  const [userBankAccounts, setUserBankAccounts] = useState<BankAccount[]>([]);
+  const [loadingBanks, setLoadingBanks] = useState(false);
+  const [showAddBankModal, setShowAddBankModal] = useState(false);
+  const [newBankName, setNewBankName] = useState('');
+  const [newAccountNumber, setNewAccountNumber] = useState('');
+  const [newAccountHolder, setNewAccountHolder] = useState('');
+  const [newBranch, setNewBranch] = useState('');
+
+  useEffect(() => {
+    if (expandedId) {
+      setLoadingBanks(true);
+      bankAccountService.getByUser(expandedId)
+        .then(data => {
+          setUserBankAccounts(data || []);
+          setLoadingBanks(false);
+        })
+        .catch(err => {
+          console.error(err);
+          setUserBankAccounts([]);
+          setLoadingBanks(false);
+        });
+    } else {
+      setUserBankAccounts([]);
+    }
+  }, [expandedId]);
+
+  const handleAddBankAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!expandedId) return;
+    if (!newBankName || !newAccountNumber || !newAccountHolder) {
+      alert('Vui lòng điền đầy đủ các thông tin bắt buộc');
+      return;
+    }
+    try {
+      await bankAccountService.add({
+        userId: expandedId,
+        bankName: newBankName,
+        accountNumber: newAccountNumber,
+        accountHolder: newAccountHolder.toUpperCase(),
+        branch: newBranch,
+        isDefault: userBankAccounts.length === 0
+      });
+      setNewBankName('');
+      setNewAccountNumber('');
+      setNewAccountHolder('');
+      setNewBranch('');
+      setShowAddBankModal(false);
+      
+      const data = await bankAccountService.getByUser(expandedId);
+      setUserBankAccounts(data || []);
+    } catch (err) {
+      console.error(err);
+      alert('Không thể thêm tài khoản ngân hàng');
+    }
+  };
+
+  const handleDeleteBankAccount = async (id: string) => {
+    if (!expandedId) return;
+    if (!confirm('Bạn có chắc chắn muốn xóa tài khoản ngân hàng liên kết này không?')) return;
+    try {
+      await bankAccountService.remove(id);
+      const data = await bankAccountService.getByUser(expandedId);
+      setUserBankAccounts(data || []);
+    } catch (err) {
+      console.error(err);
+      alert('Không thể xóa tài khoản ngân hàng');
+    }
+  };
+
+  const handleSetDefaultBank = async (id: string) => {
+    if (!expandedId) return;
+    try {
+      await bankAccountService.setDefault(id, expandedId);
+      const data = await bankAccountService.getByUser(expandedId);
+      setUserBankAccounts(data || []);
+    } catch (err) {
+      console.error(err);
+      alert('Không thể đặt làm mặc định');
+    }
+  };
+
+  useEffect(() => {
+    setMounted(true);
+    setLoading(true);
+    authService.getUsers().then(data => {
+      if (Array.isArray(data)) {
+        setUsers(data.map((u: any) => ({
+          ...u,
+          status: u.status ? u.status.charAt(0).toUpperCase() + u.status.slice(1).toLowerCase() : 'Active',
+          role: u.role ? u.role.charAt(0).toUpperCase() + u.role.slice(1).toLowerCase() : 'Customer',
+        })));
+      }
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, []);
 
   const filtered = users.filter(u => {
     const q = search.toLowerCase();
@@ -68,19 +153,56 @@ export default function AdminUsers() {
 
   const handleBanToggle = () => {
     if (!banModal) return;
-    setUsers(prev => prev.map(u => u.id === banModal.id ? { ...u, status: banModal.action === 'ban' ? 'Banned' : 'Active' as const } : u));
-    setBanModal(null);
+    const newStatus = banModal.action === 'ban' ? 'banned' : 'active';
+    authService.updateUserStatus(banModal.id, newStatus)
+      .then(() => {
+        setUsers(prev => prev.map(u => u.id === banModal.id ? { ...u, status: banModal.action === 'ban' ? 'Banned' : 'Active' } : u));
+        setBanModal(null);
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Failed to update user status');
+        setBanModal(null);
+      });
   };
 
   const handleSuspend = (id: string) => {
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, status: u.status === 'Suspended' ? 'Active' as const : 'Suspended' as const } : u));
+    const targetUser = users.find(u => u.id === id);
+    if (!targetUser) return;
+    const newStatus = targetUser.status === 'Suspended' ? 'active' : 'suspended';
+    authService.updateUserStatus(id, newStatus)
+      .then(() => {
+        setUsers(prev => prev.map(u => u.id === id ? { ...u, status: targetUser.status === 'Suspended' ? 'Active' : 'Suspended' } : u));
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Failed to suspend user');
+      });
   };
 
   const handleVerify = (id: string) => {
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, status: 'Active' as const } : u));
+    authService.updateUserStatus(id, 'active')
+      .then(() => {
+        setUsers(prev => prev.map(u => u.id === id ? { ...u, status: 'Active' } : u));
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Failed to verify user');
+      });
   };
 
   if (!mounted) return null;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0A0F1C] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+          <div className="text-slate-300 text-sm font-medium">Loading user directory...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#f0f2f5] dark:bg-slate-950 min-h-screen pb-20 font-sans transition-colors duration-300">
@@ -125,8 +247,8 @@ export default function AdminUsers() {
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
                 {filtered.map(user => (
-                  <>
-                    <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors group cursor-pointer" onClick={() => setExpandedId(expandedId === user.id ? null : user.id)}>
+                  <Fragment key={user.id}>
+                    <tr className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors group cursor-pointer" onClick={() => setExpandedId(expandedId === user.id ? null : user.id)}>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <GradientAvatar name={user.name} />
@@ -179,28 +301,99 @@ export default function AdminUsers() {
                     {expandedId === user.id && (
                       <tr key={`${user.id}-detail`}>
                         <td colSpan={6} className="px-6 py-4 bg-gray-50/50 dark:bg-slate-900/30 border-b border-gray-100 dark:border-slate-700">
-                          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700">
-                              <div className="flex items-center gap-2 text-gray-500 dark:text-slate-400 text-[10px] font-bold uppercase mb-1"><ShoppingBag className="w-3 h-3" /> Total Orders</div>
-                              <div className="text-lg font-black text-gray-900 dark:text-white">{user.totalOrders}</div>
+                          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                              <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700">
+                                <div className="flex items-center gap-2 text-gray-500 dark:text-slate-400 text-[10px] font-bold uppercase mb-1"><ShoppingBag className="w-3 h-3" /> Total Orders</div>
+                                <div className="text-lg font-black text-gray-900 dark:text-white">{user.totalOrders}</div>
+                              </div>
+                              <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700">
+                                <div className="flex items-center gap-2 text-gray-500 dark:text-slate-400 text-[10px] font-bold uppercase mb-1"><DollarSign className="w-3 h-3" /> Total Spent</div>
+                                <div className="text-lg font-black text-gray-900 dark:text-white">{user.totalSpent.toLocaleString()}đ</div>
+                              </div>
+                              <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700">
+                                <div className="flex items-center gap-2 text-gray-500 dark:text-slate-400 text-[10px] font-bold uppercase mb-1"><Flag className="w-3 h-3" /> Reports</div>
+                                <div className="text-lg font-black text-gray-900 dark:text-white">{user.reportsCount}</div>
+                              </div>
+                              <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700">
+                                <div className="flex items-center gap-2 text-gray-500 dark:text-slate-400 text-[10px] font-bold uppercase mb-1"><Calendar className="w-3 h-3" /> Account Age</div>
+                                <div className="text-lg font-black text-gray-900 dark:text-white">{user.accountAge}</div>
+                              </div>
                             </div>
-                            <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700">
-                              <div className="flex items-center gap-2 text-gray-500 dark:text-slate-400 text-[10px] font-bold uppercase mb-1"><DollarSign className="w-3 h-3" /> Total Spent</div>
-                              <div className="text-lg font-black text-gray-900 dark:text-white">{user.totalSpent.toLocaleString()}đ</div>
-                            </div>
-                            <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700">
-                              <div className="flex items-center gap-2 text-gray-500 dark:text-slate-400 text-[10px] font-bold uppercase mb-1"><Flag className="w-3 h-3" /> Reports</div>
-                              <div className="text-lg font-black text-gray-900 dark:text-white">{user.reportsCount}</div>
-                            </div>
-                            <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700">
-                              <div className="flex items-center gap-2 text-gray-500 dark:text-slate-400 text-[10px] font-bold uppercase mb-1"><Calendar className="w-3 h-3" /> Account Age</div>
-                              <div className="text-lg font-black text-gray-900 dark:text-white">{user.accountAge}</div>
+
+                            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700">
+                              <div className="flex items-center justify-between mb-3">
+                                <h4 className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-2 uppercase tracking-wider">
+                                  <CreditCard className="w-4 h-4 text-slate-500 dark:text-slate-400" /> Tài khoản ngân hàng liên kết (Nạp tự động)
+                                </h4>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowAddBankModal(true);
+                                  }}
+                                  className="flex items-center gap-1 text-[10px] font-bold text-white bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 px-3 py-1.5 rounded-lg transition-all"
+                                >
+                                  <Plus className="w-3 h-3" /> Thêm ngân hàng
+                                </button>
+                              </div>
+
+                              {loadingBanks ? (
+                                <div className="py-4 flex justify-center">
+                                  <Loader2 className="w-5 h-5 text-emerald-500 animate-spin" />
+                                </div>
+                              ) : userBankAccounts.length === 0 ? (
+                                <div className="py-4 text-center text-xs text-gray-400 dark:text-slate-500 italic bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700">
+                                  Chưa cấu hình tài khoản ngân hàng nào cho khách hàng này. Vui lòng bấm &quot;Thêm ngân hàng&quot; để liên kết.
+                                </div>
+                              ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  {userBankAccounts.map(acc => (
+                                    <div key={acc.id} className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 flex items-start justify-between shadow-sm">
+                                      <div className="flex gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
+                                          {acc.bankName.slice(0, 2).toUpperCase()}
+                                        </div>
+                                        <div>
+                                          <div className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-1.5">
+                                            {acc.bankName}
+                                            {acc.isDefault && (
+                                              <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full">
+                                                Mặc định
+                                              </span>
+                                            )}
+                                          </div>
+                                          <div className="text-xs text-gray-500 dark:text-slate-400 font-medium mt-0.5">Số tài khoản: <strong className="text-gray-700 dark:text-slate-300">{acc.accountNumber}</strong></div>
+                                          <div className="text-xs text-gray-500 dark:text-slate-400 font-medium mt-0.5">Chủ tài khoản: <span className="uppercase text-gray-700 dark:text-slate-300">{acc.accountHolder}</span></div>
+                                          {acc.branch && <div className="text-[10px] text-gray-400 dark:text-slate-500 font-medium mt-0.5">Chi nhánh: {acc.branch}</div>}
+                                        </div>
+                                      </div>
+                                      <div className="flex gap-1 items-center">
+                                        {!acc.isDefault && (
+                                          <button
+                                            onClick={() => handleSetDefaultBank(acc.id)}
+                                            className="text-[9px] font-bold text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 bg-gray-50 dark:bg-slate-700 px-2 py-1 rounded-lg transition-colors border border-gray-100 dark:border-slate-600"
+                                          >
+                                            Đặt mặc định
+                                          </button>
+                                        )}
+                                        <button
+                                          onClick={() => handleDeleteBankAccount(acc.id)}
+                                          className="p-1.5 bg-red-50 dark:bg-red-950/30 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg hover:scale-105 transition-all"
+                                          title="Xóa"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </motion.div>
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -228,6 +421,86 @@ export default function AdminUsers() {
               </button>
               <button onClick={() => setBanModal(null)} className="flex-1 py-3 rounded-xl font-bold bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">Cancel</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showAddBankModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setShowAddBankModal(false)}>
+          <div className="bg-white dark:bg-slate-800 rounded-[2rem] p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-slate-700" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-black text-gray-900 dark:text-white text-lg flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-slate-600 dark:text-slate-300" /> Thêm Ngân Hàng Liên Kết
+              </h3>
+              <button onClick={() => setShowAddBankModal(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
+                <X className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleAddBankAccount} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-gray-500 dark:text-slate-400 mb-1 block uppercase">Tên Ngân Hàng <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ví dụ: Vietcombank, Techcombank, MB Bank..."
+                  value={newBankName}
+                  onChange={e => setNewBankName(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-slate-700 rounded-xl font-bold text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-500 dark:text-slate-400 mb-1 block uppercase">Số Tài Khoản <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Nhập số tài khoản ngân hàng"
+                  value={newAccountNumber}
+                  onChange={e => setNewAccountNumber(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-slate-700 rounded-xl font-bold text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-500 dark:text-slate-400 mb-1 block uppercase">Tên Chủ Tài Khoản <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ví dụ: NGUYEN VAN A"
+                  value={newAccountHolder}
+                  onChange={e => setNewAccountHolder(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-slate-700 rounded-xl font-bold text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 uppercase"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-500 dark:text-slate-400 mb-1 block uppercase">Chi Nhánh (Tùy chọn)</label>
+                <input
+                  type="text"
+                  placeholder="Nhập chi nhánh ngân hàng"
+                  value={newBranch}
+                  onChange={e => setNewBranch(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-slate-700 rounded-xl font-bold text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  className="flex-1 py-3 rounded-xl font-bold text-white bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 transition-all"
+                >
+                  Xác nhận thêm
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddBankModal(false)}
+                  className="flex-1 py-3 rounded-xl font-bold bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+                >
+                  Hủy
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -2,33 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Megaphone, Image as ImageIcon, Plus, Send, Users, TrendingUp, BarChart3, Calendar, Clock, Percent, MousePointerClick, Gift, Bell } from 'lucide-react';
+import { Megaphone, Image as ImageIcon, Plus, Send, Users, TrendingUp, BarChart3, Calendar, Clock, Percent, MousePointerClick, Gift, Bell, Loader2 } from 'lucide-react';
 import { useGlobal } from '@/app/providers';
-
-const BANNERS = [
-  { id: 'B001', title: 'Summer Food Fest', image: '', activeFrom: '2026-05-01', activeTo: '2026-06-15', status: 'Active' as const },
-  { id: 'B002', title: 'Zero Waste Campaign', image: '', activeFrom: '2026-04-15', activeTo: '2026-05-30', status: 'Active' as const },
-  { id: 'B003', title: 'New Partner Onboarding', image: '', activeFrom: '2026-05-10', activeTo: '2026-06-10', status: 'Active' as const },
-  { id: 'B004', title: 'Flash Sale - Bakery', image: '', activeFrom: '2026-05-01', activeTo: '2026-05-07', status: 'Ended' as const },
-  { id: 'B005', title: 'Referral Bonus Week', image: '', activeFrom: '2026-04-20', activeTo: '2026-05-05', status: 'Ended' as const },
-  { id: 'B006', title: 'Earth Day Special', image: '', activeFrom: '2026-04-22', activeTo: '2026-04-23', status: 'Ended' as const },
-];
-
-const CAMPAIGNS = [
-  { id: 'C001', name: 'Flash Sale FriYay', type: 'Flash Sale', budget: 50000000, spent: 28500000, impressions: 450000, conversions: 12500, status: 'Active' as const },
-  { id: 'C002', name: 'Summer Referral Drive', type: 'Referral', budget: 30000000, spent: 12000000, impressions: 210000, conversions: 5400, status: 'Active' as const },
-  { id: 'C003', name: 'Rainy Season Promo', type: 'Seasonal', budget: 25000000, spent: 25000000, impressions: 380000, conversions: 8900, status: 'Ended' as const },
-  { id: 'C004', name: 'Lunar New Year Deals', type: 'Seasonal', budget: 80000000, spent: 72000000, impressions: 920000, conversions: 28400, status: 'Ended' as const },
-  { id: 'C005', name: 'Referral Boost Week', type: 'Referral', budget: 15000000, spent: 5000000, impressions: 95000, conversions: 3100, status: 'Active' as const },
-  { id: 'C006', name: 'Midnight Snack Flash', type: 'Flash Sale', budget: 20000000, spent: 18000000, impressions: 320000, conversions: 15000, status: 'Ended' as const },
-];
-
-const NOTIFICATION_LOG = [
-  { id: 'N001', title: 'Flash Sale Now Live!', segments: 'All Users', sentAt: '2026-05-16 10:00', delivered: 45200, opens: 12400 },
-  { id: 'N002', title: 'New Restaurants Near You', segments: 'District 1, District 3', sentAt: '2026-05-15 18:30', delivered: 12400, opens: 3800 },
-  { id: 'N003', title: 'Your Weekly Discount Code', segments: 'Active Customers', sentAt: '2026-05-14 09:00', delivered: 28500, opens: 7200 },
-  { id: 'N004', title: 'Referral Reward Earned!', segments: 'Referral Participants', sentAt: '2026-05-13 14:00', delivered: 3200, opens: 1800 },
-];
+import { campaignService, Campaign } from '@/lib/data/campaigns';
 
 const formatVND = (n: number) => n.toLocaleString('vi-VN') + 'đ';
 const formatNum = (n: number) => n.toLocaleString();
@@ -36,15 +12,32 @@ const formatNum = (n: number) => n.toLocaleString();
 export default function AdminMarketing() {
   const { t } = useGlobal();
   const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [campaignName, setCampaignName] = useState('');
   const [campaignType, setCampaignType] = useState('Flash Sale');
   const [campaignBudget, setCampaignBudget] = useState('');
   const [notifTitle, setNotifTitle] = useState('');
   const [notifSegment, setNotifSegment] = useState('All Users');
-  const [notifLog, setNotifLog] = useState(NOTIFICATION_LOG);
+  const [notifLog, setNotifLog] = useState<any[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [banners, setBanners] = useState<any[]>([]);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    setLoading(true);
+    Promise.all([
+      campaignService.getAll(),
+      campaignService.getBanners(),
+    ]).then(([campaignData, bannerData]) => {
+      if (Array.isArray(campaignData)) setCampaigns(campaignData);
+      if (Array.isArray(bannerData)) setBanners(bannerData);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, []);
 
   const handleCreateCampaign = () => {
     if (!campaignName.trim()) return;
@@ -61,19 +54,28 @@ export default function AdminMarketing() {
       title: notifTitle,
       segments: notifSegment,
       sentAt: new Date().toLocaleString('sv-SE').replace('T', ' ').slice(0, 16),
-      delivered: Math.floor(Math.random() * 30000) + 5000,
-      opens: Math.floor(Math.random() * 10000) + 1000,
     };
     setNotifLog(prev => [newNotif, ...prev]);
     setNotifTitle('');
   };
 
-  const totalReferrals = 28400;
-  const referralConversion = 12.4;
-  const rewardsDistributed = 186500000;
-  const activeCampaigns = CAMPAIGNS.filter(c => c.status === 'Active').length;
+  const totalReferrals = campaigns.reduce((s, c) => s + (c.actualConversions || 0), 0) || 0;
+  const referralConversion = campaigns.length && totalReferrals ? Math.round((totalReferrals / campaigns.reduce((s, c) => s + (c.actualImpressions || 1), 0)) * 100 * 10) / 10 : null;
+  const rewardsDistributed = campaigns.reduce((s, c) => s + (c.spent || 0), 0) || 0;
+  const activeCampaigns = campaigns.filter(c => c.status === 'active').length;
 
   if (!mounted) return null;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0A0F1C] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+          <div className="text-slate-300 text-sm font-medium">Retrieving marketing data...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#f0f2f5] dark:bg-slate-950 min-h-screen pb-20 font-sans transition-colors duration-300">
@@ -103,7 +105,7 @@ export default function AdminMarketing() {
               <Percent className="w-4 h-5 text-blue-500" />
               <span className="text-gray-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider">Conversion Rate</span>
             </div>
-            <div className="text-2xl font-black text-blue-600">{referralConversion}%</div>
+            <div className="text-2xl font-black text-blue-600">{referralConversion !== null ? `${referralConversion}%` : '—'}</div>
             <div className="text-[10px] text-blue-500 font-bold mt-1">Referral to order</div>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-slate-700">
@@ -134,7 +136,7 @@ export default function AdminMarketing() {
             </button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {BANNERS.map(banner => (
+            {banners.map(banner => (
               <div key={banner.id} className="bg-gray-50 dark:bg-slate-900/50 rounded-2xl border border-gray-100 dark:border-slate-700 overflow-hidden">
                 <div className="h-24 bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center">
                   {banner.image ? (
@@ -146,12 +148,12 @@ export default function AdminMarketing() {
                 <div className="p-4">
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-bold text-sm text-gray-900 dark:text-white">{banner.title}</h4>
-                    <span className={`text-[8px] font-bold px-2 py-1 rounded-full uppercase tracking-wider border ${banner.status === 'Active' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700'}`}>
-                      {banner.status}
+                    <span className={`text-[8px] font-bold px-2 py-1 rounded-full uppercase tracking-wider border ${banner.active ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700'}`}>
+                      {banner.active ? 'Active' : 'Inactive'}
                     </span>
                   </div>
                   <div className="flex items-center gap-1 text-[10px] text-gray-400 dark:text-slate-500 font-medium">
-                    <Calendar className="w-3 h-3" /> {banner.activeFrom} - {banner.activeTo}
+                    <Calendar className="w-3 h-3" /> Priority: {banner.priority}
                   </div>
                 </div>
               </div>
@@ -202,18 +204,18 @@ export default function AdminMarketing() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
-                {CAMPAIGNS.map(c => (
+                {campaigns.map(c => (
                   <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
-                    <td className="px-4 py-4 font-bold text-sm text-gray-900 dark:text-white">{c.name}</td>
+                    <td className="px-4 py-4 font-bold text-sm text-gray-900 dark:text-white">{c.title}</td>
                     <td className="px-4 py-4">
                       <span className="text-[10px] font-bold px-2 py-1 rounded-full border text-gray-600 dark:text-slate-400 border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800">{c.type}</span>
                     </td>
                     <td className="px-4 py-4 text-xs font-bold text-gray-800 dark:text-slate-200">{formatVND(c.budget)}</td>
                     <td className="px-4 py-4 text-xs font-bold text-gray-800 dark:text-slate-200">{formatVND(c.spent)}</td>
-                    <td className="px-4 py-4 text-xs font-medium text-gray-600 dark:text-slate-400">{formatNum(c.impressions)}</td>
-                    <td className="px-4 py-4 text-xs font-bold text-gray-800 dark:text-slate-200">{formatNum(c.conversions)}</td>
+                    <td className="px-4 py-4 text-xs font-medium text-gray-600 dark:text-slate-400">{formatNum(c.actualImpressions || 0)}</td>
+                    <td className="px-4 py-4 text-xs font-bold text-gray-800 dark:text-slate-200">{formatNum(c.actualConversions || 0)}</td>
                     <td className="px-4 py-4">
-                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider border ${c.status === 'Active' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700'}`}>
+                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider border ${c.status === 'active' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700'}`}>
                         {c.status}
                       </span>
                     </td>
@@ -254,8 +256,8 @@ export default function AdminMarketing() {
                   </div>
                 </div>
                 <div className="text-right text-[10px]">
-                  <div className="font-bold text-gray-700 dark:text-slate-300">{formatNum(n.delivered)} delivered</div>
-                  <div className="text-gray-400">{formatNum(n.opens)} opens</div>
+                  <div className="font-bold text-gray-400 dark:text-slate-400">Pending</div>
+                  <div className="text-gray-400">—</div>
                 </div>
               </div>
             ))}

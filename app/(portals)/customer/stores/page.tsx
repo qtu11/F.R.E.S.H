@@ -5,24 +5,48 @@ import { Store, Search, MapPin, Phone, Star, Clock, ChevronRight, Tag } from 'lu
 import { motion } from 'framer-motion';
 import { useGlobal } from '@/app/providers';
 import { showToast } from '@/lib/data/notifications';
+import { productService } from '@/lib/data/products';
 
-const stores = [
-  { id: 's1', name: 'WinMart+', address: '123 Nguyễn Huệ, D1', distance: '0.3 km', rating: 4.5, open: true, yearsOpen: 5, dealsCount: 8, phone: '028 3825 6789', color: 'from-blue-500 to-blue-700' },
-  { id: 's2', name: 'Co.opmart', address: '45 Lê Lợi, D1', distance: '0.8 km', rating: 4.3, open: true, yearsOpen: 12, dealsCount: 5, phone: '028 3829 0123', color: 'from-red-500 to-red-700' },
-  { id: 's3', name: 'AEON', address: '1 Tân Phú, D7', distance: '2.1 km', rating: 4.6, open: true, yearsOpen: 8, dealsCount: 12, phone: '028 5413 6789', color: 'from-emerald-500 to-emerald-700' },
-  { id: 's4', name: 'MM Mega Market', address: '78 Nam Kỳ Khởi Nghĩa, D3', distance: '1.5 km', rating: 4.2, open: true, yearsOpen: 15, dealsCount: 4, phone: '028 3930 4567', color: 'from-orange-500 to-orange-700' },
-  { id: 's5', name: 'FamilyMart', address: '56 Nguyễn Đình Chiểu, D3', distance: '0.5 km', rating: 4.0, open: true, yearsOpen: 3, dealsCount: 6, phone: '028 3823 8901', color: 'from-green-500 to-green-700' },
-  { id: 's6', name: 'Circle K', address: '12 Lý Tự Trọng, D1', distance: '0.2 km', rating: 3.8, open: true, yearsOpen: 2, dealsCount: 3, phone: '028 3825 2345', color: 'from-red-600 to-red-800' },
-  { id: 's7', name: 'Lotte Mart', address: '469 Nguyễn Hữu Thọ, D7', distance: '3.2 km', rating: 4.4, open: false, yearsOpen: 10, dealsCount: 7, phone: '028 3771 5678', color: 'from-yellow-500 to-yellow-700' },
-  { id: 's8', name: 'Big C', address: '88 Nguyễn Văn Linh, D7', distance: '4.0 km', rating: 4.1, open: true, yearsOpen: 6, dealsCount: 9, phone: '028 5410 1234', color: 'from-cyan-500 to-cyan-700' },
-];
+const storeColors: Record<string, string> = {
+  'WinMart+': 'from-blue-500 to-blue-700',
+  'Co.opmart': 'from-red-500 to-red-700',
+  'AEON': 'from-emerald-500 to-emerald-700',
+  'MM Mega Market': 'from-orange-500 to-orange-700',
+  'FamilyMart': 'from-green-500 to-green-700',
+  'Circle K': 'from-red-600 to-red-800',
+  'Lotte Mart': 'from-yellow-500 to-yellow-700',
+  'Big C': 'from-cyan-500 to-cyan-700',
+};
 
 export default function CustomerStores() {
   const { t } = useGlobal();
   const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [stores, setStores] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    productService.getStores().then(data => {
+      setStores((data || []).map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        address: s.address,
+        distance: s.distance ? `${s.distance} km` : '0 km',
+        rating: s.rating || 4.0,
+        open: s.isOpen,
+        yearsOpen: s.since ? Math.floor((Date.now() - new Date(s.since).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 3,
+        dealsCount: s.dealsCount || 0,
+        phone: s.phone,
+        color: storeColors[s.name] || 'from-blue-500 to-blue-700',
+      })));
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      showToast('error', 'Failed to load stores');
+      setLoading(false);
+    });
+  }, []);
 
   const filtered = stores.filter(s =>
     s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -54,7 +78,7 @@ export default function CustomerStores() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 mt-6 space-y-3">
-        {!mounted ? null : filtered.length === 0 ? (
+        {!mounted || loading ? null : filtered.length === 0 ? (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-slate-800 rounded-3xl p-12 text-center shadow-sm border border-gray-100 dark:border-slate-700">
             <Store className="w-16 h-16 mx-auto text-gray-300 dark:text-slate-600 mb-4" />
             <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">No stores found</h3>

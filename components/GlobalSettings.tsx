@@ -2,9 +2,14 @@
 
 import { useGlobal } from '@/app/providers';
 import { Moon, Sun } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 
 export function GlobalSettings() {
   const { theme, setTheme, lang, setLang } = useGlobal();
+  const pathname = usePathname();
+
+  // Hide the floating widget on the homepage to avoid cluttering and duplication
+  if (pathname === '/') return null;
 
   return (
     <div className="fixed top-16 md:top-4 right-4 z-[55] flex items-center gap-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-2 rounded-full border border-gray-200 dark:border-slate-800 shadow-lg">
@@ -28,3 +33,4 @@ export function GlobalSettings() {
     </div>
   );
 }
+
