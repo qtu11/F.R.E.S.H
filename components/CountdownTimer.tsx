@@ -45,7 +45,7 @@ export function CountdownTimer({ targetDate, size = 'md', showLabel = true, expi
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [targetDate]);
+  }, [targetDate, expiredLabel]);
 
   const sizeClasses = {
     sm: 'text-xs px-2 py-0.5',

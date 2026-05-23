@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   MapPin, Ticket, Clock, ShoppingBag, Wallet, Plus, Award, 
   Sparkles, ShieldCheck, HelpCircle, Loader2, ArrowUpRight, 
@@ -55,12 +55,7 @@ export default function CustomerApp() {
 
   useEffect(() => { setMounted(true); }, []);
 
-  useEffect(() => {
-    if (!user) return;
-    fetchCustomerDashboard();
-  }, [user?.id]);
-
-  const fetchCustomerDashboard = () => {
+  const fetchCustomerDashboard = useCallback(() => {
     setLoading(true);
     productService.getLive()
       .then((products) => {
@@ -72,7 +67,12 @@ export default function CustomerApp() {
         showToast('error', 'Không thể tải danh sách món ăn cứu hộ');
         setLoading(false);
       });
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    fetchCustomerDashboard();
+  }, [user, fetchCustomerDashboard]);
 
   // Card Mouse Tilt Handler
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -250,6 +250,7 @@ export default function CustomerApp() {
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-sky-400 p-[2px] shadow-lg">
               <div className="w-full h-full bg-slate-900 rounded-[14px] flex items-center justify-center text-3xl overflow-hidden font-bold text-white">
                 {user?.avatar && user.avatar.length > 2 ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
                   <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
                 ) : (
                   user?.name ? user.name[0].toUpperCase() : 'W'

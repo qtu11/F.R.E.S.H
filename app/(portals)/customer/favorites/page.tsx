@@ -9,6 +9,19 @@ import { useAuth } from '@/app/contexts/AuthContext';
 import { showToast } from '@/lib/data/notifications';
 import { favoriteService } from '@/lib/data/favorites';
 
+const categoryGradients: Record<string, string> = {
+  Bakery: 'from-amber-400 to-orange-600',
+  'Fast Food': 'from-orange-400 to-red-600',
+  Vegetables: 'from-emerald-400 to-green-600',
+  Fruits: 'from-yellow-400 to-green-600',
+  Frozen: 'from-cyan-400 to-blue-600',
+  Beverages: 'from-sky-400 to-blue-600',
+  Dairy: 'from-blue-100 to-blue-500',
+  Meals: 'from-orange-400 to-red-500',
+  Snacks: 'from-yellow-300 to-amber-600',
+  Produce: 'from-lime-400 to-green-600',
+};
+
 export default function CustomerFavorites() {
   const { t } = useGlobal();
   const { user } = useAuth();
@@ -27,19 +40,6 @@ export default function CustomerFavorites() {
       return `${h}h ${m}m`;
     }
     return `${mins}m`;
-  };
-
-  const categoryGradients: Record<string, string> = {
-    Bakery: 'from-amber-400 to-orange-600',
-    'Fast Food': 'from-orange-400 to-red-600',
-    Vegetables: 'from-emerald-400 to-green-600',
-    Fruits: 'from-yellow-400 to-green-600',
-    Frozen: 'from-cyan-400 to-blue-600',
-    Beverages: 'from-sky-400 to-blue-600',
-    Dairy: 'from-blue-100 to-blue-500',
-    Meals: 'from-orange-400 to-red-500',
-    Snacks: 'from-yellow-300 to-amber-600',
-    Produce: 'from-lime-400 to-green-600',
   };
 
   useEffect(() => {

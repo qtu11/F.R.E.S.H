@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   TrendingUp, Globe, RefreshCw, Activity, Loader2, 
   Terminal, ShieldAlert, Award, Layers, Trash2, 
@@ -47,9 +47,9 @@ export default function AdminApp() {
   useEffect(() => {
     if (!mounted) return;
     fetchDashboardData();
-  }, [mounted]);
+  }, [mounted, fetchDashboardData]);
 
-  const fetchDashboardData = () => {
+  const fetchDashboardData = useCallback(() => {
     setLoading(true);
     Promise.all([
       orderService.getStats(),
@@ -208,7 +208,7 @@ export default function AdminApp() {
       console.error('Error fetching admin overview metrics:', err);
       setLoading(false);
     });
-  };
+  }, [t]);
 
   // Add random terminal logs simulation
   useEffect(() => {

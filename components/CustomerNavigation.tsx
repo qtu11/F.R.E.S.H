@@ -121,6 +121,7 @@ export function CustomerNavigation() {
                   className="flex items-center gap-3 bg-gray-50 dark:bg-slate-800 p-3 rounded-2xl cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors select-none"
                 >
                   {user?.avatar && user.avatar.startsWith('http') ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={user.avatar} alt={user.name || 'User'} className="w-10 h-10 rounded-full object-cover" />
                   ) : (
                     <div className="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center text-yellow-700 dark:text-yellow-500 font-bold text-lg">
@@ -194,6 +195,7 @@ export function CustomerNavigation() {
             className="flex items-center gap-3 w-full bg-gray-50 dark:bg-slate-800 p-3 rounded-2xl border border-gray-200 dark:border-slate-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors select-none"
           >
              {user?.avatar && user.avatar.startsWith('http') ? (
+               /* eslint-disable-next-line @next/next/no-img-element */
                <img src={user.avatar} alt={user.name || 'User'} className="w-10 h-10 rounded-full object-cover" />
              ) : (
                <div className="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center text-yellow-700 dark:text-yellow-500 font-bold text-lg shadow-sm border border-yellow-200 dark:border-yellow-700/50">

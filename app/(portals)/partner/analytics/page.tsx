@@ -123,7 +123,7 @@ export default function PartnerAnalyticsPage() {
       { label: 'Items Rescued', value: `${itemsRescued}`, change: 15.2, icon: Leaf, color: 'text-green-600' },
       { label: 'Waste Reduced', value: `${wasteKg} kg`, change: -3.1, icon: Trash2, color: 'text-orange-600' },
     ];
-  }, [orders, transactions]);
+  }, [orders, transactions, products]);
 
   const maxSold = Math.max(...topItems.map(i => i.sold), 1);
   const maxHourly = Math.max(...hourlyData.map(h => h.value), 1);

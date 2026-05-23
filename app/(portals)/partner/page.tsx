@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   ScanBarcode, TrendingUp, Package, Leaf, X, Check, Loader2, 
   Clock, AlertCircle, Sparkles, CheckCircle2, ChevronRight, XCircle
@@ -47,12 +47,7 @@ export default function PartnerApp() {
 
   useEffect(() => { setMounted(true); }, []);
 
-  useEffect(() => {
-    if (!storeId) return;
-    fetchStoreData();
-  }, [storeId]);
-
-  const fetchStoreData = () => {
+  const fetchStoreData = useCallback(() => {
     setLoading(true);
     Promise.all([
       productService.getByStore(storeId),
@@ -65,7 +60,12 @@ export default function PartnerApp() {
       console.error(err);
       setLoading(false);
     });
-  };
+  }, [storeId]);
+
+  useEffect(() => {
+    if (!storeId) return;
+    fetchStoreData();
+  }, [storeId, fetchStoreData]);
 
   // Sound Beep Generator via Web Audio API
   const playBeep = () => {

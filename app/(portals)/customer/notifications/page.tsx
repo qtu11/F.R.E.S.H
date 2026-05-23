@@ -27,6 +27,12 @@ const typeColorMap: Record<string, string> = {
   voucher: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400',
 };
 
+const typeTabMap: Record<string, string> = {
+  deal: 'deals',
+  order: 'orders',
+  voucher: 'vouchers',
+};
+
 export default function CustomerNotifications() {
   const { t } = useGlobal();
   const [mounted, setMounted] = useState(false);
@@ -34,12 +40,6 @@ export default function CustomerNotifications() {
   const [readIds, setReadIds] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const typeTabMap: Record<string, string> = {
-    deal: 'deals',
-    order: 'orders',
-    voucher: 'vouchers',
-  };
 
   useEffect(() => {
     setMounted(true);

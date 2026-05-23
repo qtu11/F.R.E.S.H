@@ -61,6 +61,7 @@ export default function CustomerProfile() {
         <div className="max-w-5xl mx-auto flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-yellow-100 dark:bg-yellow-900/50 flex items-center justify-center text-yellow-700 dark:text-yellow-500 font-bold text-2xl shadow-sm border-2 border-white dark:border-slate-800 overflow-hidden shrink-0">
             {user?.avatar && user.avatar.startsWith('http') ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
               <img src={user.avatar} alt={user.name || 'User'} className="w-full h-full rounded-full object-cover" />
             ) : (
               user?.name ? user.name.charAt(0).toUpperCase() : 'U'
