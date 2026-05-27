@@ -2,6 +2,9 @@
 
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { useGlobal } from '@/app/providers';
+import { useAuth } from '@/app/contexts/AuthContext';
+import { productService, Product } from '@/lib/data/products';
+import { applyRescueCatalogImages, rescueProductsToClient } from '@/lib/data/rescue-products';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import Link from 'next/link';
 import {
@@ -521,11 +524,59 @@ const PARTNERS = [
 // ═══════════════════════════════════════════════════════════════════
 export default function LandingPage() {
   const { t, theme, setTheme, lang, setLang } = useGlobal();
+  const { user } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { scrollYProgress } = useScroll();
   const navOpacity = useTransform(scrollYProgress, [0, 0.05], [1, 0.95]);
   const mainRef = useRef<HTMLDivElement>(null);
+
+  const catalogProducts = useMemo(() => rescueProductsToClient(), []);
+
+  const [dbProducts, setDbProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [selectedRescueProduct, setSelectedRescueProduct] = useState<Product | null>(null);
+  const [showQuickRescueModal, setShowQuickRescueModal] = useState(false);
+
+  useEffect(() => {
+    setLoadingProducts(true);
+    productService.getLive()
+      .then((data) => {
+        setDbProducts(data || []);
+      })
+      .catch((err) => {
+        console.error('Error fetching live products on landing page:', err);
+      })
+      .finally(() => {
+        setLoadingProducts(false);
+      });
+  }, []);
+
+  const displayProducts = useMemo(() => {
+    const hasRescueCatalog = dbProducts.some((p) => p.id.startsWith('rp'));
+    const baseProducts = hasRescueCatalog ? dbProducts : catalogProducts;
+    const withImages = applyRescueCatalogImages(baseProducts) as typeof baseProducts;
+    if (categoryFilter === 'All') return withImages;
+    return withImages.filter((p) => p.category === categoryFilter);
+  }, [dbProducts, catalogProducts, categoryFilter]);
+
+  const getExpiryLabelLanding = (expiryStr: string) => {
+    const rem = new Date(expiryStr).getTime() - Date.now();
+    if (rem <= 0) return { text: lang === 'vi' ? 'Hết hạn' : 'Expired', style: 'text-red-500 bg-red-500/10 border-red-500/20' };
+    const hrs = Math.round(rem / (60 * 60 * 1000));
+    if (hrs <= 24) {
+      return {
+        text: lang === 'vi' ? (hrs <= 4 ? `Chỉ còn ${hrs}h!` : 'Sắp hết hạn') : (hrs <= 4 ? `${hrs}h left!` : 'Expiring soon'),
+        style: 'text-rose-500 bg-rose-500/10 border-rose-500/20 animate-pulse',
+      };
+    }
+    const days = Math.round(hrs / 24);
+    return {
+      text: lang === 'vi' ? `Còn hạn · ${days} ngày` : `Fresh · ${days}d left`,
+      style: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+    };
+  };
 
   useEffect(() => {
     const main = mainRef.current;
@@ -688,13 +739,30 @@ export default function LandingPage() {
             </div>
 
             {/* Launch System */}
-            <Link
-              href="/customer"
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-102 transition-all"
-            >
-              <Zap className="w-3.5 h-3.5 text-white animate-pulse" />
-              {t('login_btn')}
-            </Link>
+            {user ? (
+              <Link
+                href={user.role === 'admin' ? '/admin' : user.role === 'partner' ? '/partner' : '/customer'}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-102 transition-all"
+              >
+                <div className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center overflow-hidden shrink-0">
+                  {user.avatar ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-[8px] font-bold text-white">{user.name?.[0]?.toUpperCase() || 'U'}</span>
+                  )}
+                </div>
+                <span>{lang === 'en' ? 'PORTAL' : 'VÀO PORTAL'}</span>
+              </Link>
+            ) : (
+              <Link
+                href="/customer"
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-102 transition-all"
+              >
+                <Zap className="w-3.5 h-3.5 text-white animate-pulse" />
+                {t('login_btn')}
+              </Link>
+            )}
 
             {/* Mobile menu trigger */}
             <button
@@ -779,13 +847,23 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <Link
-                  href="/customer"
-                  onClick={() => setMenuOpen(false)}
-                  className="block px-4 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest text-white bg-emerald-500 hover:bg-emerald-600 text-center shadow-lg shadow-emerald-500/25"
-                >
-                  {t('login_btn')}
-                </Link>
+                {user ? (
+                  <Link
+                    href={user.role === 'admin' ? '/admin' : user.role === 'partner' ? '/partner' : '/customer'}
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-4 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest text-white bg-emerald-500 hover:bg-emerald-600 text-center shadow-lg shadow-emerald-500/25"
+                  >
+                    {lang === 'en' ? 'PORTAL' : 'VÀO HỆ THỐNG'}
+                  </Link>
+                ) : (
+                  <Link
+                    href="/customer"
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-4 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest text-white bg-emerald-500 hover:bg-emerald-600 text-center shadow-lg shadow-emerald-500/25"
+                  >
+                    {t('login_btn')}
+                  </Link>
+                )}
               </div>
             </motion.div>
           )}
@@ -1094,6 +1172,139 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ─── LIVE RESCUE FEED (Danh sách sản phẩm cứu hộ) ────────── */}
+      <section id="rescue-feed" className="relative z-10 max-w-7xl mx-auto px-6 py-16 border-b border-slate-200/60 dark:border-slate-900/60">
+        <div className="text-center mb-12">
+          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-555 dark:text-emerald-400 mb-3 block">
+            {t('landing_products_badge')}
+          </span>
+          <h2 className="text-3xl sm:text-5xl font-black uppercase tracking-tight text-slate-900 dark:text-white flex items-center justify-center gap-3">
+            {t('landing_products_heading')} <Flame className="w-8 h-8 text-orange-500 animate-pulse" />
+          </h2>
+          <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto text-xs sm:text-sm font-semibold mt-4">
+            {t('landing_products_sub')}
+          </p>
+        </div>
+
+        {/* Categories selector */}
+        <div className="flex flex-wrap justify-center gap-2 mb-10">
+          {[
+            { id: 'All', name: lang === 'vi' ? 'Tất cả' : 'All' },
+            { id: 'Vegetables', name: lang === 'vi' ? 'Rau củ' : 'Vegetables' },
+            { id: 'Fruits', name: lang === 'vi' ? 'Trái cây' : 'Fruits' },
+            { id: 'Produce', name: lang === 'vi' ? 'Thịt & hải sản' : 'Meat & seafood' },
+            { id: 'Dairy', name: lang === 'vi' ? 'Sữa & trứng' : 'Dairy' },
+            { id: 'Bakery', name: lang === 'vi' ? 'Bánh ngọt' : 'Bakery' },
+            { id: 'Meals', name: lang === 'vi' ? 'Chế biến sẵn' : 'Prepared meals' },
+          ].map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => setCategoryFilter(cat.id)}
+              className={`px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-300 ${
+                categoryFilter === cat.id
+                  ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25'
+                  : 'bg-white dark:bg-slate-900/40 border border-slate-250 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              {cat.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Products Grid */}
+        <motion.div
+          layout
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+        >
+          <AnimatePresence mode="popLayout">
+            {displayProducts.map((item) => {
+              const exp = getExpiryLabelLanding(item.expiry);
+              const isExpired = exp.text === 'Hết hạn' || exp.text === 'Expired';
+              return (
+                <motion.div
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.3 }}
+                  key={item.id}
+                  className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800/80 shadow-md hover:shadow-xl dark:hover:shadow-emerald-950/20 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group"
+                >
+                  <div>
+                    {/* Expiry and Discount badges */}
+                    <div className="flex justify-between items-center">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold border uppercase tracking-wider ${exp.style}`}>
+                        {exp.text}
+                      </span>
+                      <span className="text-[10px] bg-orange-500 text-white font-mono px-2 py-0.5 rounded font-black">
+                        -{item.discount}%
+                      </span>
+                    </div>
+
+                    {/* Image and basic info */}
+                    <div className="flex items-center gap-4 mt-5">
+                      <div className="w-16 h-16 rounded-xl bg-slate-100 dark:bg-slate-800/80 flex items-center justify-center shadow-inner border border-slate-250 dark:border-slate-700 shrink-0 overflow-hidden select-none group-hover:rotate-12 transition-transform duration-300">
+                        {item.image && (item.image.startsWith('http') || item.image.startsWith('/')) ? (
+                          <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-3xl">{item.image || '🥦'}</span>
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="font-extrabold text-slate-850 dark:text-white text-base block line-clamp-1 group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors">
+                          {item.name}
+                        </h4>
+                        <span className="text-[10px] text-slate-450 dark:text-slate-500 font-bold flex items-center gap-1 mt-1">
+                          <MapPin className="w-3.5 h-3.5 text-orange-500" /> {item.storeName}
+                        </span>
+                        {item.distance && (
+                          <span className="text-[9px] text-slate-400 dark:text-slate-500 font-semibold block mt-0.5 ml-4.5">
+                            {item.distance} {lang === 'vi' ? 'km gần đây' : 'km nearby'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CO2 Saved and Stock */}
+                  <div className="mt-5 flex justify-between items-center bg-slate-100/50 dark:bg-slate-950/40 border border-slate-200/50 dark:border-slate-800/40 rounded-xl px-4 py-2 text-xs">
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-black uppercase tracking-wider flex items-center gap-1">
+                      <Leaf className="w-3.5 h-3.5" />
+                      {t('eco_saved_tag').replace('{co2}', item.co2Saved?.toString() || '0')}
+                    </span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">
+                      {t('only_left').replace('{stock}', item.stock.toString())}
+                    </span>
+                  </div>
+
+                  {/* Prices and Rescue CTA button */}
+                  <div className="mt-5 border-t border-slate-200/80 dark:border-slate-850 pt-4 flex justify-between items-center">
+                    <div>
+                      <div className="text-[9px] text-slate-400 dark:text-slate-550 uppercase font-bold tracking-wider">{t('rescue_price')}</div>
+                      <div className="flex items-baseline gap-1.5 mt-0.5">
+                        <span className="text-xl font-black text-slate-850 dark:text-white font-mono">{item.aiPrice.toLocaleString()}đ</span>
+                        <span className="text-xs line-through text-slate-400 dark:text-slate-500 font-mono">{item.originalPrice.toLocaleString()}đ</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setSelectedRescueProduct(item);
+                        setShowQuickRescueModal(true);
+                      }}
+                      disabled={item.stock <= 0 || isExpired}
+                      className="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-sky-500 hover:brightness-110 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-emerald-500/10 disabled:opacity-40 transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <ShoppingBag className="w-3.5 h-3.5" /> {t('rescue_now')}
+                    </button>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </motion.div>
+      </section>
+
       {/* ─── SYSTEM PORTALS (Các cổng thông tin chính) ───────────── */}
       <section id="portals" className="relative z-10 max-w-7xl mx-auto px-6 py-24">
         <div className="text-center mb-16">
@@ -1300,6 +1511,74 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+      {/* ─── QUICK RESCUE LOGIN DIALOG MODAL ────────────────────── */}
+      <AnimatePresence>
+        {showQuickRescueModal && selectedRescueProduct && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 30 }}
+              className="bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl relative"
+            >
+              <div className="p-6 border-b border-slate-200 dark:border-slate-800/60 bg-slate-50 dark:bg-slate-950/40 flex justify-between items-center">
+                <div>
+                  <h3 className="font-black text-slate-850 dark:text-white text-base flex items-center gap-2">
+                    <ShoppingBag className="w-5 h-5 text-emerald-500" /> {t('quick_rescue_title')}
+                  </h3>
+                  <p className="text-[9px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-widest">F.R.E.S.H AI Secure Rescue Portal</p>
+                </div>
+                <button 
+                  onClick={() => setShowQuickRescueModal(false)}
+                  className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Product Preview Info */}
+                <div className="bg-slate-50 dark:bg-slate-950/60 p-4 rounded-2xl border border-slate-200/60 dark:border-slate-800/80 flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center shadow-inner border border-slate-200 dark:border-slate-850 shrink-0 overflow-hidden select-none">
+                    {selectedRescueProduct.image && (selectedRescueProduct.image.startsWith('http') || selectedRescueProduct.image.startsWith('/')) ? (
+                      <img src={selectedRescueProduct.image} alt={selectedRescueProduct.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-3xl">{selectedRescueProduct.image || '🥦'}</span>
+                    )}
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-slate-850 dark:text-white text-sm line-clamp-1">{selectedRescueProduct.name}</h4>
+                    <span className="text-[10px] text-slate-450 dark:text-slate-500 font-bold block mt-0.5">{selectedRescueProduct.storeName}</span>
+                    <div className="flex items-baseline gap-2 mt-1">
+                      <span className="text-sm font-black text-emerald-500 font-mono">{selectedRescueProduct.aiPrice.toLocaleString()}đ</span>
+                      <span className="text-[10px] line-through text-slate-400 dark:text-slate-500 font-mono">{selectedRescueProduct.originalPrice.toLocaleString()}đ</span>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
+                  {t('quick_rescue_desc')}
+                </p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Link
+                    href="/customer"
+                    className="flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-emerald-500 to-sky-500 hover:brightness-110 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/10 cursor-pointer"
+                  >
+                    <Users className="w-4 h-4" /> {lang === 'vi' ? 'Đăng nhập KH' : 'Customer Log In'}
+                  </Link>
+                  <Link
+                    href="/partner"
+                    className="flex items-center justify-center gap-2 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer"
+                  >
+                    <Store className="w-4 h-4" /> {lang === 'vi' ? 'Cổng Đối Tác' : 'Partner Portal'}
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }

@@ -3,6 +3,11 @@ import { getServerClient } from '@/lib/supabase/server';
 import { handleError } from '@/lib/supabase/helpers';
 import { toCamelCase, toSnakeCase } from '@/lib/supabase/transform';
 import { requireAnyRole } from '@/lib/auth/middleware';
+import { applyRescueCatalogImages } from '@/lib/data/rescue-products';
+
+function withCatalogImages<T>(data: T): T {
+  return applyRescueCatalogImages(data as { id?: string; image?: string }[] | { id?: string; image?: string } | null) as T;
+}
 
 export async function GET(req: Request) {
   try {
@@ -29,32 +34,32 @@ export async function GET(req: Request) {
     const { data, error } = await builder;
     if (error) return handleError(error);
 
-    if (id) return NextResponse.json(toCamelCase(data?.[0] || null));
+    if (id) return NextResponse.json(withCatalogImages(toCamelCase(data?.[0] || null)));
     if (query) {
       const q = query.toLowerCase();
       const filtered = (data || []).filter((p: any) =>
         p.name?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q) || p.store_name?.toLowerCase().includes(q)
       );
-      return NextResponse.json(toCamelCase(filtered));
+      return NextResponse.json(withCatalogImages(toCamelCase(filtered)));
     }
     if (nearby) {
       const maxDist = parseFloat(nearby);
-      return NextResponse.json(toCamelCase((data || []).filter((p: any) => (p.distance ?? 999) <= maxDist)));
+      return NextResponse.json(withCatalogImages(toCamelCase((data || []).filter((p: any) => (p.distance ?? 999) <= maxDist))));
     }
     if (topRated) {
-      return NextResponse.json(toCamelCase([...(data || [])].sort((a: any, b: any) => (b.rating ?? 0) - (a.rating ?? 0)).slice(0, parseInt(topRated))));
+      return NextResponse.json(withCatalogImages(toCamelCase([...(data || [])].sort((a: any, b: any) => (b.rating ?? 0) - (a.rating ?? 0)).slice(0, parseInt(topRated)))));
     }
     if (endingSoon) {
       const hours = parseInt(endingSoon);
       const now = new Date();
       const threshold = new Date(now.getTime() + hours * 3600000);
-      return NextResponse.json(toCamelCase((data || []).filter((p: any) => {
+      return NextResponse.json(withCatalogImages(toCamelCase((data || []).filter((p: any) => {
         const expiry = new Date(p.expiry);
         return expiry <= threshold && expiry > now;
-      }).sort((a: any, b: any) => new Date(a.expiry).getTime() - new Date(b.expiry).getTime())));
+      }).sort((a: any, b: any) => new Date(a.expiry).getTime() - new Date(b.expiry).getTime()))));
     }
 
-    return NextResponse.json(toCamelCase(data || []));
+    return NextResponse.json(withCatalogImages(toCamelCase(data || [])));
   } catch (err) { return handleError(err); }
 }
 
@@ -66,7 +71,23 @@ export async function POST(req: Request) {
     const supabase = getServerClient();
     if (!supabase) return NextResponse.json({ error: 'Not configured' }, { status: 503 });
 
-    const data = toSnakeCase(await req.json());
+    const rawBody = await req.json();
+    const nutrition = typeof rawBody.nutrition === 'object' ? { ...rawBody.nutrition } : {};
+    if (rawBody.description) nutrition.description = rawBody.description;
+    if (rawBody.details) nutrition.details = rawBody.details;
+    if (rawBody.mfgDate) nutrition.mfgDate = rawBody.mfgDate;
+    if (rawBody.expiryDate) nutrition.expiryDate = rawBody.expiryDate;
+
+    const cleanBody = {
+      ...rawBody,
+      nutrition: JSON.stringify(nutrition)
+    };
+    delete cleanBody.description;
+    delete cleanBody.details;
+    delete cleanBody.mfgDate;
+    delete cleanBody.expiryDate;
+
+    const data = toSnakeCase(cleanBody);
     const newProduct = { ...data, id: crypto.randomUUID(), created_at: new Date().toISOString() };
     const { data: result, error } = await supabase.from('products').insert(newProduct).select().single();
     if (error) return handleError(error);
@@ -82,13 +103,32 @@ export async function PATCH(req: Request) {
     const supabase = getServerClient();
     if (!supabase) return NextResponse.json({ error: 'Not configured' }, { status: 503 });
 
-    const body = toSnakeCase(await req.json());
+    const rawBody = await req.json();
+    
+    // Đóng gói update vào nutrition
+    const nutrition = typeof rawBody.nutrition === 'object' ? { ...rawBody.nutrition } : {};
+    if (rawBody.description !== undefined) nutrition.description = rawBody.description;
+    if (rawBody.details !== undefined) nutrition.details = rawBody.details;
+    if (rawBody.mfgDate !== undefined) nutrition.mfgDate = rawBody.mfgDate;
+    if (rawBody.expiryDate !== undefined) nutrition.expiryDate = rawBody.expiryDate;
+
+    const cleanBody = {
+      ...rawBody,
+      nutrition: JSON.stringify(nutrition)
+    };
+    delete cleanBody.description;
+    delete cleanBody.details;
+    delete cleanBody.mfgDate;
+    delete cleanBody.expiryDate;
+
+    const body = toSnakeCase(cleanBody);
     const { id, ...updates } = body;
     const { data, error } = await supabase.from('products').update(updates).eq('id', id).select().single();
     if (error) return handleError(error);
     return NextResponse.json(toCamelCase(data));
   } catch (err) { return handleError(err); }
 }
+
 
 export async function DELETE(req: Request) {
   try {

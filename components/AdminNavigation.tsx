@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ShieldCheck, Activity, Users, Database, Server, Headphones, UserCheck, DollarSign, TrendingUp, MapPin, Megaphone, UserCog, Menu, ArrowLeft, X, LogOut } from 'lucide-react';
+import { ShieldCheck, Activity, Users, Database, Server, Headphones, UserCheck, DollarSign, TrendingUp, MapPin, Megaphone, UserCog, Menu, ArrowLeft, X, LogOut, Settings, MessageSquare } from 'lucide-react';
 import { useGlobal } from '@/app/providers';
 import { useAuth } from '@/app/contexts/AuthContext';
 
@@ -28,9 +28,10 @@ export function AdminNavigation() {
     { icon: ShieldCheck, label: t('fraud_log'), href: '/admin/fraud' },
     { icon: Database, label: t('esg_data'), href: '/admin/esg' },
     { icon: Megaphone, label: t('marketing'), href: '/admin/marketing' },
-    { icon: Headphones, label: t('customer_care'), href: '/admin/customer-care' },
+    { icon: MessageSquare, label: t('customer_care'), href: '/admin/customer-care' },
     { icon: UserCog, label: t('admin_roles'), href: '/admin/roles' },
     { icon: Server, label: t('system_health'), href: '/admin/system' },
+    { icon: Settings, label: t('settings'), href: '/admin/settings' },
   ];
 
   if (pathname === '/admin/login') return null;

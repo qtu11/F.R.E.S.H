@@ -3,6 +3,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { handleError } from '@/lib/supabase/helpers';
 import { toCamelCase, toSnakeCase } from '@/lib/supabase/transform';
 import { requireAuth } from '@/lib/auth/middleware';
+import { sendDepositSuccessEmail, sendWithdrawalSuccessEmail } from '@/utils/email/mailer';
 
 export async function GET(req: Request) {
   try {
@@ -53,13 +54,27 @@ export async function POST(req: Request) {
     const { error: txErr } = await supabase.from('transactions').insert(newTx);
     if (txErr) return handleError(txErr);
 
-    // Cập nhật số dư ví
-    const { data: user, error: userErr } = await supabase.from('users').select('wallet_balance').eq('id', targetUserId).single();
+    // Cập nhật số dư ví, lấy thêm name và email để gửi thư
+    const { data: user, error: userErr } = await supabase.from('users').select('wallet_balance, name, email').eq('id', targetUserId).single();
     if (userErr) return handleError(userErr);
+    
     if (user) {
       const newBalance = (user.wallet_balance || 0) + body.amount;
       const { error: updateErr } = await supabase.from('users').update({ wallet_balance: newBalance }).eq('id', targetUserId);
       if (updateErr) return handleError(updateErr);
+
+      // Gửi email thông báo nạp/rút tiền thành công
+      if (user.email) {
+        if (body.type === 'topup' && body.amount > 0) {
+          sendDepositSuccessEmail(user.email, user.name || 'Thành viên', body.amount, newTx.id, newBalance).catch(err => {
+            console.error('Failed to send deposit email:', err);
+          });
+        } else if (body.type === 'withdrawal' && body.amount < 0) {
+          sendWithdrawalSuccessEmail(user.email, user.name || 'Thành viên', Math.abs(body.amount), newTx.id, newBalance).catch(err => {
+            console.error('Failed to send withdrawal email:', err);
+          });
+        }
+      }
     }
 
     return NextResponse.json(toCamelCase(newTx), { status: 201 });

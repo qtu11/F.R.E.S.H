@@ -4,6 +4,7 @@ import { handleError } from '@/lib/supabase/helpers';
 import { toCamelCase, toSnakeCase } from '@/lib/supabase/transform';
 import { requireAuth, requireRole } from '@/lib/auth/middleware';
 import { logSecurityEvent } from '@/lib/auth/security';
+import { sendOrderConfirmationEmail } from '@/utils/email/mailer';
 
 export async function GET(req: Request) {
   const startTime = Date.now();
@@ -190,6 +191,31 @@ export async function POST(req: Request) {
     const { data: items } = await supabase.from('order_items').select('*').eq('order_id', id);
     const { data: steps } = await supabase.from('tracking_steps').select('*').eq('order_id', id);
     
+    // Truy xuất thông tin email/name của user và gửi email hóa đơn điện tử
+    const { data: user } = await supabase.from('users').select('email, name').eq('id', userId).single();
+    if (user && user.email) {
+      const emailItems = (items || []).map((it: any) => ({
+        name: it.product_name || 'Sản phẩm giải cứu',
+        quantity: it.quantity,
+        price: it.price
+      }));
+      
+      const co2Saved = orderData.co2_saved || (3.6 * (items?.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0) || 1));
+      const pointsEarned = orderData.points_earned || Math.floor(total / 1000);
+
+      sendOrderConfirmationEmail(
+        user.email,
+        user.name || 'Thành viên',
+        id.substring(0, 8).toUpperCase(),
+        emailItems,
+        total,
+        co2Saved,
+        pointsEarned
+      ).catch(err => {
+        console.error('Failed to send order email:', err);
+      });
+    }
+
     await logSecurityEvent(req, currentUserId, '/api/orders', 'POST', 201, Date.now() - startTime);
     return NextResponse.json(toCamelCase({ ...order, items: items || [], trackingSteps: steps || [] }), { status: 201 });
   } catch (err) {

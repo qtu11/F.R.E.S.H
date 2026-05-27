@@ -44,11 +44,6 @@ export default function AdminApp() {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    if (!mounted) return;
-    fetchDashboardData();
-  }, [mounted, fetchDashboardData]);
-
   const fetchDashboardData = useCallback(() => {
     setLoading(true);
     Promise.all([
@@ -209,6 +204,11 @@ export default function AdminApp() {
       setLoading(false);
     });
   }, [t]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    fetchDashboardData();
+  }, [mounted, fetchDashboardData]);
 
   // Add random terminal logs simulation
   useEffect(() => {

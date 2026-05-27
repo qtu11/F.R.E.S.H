@@ -61,6 +61,7 @@ export default function CustomerSearch() {
           timeLeft: '2h',
           gradient: categoryGradients[p.category] || 'from-emerald-400 to-green-600',
           tags,
+          image: p.image,
         };
       }));
       setLoading(false);
@@ -167,7 +168,13 @@ export default function CustomerSearch() {
             {filtered.map((product, i) => (
               <motion.div key={product.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} layout className="bg-white dark:bg-slate-800 rounded-3xl overflow-hidden shadow-sm border border-gray-100 dark:border-slate-700 hover:shadow-lg transition-all group">
                 <Link href={`/customer/deals/${product.id}`}>
-                  <div className={`h-32 bg-gradient-to-br ${product.gradient} relative flex items-center justify-center`}>
+                  <div className={`h-32 bg-gradient-to-br ${product.gradient} relative flex items-center justify-center overflow-hidden`}>
+                    {product.image && (product.image.startsWith('http') || product.image.startsWith('/')) ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    ) : (
+                      <span className="text-5xl opacity-40 select-none group-hover:scale-110 transition-transform">{product.image || '🍱'}</span>
+                    )}
                     <div className="absolute top-3 right-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm text-xs font-black px-2 py-1 rounded-lg text-orange-600">-{product.discount}%</div>
                     <div className="absolute top-3 left-3 flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm text-[10px] font-bold px-2 py-1 rounded-lg text-gray-600 dark:text-slate-300">
                       <Clock className="w-3 h-3" /> {product.timeLeft}

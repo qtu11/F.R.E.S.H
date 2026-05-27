@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'images.unsplash.com', pathname: '/**' },
+    ],
+  },
   eslint: {
     // Bỏ qua lỗi ESLint khi build production trên Vercel để tránh làm gián đoạn deploy
     ignoreDuringBuilds: true,

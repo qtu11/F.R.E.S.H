@@ -21,8 +21,9 @@ export const translations = {
     partners_approvals: 'Duyệt Đối tác',
     fraud_log: 'Nhật ký Gian lận',
     esg_data: 'Dữ liệu ESG',
-    customer_care: 'CSKH',
+    customer_care: 'Chat hỗ trợ',
     system_health: 'Hệ thống',
+    settings: 'Cài đặt',
     
     // Partner Portal Detailed
     add_product: 'Thêm Sản Phẩm',
@@ -806,6 +807,13 @@ export const translations = {
     co2_saved_unit: 'kg',
     green_credits_unit: 'P',
     trees_saved_unit: 'Cây',
+    landing_products_badge: 'BẢNG TIN CỨU HỘ THỜI GIAN THỰC',
+    landing_products_heading: 'THỰC PHẨM SẴN SÀNG GIẢI CỨU',
+    landing_products_sub: 'Danh sách sản phẩm sắp hết hạn được định giá động tự động bằng AI từ các hệ thống siêu thị lớn gần bạn.',
+    only_left: 'Chỉ còn {stock} phần',
+    eco_saved_tag: 'Bảo vệ: -{co2}kg CO₂',
+    quick_rescue_title: 'ĐĂNG NHẬP CỨU THỰC PHẨM',
+    quick_rescue_desc: 'Bạn cần đăng nhập tài khoản Khách hàng (Chiến binh Xanh) để thực hiện giao dịch thanh toán giải cứu thực phẩm qua ví điện tử.',
   },
   en: {
     // Nav
@@ -829,7 +837,7 @@ export const translations = {
     partners_approvals: 'Partners Approvals',
     fraud_log: 'AI Fraud Log',
     esg_data: 'ESG Data',
-    customer_care: 'Customer Care',
+    customer_care: 'Live Chat',
     system_health: 'System Health',
 
     // Partner Portal Detailed
@@ -964,6 +972,7 @@ export const translations = {
     transaction_history: 'Transaction History',
     account_settings: 'Account Settings',
     log_out: 'Log Out',
+    settings: 'Settings',
     
     // Partner Page
     partner_dashboard: 'F.R.E.S.H. PARTNER DASHBOARD',
@@ -1614,6 +1623,13 @@ export const translations = {
     co2_saved_unit: 'kg',
     green_credits_unit: 'pts',
     trees_saved_unit: 'trees',
+    landing_products_badge: 'REAL-TIME RESCUE FEED',
+    landing_products_heading: 'SURPLUS FOOD READY FOR RESCUE',
+    landing_products_sub: 'Near-expired surplus food automatically dynamically priced by AI from top supermarkets near you.',
+    only_left: 'Only {stock} left',
+    eco_saved_tag: 'Eco: -{co2}kg CO₂',
+    quick_rescue_title: 'FOOD RESCUE SIGN IN',
+    quick_rescue_desc: 'You need to log in as a Customer (Green Warrior) to execute food rescue transactions via wallet payment.',
   }
 };
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import {
@@ -11,27 +11,29 @@ import {
 } from 'lucide-react';
 import { useGlobal } from '@/app/providers';
 
-// --- DATA ---
-const TEAM_MEMBERS = [
-  { name: 'Trương Thị Anh Thư', mssv: '225086464', email: 'thutta22@uef.edu.vn', role: 'CEO & Founder - Quản trị Chiến lược & Đàm phán B2B' },
-  { name: 'Lương Hoàng Bửu Ngọc', mssv: '255146242', email: 'ngoclhb25@uef.edu.vn', role: 'COO - Vận hành chuỗi & Kiểm soát chất lượng thực phẩm' },
-  { name: 'Nguyễn Thị Thanh Hằng', mssv: '235087692', email: 'hangntt23@uef.edu.vn', role: 'CMO - Phát triển cộng đồng & Truyền thông Gen Z' },
-  { name: 'Nguyễn Quang Tú', mssv: '255015965', email: 'tunq25@uef.edu.vn', role: 'CTO - Kiến trúc sư Thuật toán AI & Tích hợp API' },
+import { startupTranslations } from './translations';
+
+// --- DYNAMIC DATA HELPERS ---
+const getTeamMembers = (lang: 'vi' | 'en') => [
+  { name: 'Trương Thị Anh Thư', mssv: '225086464', email: 'thutta22@uef.edu.vn', role: lang === 'vi' ? 'CEO & Founder - Quản trị Chiến lược & Đàm phán B2B' : 'CEO & Founder - Strategic Management & B2B Negotiation' },
+  { name: 'Lương Hoàng Bửu Ngọc', mssv: '255146242', email: 'ngoclhb25@uef.edu.vn', role: lang === 'vi' ? 'COO - Vận hành chuỗi & Kiểm soát chất lượng thực phẩm' : 'COO - Supply Chain Operations & Food Quality Control' },
+  { name: 'Nguyễn Thị Thanh Hằng', mssv: '235087692', email: 'hangntt23@uef.edu.vn', role: lang === 'vi' ? 'CMO - Phát triển cộng đồng & Truyền thông Gen Z' : 'CMO - Community Development & Gen Z Marketing' },
+  { name: 'Nguyễn Quang Tú', mssv: '255015965', email: 'tunq25@uef.edu.vn', role: lang === 'vi' ? 'CTO - Kiến trúc sư Thuật toán AI & Tích hợp API' : 'CTO - AI Algorithm Architect & API Integration' },
 ];
 
-const FINANCIAL_PROJECTS = [
+const getFinancialProjects = (lang: 'vi' | 'en') => [
   {
     year: '2026',
     capex: 250000000,
     opex: 480000000,
     total: 730000000,
     details: {
-      dev: '150,000,000đ (Phát triển App/AI/API)',
-      legal: '100,000,000đ (Pháp lý & Thương hiệu)',
-      server: '60,000,000đ (Server/IT)',
-      staff: '280,000,000đ (Nhân sự cốt lõi)',
-      marketing: '100,000,000đ (Chiến dịch Pilot)',
-      reserve: '40,000,000đ (Dự phòng)'
+      dev: lang === 'vi' ? '150,000,000đ (Phát triển App/AI/API)' : '150,000,000 VND (App/AI/API Development)',
+      legal: lang === 'vi' ? '100,000,000đ (Pháp lý & Thương hiệu)' : '100,000,000 VND (Legal & Brand)',
+      server: lang === 'vi' ? '60,000,000đ (Server/IT)' : '60,000,000 VND (Server/IT)',
+      staff: lang === 'vi' ? '280,000,000đ (Nhân sự cốt lõi)' : '280,000,000 VND (Core Staff)',
+      marketing: lang === 'vi' ? '100,000,000đ (Chiến dịch Pilot)' : '100,000,000 VND (Pilot Campaign)',
+      reserve: lang === 'vi' ? '40,000,000đ (Dự phòng)' : '40,000,000 VND (Reserve)'
     }
   },
   {
@@ -40,12 +42,12 @@ const FINANCIAL_PROJECTS = [
     opex: 960000000,
     total: 1060000000,
     details: {
-      dev: '80,000,000đ (Nâng cấp hệ thống)',
-      legal: '20,000,000đ (Bảo hộ & Giấy phép)',
-      server: '120,000,000đ (Mở rộng hạ tầng)',
-      staff: '540,000,000đ (Mở rộng CSKH)',
-      marketing: '250,000,000đ (Phủ sóng TP.HCM)',
-      reserve: '50,000,000đ (Dự phòng)'
+      dev: lang === 'vi' ? '80,000,000đ (Nâng cấp hệ thống)' : '80,000,000 VND (System Upgrades)',
+      legal: lang === 'vi' ? '20,000,000đ (Bảo hộ & Giấy phép)' : '20,000,000 VND (Patent & Licensing)',
+      server: lang === 'vi' ? '120,000,000đ (Mở rộng hạ tầng)' : '120,000,000 VND (Infrastructure Expansion)',
+      staff: lang === 'vi' ? '540,000,000đ (Mở rộng CSKH)' : '540,000,000 VND (Support Team Expansion)',
+      marketing: lang === 'vi' ? '250,000,000đ (Phủ sóng TP.HCM)' : '250,000,000 VND (HCMC Expansion)',
+      reserve: lang === 'vi' ? '50,000,000đ (Dự phòng)' : '50,000,000 VND (Reserve)'
     }
   },
   {
@@ -54,12 +56,12 @@ const FINANCIAL_PROJECTS = [
     opex: 1800000000,
     total: 2100000000,
     details: {
-      dev: '200,000,000đ (AI Dynamic Pricing v2)',
-      legal: '100,000,000đ (Pháp lý liên tỉnh)',
-      server: '250,000,000đ (Cloud Cluster)',
-      staff: '1,000,000,000đ (Đội ngũ kỹ thuật)',
-      marketing: '450,000,000đ (Khu vực Miền Nam)',
-      reserve: '100,000,000đ (Dự phòng)'
+      dev: lang === 'vi' ? '200,000,000đ (AI Dynamic Pricing v2)' : '200,000,000 VND (AI Dynamic Pricing v2)',
+      legal: lang === 'vi' ? '100,000,000đ (Pháp lý liên tỉnh)' : '100,000,000 VND (Inter-provincial Legal)',
+      server: lang === 'vi' ? '250,000,000đ (Cloud Cluster)' : '250,000,000 VND (Cloud Cluster)',
+      staff: lang === 'vi' ? '1,000,000,000đ (Đội ngũ kỹ thuật)' : '1,000,000,000 VND (Engineering Team)',
+      marketing: lang === 'vi' ? '450,000,000đ (Khu vực Miền Nam)' : '450,000,000 VND (Southern Region)',
+      reserve: lang === 'vi' ? '100,000,000đ (Dự phòng)' : '100,000,000 VND (Reserve)'
     }
   },
   {
@@ -68,12 +70,12 @@ const FINANCIAL_PROJECTS = [
     opex: 3200000000,
     total: 3700000000,
     details: {
-      dev: '350,000,000đ (Tích hợp sâu API siêu thị lớn)',
-      legal: '150,000,000đ (Thương hiệu Quốc gia)',
-      server: '450,000,000đ (Kiến trúc Microservices)',
-      staff: '1,800,000,000đ (Mở rộng quy mô nhân sự)',
-      marketing: '750,000,000đ (Truyền thông Toàn quốc)',
-      reserve: '200,000,000đ (Dự phòng)'
+      dev: lang === 'vi' ? '350,000,000đ (Tích hợp sâu API siêu thị lớn)' : '350,000,000 VND (Deep Enterprise API Integration)',
+      legal: lang === 'vi' ? '150,000,000đ (Thương hiệu Quốc gia)' : '150,000,000 VND (National Brand Registration)',
+      server: lang === 'vi' ? '450,000,000đ (Kiến trúc Microservices)' : '450,000,000 VND (Microservices Architecture)',
+      staff: lang === 'vi' ? '1,800,000,000đ (Mở rộng quy mô nhân sự)' : '1,800,000,000 VND (Scaling Workforce)',
+      marketing: lang === 'vi' ? '750,000,000đ (Truyền thông Toàn quốc)' : '750,000,000 VND (National Marketing Campaigns)',
+      reserve: lang === 'vi' ? '200,000,000đ (Dự phòng)' : '200,000,000 VND (Reserve)'
     }
   },
   {
@@ -82,30 +84,38 @@ const FINANCIAL_PROJECTS = [
     opex: 4500000000,
     total: 4700000000,
     details: {
-      dev: '150,000,000đ (R&D công nghệ mới)',
-      legal: '50,000,000đ (Pháp lý quốc tế)',
-      server: '600,000,000đ (Hạ tầng lưu trữ lớn)',
-      staff: '2,500,000,000đ (Ban điều hành & Nghiên cứu)',
-      marketing: '1,100,000,000đ (Duy trì vị thế)',
-      reserve: '300,000,000đ (Dự phòng)'
+      dev: lang === 'vi' ? '150,000,000đ (R&D công nghệ mới)' : '150,000,000 VND (Next-Gen Tech R&D)',
+      legal: lang === 'vi' ? '50,000,000đ (Pháp lý quốc tế)' : '50,000,000 VND (International Legal)',
+      server: lang === 'vi' ? '600,000,000đ (Hạ tầng lưu trữ lớn)' : '600,000,000 VND (Big Data Infrastructure)',
+      staff: lang === 'vi' ? '2,500,000,000đ (Ban điều hành & Nghiên cứu)' : '2,500,000,000 VND (Executive Board & R&D)',
+      marketing: lang === 'vi' ? '1,100,000,000đ (Duy trì vị thế)' : '1,100,000,000 VND (Market Position Maintenance)',
+      reserve: lang === 'vi' ? '300,000,000đ (Dự phòng)' : '300,000,000 VND (Reserve)'
     }
   }
 ];
 
-const SECTIONS = [
-  { id: 'tong-quan', name: 'Mô tả & Slogan', icon: Sparkles },
-  { id: 'su-can-thiet', name: 'Sự cần thiết & Thực trạng', icon: AlertTriangle },
-  { id: 'tinh-kha-thi', name: 'Tính khả thi & Vận hành', icon: Target },
-  { id: 'sanh-tao', name: 'Độc đáo & Sáng tạo', icon: Cpu },
-  { id: 'ke-hoach', name: 'Kế hoạch & Dự phóng', icon: LineChart },
-  { id: 'nguon-luc', name: 'Nguồn lực thực hiện', icon: Users },
-  { id: 'truyen-thong', name: 'Kênh truyền thông', icon: Briefcase }
+const getSections = (lang: 'vi' | 'en') => [
+  { id: 'tong-quan', name: lang === 'vi' ? 'Mô tả & Slogan' : 'Description & Slogan', icon: Sparkles },
+  { id: 'su-can-thiet', name: lang === 'vi' ? 'Sự cần thiết & Thực trạng' : 'Necessity & Market Status', icon: AlertTriangle },
+  { id: 'tinh-kha-thi', name: lang === 'vi' ? 'Tính khả thi & Vận hành' : 'Feasibility & Operations', icon: Target },
+  { id: 'sanh-tao', name: lang === 'vi' ? 'Độc đáo & Sáng tạo' : 'Uniqueness & AI Pricing', icon: Cpu },
+  { id: 'ke-hoach', name: lang === 'vi' ? 'Kế hoạch & Dự phóng' : 'Plan & Projections', icon: LineChart },
+  { id: 'nguon-luc', name: lang === 'vi' ? 'Nguồn lực thực hiện' : 'Resources & Partners', icon: Users },
+  { id: 'truyen-thong', name: lang === 'vi' ? 'Kênh truyền thông' : 'Marketing Channels', icon: Briefcase }
 ];
 
 export default function StartupPitchDeck() {
-  const { theme } = useGlobal();
+  const { theme, lang, setLang } = useGlobal();
   const [activeSection, setActiveSection] = useState('tong-quan');
   const [selectedYear, setSelectedYear] = useState('2026');
+
+  const t = useCallback((key: keyof typeof startupTranslations.vi) => {
+    return startupTranslations[lang]?.[key] || startupTranslations.en[key] || key;
+  }, [lang]);
+
+  const teamMembers = useMemo(() => getTeamMembers(lang), [lang]);
+  const financialProjects = useMemo(() => getFinancialProjects(lang), [lang]);
+  const sections = useMemo(() => getSections(lang), [lang]);
 
   // Interactive Pricing Simulator States
   const [originalPrice, setOriginalPrice] = useState(100000);
@@ -129,14 +139,14 @@ export default function StartupPitchDeck() {
   }, [originalPrice]);
 
   const selectedYearData = useMemo(() => {
-    return FINANCIAL_PROJECTS.find(f => f.year === selectedYear) || FINANCIAL_PROJECTS[0];
-  }, [selectedYear]);
+    return financialProjects.find(f => f.year === selectedYear) || financialProjects[0];
+  }, [selectedYear, financialProjects]);
 
   // Set default hash route navigation
   useEffect(() => {
     const handleScroll = () => {
       const scrollPos = window.scrollY + 200;
-      for (const section of SECTIONS) {
+      for (const section of sections) {
         const el = document.getElementById(section.id);
         if (el && el.offsetTop <= scrollPos && el.offsetTop + el.offsetHeight > scrollPos) {
           setActiveSection(section.id);
@@ -146,7 +156,7 @@ export default function StartupPitchDeck() {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [sections]);
 
   return (
     <div className="bg-[#0b0f19] text-slate-100 min-h-screen font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
@@ -167,21 +177,55 @@ export default function StartupPitchDeck() {
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">UEF Startup</span>
-                <span className="text-xs text-slate-500 font-bold">Dự án Nghiên cứu & Khởi nghiệp</span>
+                <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">{t('uef_startup')}</span>
+                <span className="text-xs text-slate-500 font-bold">{t('research_startup')}</span>
               </div>
-              <h1 className="text-base font-black text-white uppercase tracking-tight">F.R.E.S.H - Pitch Deck Hub</h1>
+              <h1 className="text-base font-black text-white uppercase tracking-tight">{t('pitch_deck_hub')}</h1>
             </div>
           </div>
 
-          <div className="hidden md:flex items-center gap-6">
-            <div className="text-right">
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Cơ quan chủ quản</p>
-              <p className="text-xs font-bold text-slate-300">Đại học Kinh tế - Tài chính TP.HCM</p>
+          <div className="flex items-center gap-4 md:gap-6">
+            <div className="hidden lg:block text-right">
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t('governing_body')}</p>
+              <p className="text-xs font-bold text-slate-300">{t('uef_university')}</p>
             </div>
-            <div className="h-8 w-px bg-slate-800" />
+            
+            {/* Language Switcher */}
+            <div className="flex items-center bg-slate-850 rounded-full p-0.5 border border-slate-700">
+              <button
+                onClick={() => setLang('vi')}
+                className={`relative px-2.5 py-1 text-[9px] font-black tracking-wider rounded-full transition-colors duration-300 z-10 cursor-pointer ${
+                  lang === 'vi' ? 'text-white' : 'text-slate-400'
+                }`}
+              >
+                VI
+                {lang === 'vi' && (
+                  <motion.div
+                    layoutId="activeLangStartup"
+                    className="absolute inset-0 bg-emerald-500 rounded-full -z-10"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  />
+                )}
+              </button>
+              <button
+                onClick={() => setLang('en')}
+                className={`relative px-2.5 py-1 text-[9px] font-black tracking-wider rounded-full transition-colors duration-300 z-10 cursor-pointer ${
+                  lang === 'en' ? 'text-white' : 'text-slate-400'
+                }`}
+              >
+                EN
+                {lang === 'en' && (
+                  <motion.div
+                    layoutId="activeLangStartup"
+                    className="absolute inset-0 bg-emerald-500 rounded-full -z-10"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  />
+                )}
+              </button>
+            </div>
+            
             <a href="mailto:tunq25@uef.edu.vn" className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-[#0b0f19] font-black text-xs rounded-xl uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/25">
-              Liên hệ Nhóm <ArrowUpRight className="w-3.5 h-3.5" />
+              {t('contact_team')} <ArrowUpRight className="w-3.5 h-3.5" />
             </a>
           </div>
         </div>
@@ -193,9 +237,9 @@ export default function StartupPitchDeck() {
         <aside className="lg:col-span-1 hidden lg:block">
           <div className="sticky top-28 space-y-6">
             <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 backdrop-blur-md">
-              <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mb-4">Danh mục đề án</p>
+              <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mb-4">{t('project_directory')}</p>
               <nav className="space-y-1">
-                {SECTIONS.map(s => (
+                {sections.map(s => (
                   <button
                     key={s.id}
                     onClick={() => {
@@ -214,11 +258,11 @@ export default function StartupPitchDeck() {
             {/* School Signature Panel */}
             <div className="bg-gradient-to-br from-slate-900 via-[#0a1424] to-[#070e1a] border border-slate-800 rounded-2xl p-5 relative overflow-hidden">
               <div className="absolute top-[-20%] right-[-20%] w-24 h-24 bg-blue-500/10 rounded-full blur-2xl" />
-              <p className="text-[9px] text-blue-400 font-black uppercase tracking-wider mb-2">Đại học chủ quản</p>
-              <p className="text-xs font-bold text-white leading-relaxed">TRƯỜNG ĐẠI HỌC KINH TẾ - TÀI CHÍNH THÀNH PHỐ HỒ CHÍ MINH</p>
-              <p className="text-[10px] text-slate-400 mt-2 font-medium">BỘ GIÁO DỤC VÀ ĐÀO TẠO</p>
+              <p className="text-[9px] text-blue-400 font-black uppercase tracking-wider mb-2">{t('governing_university')}</p>
+              <p className="text-xs font-bold text-white leading-relaxed">{t('uef_full_name')}</p>
+              <p className="text-[10px] text-slate-400 mt-2 font-medium">{t('moet')}</p>
               <div className="mt-4 pt-4 border-t border-slate-800/60 flex justify-between items-center text-[10px] text-slate-500 font-bold">
-                <span>Dự án Khởi nghiệp 2026</span>
+                <span>{t('startup_project_year')}</span>
                 <span className="text-emerald-400">F.R.E.S.H AI</span>
               </div>
             </div>
@@ -236,21 +280,21 @@ export default function StartupPitchDeck() {
             <div className="relative z-10 max-w-2xl">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6">
                 <Leaf className="w-3 h-3 text-emerald-400 animate-pulse" />
-                Leading the Zero-Waste Revolution
+                {t('leading_zero_waste')}
               </div>
 
               <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.05] uppercase">
-                DỰ ÁN KHỞI NGHIỆP <br />
+                {t('startup_project')} <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-emerald-300 to-emerald-500">F.R.E.S.H</span>
               </h1>
               <p className="text-slate-400 text-sm md:text-base font-bold uppercase tracking-widest mt-2">
-                Công nghệ quản trị hàng tồn kho và sống xanh
+                {t('sub_title')}
               </p>
               
               <div className="h-px bg-slate-800 my-8" />
               
               <p className="text-slate-300 text-sm md:text-base leading-relaxed font-medium">
-                F.R.E.S.H là nền tảng FoodTech tiên phong tại Việt Nam, cung cấp Giải pháp Quản trị Hàng tồn thông minh và Tối ưu hóa ESG. Sử dụng AI Dynamic Pricing kết nối các nhà bán lẻ với người tiêu dùng để phân phối thực phẩm cận date, giảm thiểu rác thải carbon.
+                {t('project_desc')}
               </p>
             </div>
           </div>
@@ -259,11 +303,11 @@ export default function StartupPitchDeck() {
           <section className="bg-slate-900/40 border border-slate-800/60 rounded-[2.2rem] p-6 md:p-8">
             <div className="flex items-center gap-3 mb-6">
               <Users className="w-5 h-5 text-emerald-400" />
-              <h2 className="text-lg font-black text-white uppercase tracking-wider">Đội ngũ sinh viên thực hiện</h2>
+              <h2 className="text-lg font-black text-white uppercase tracking-wider">{t('team_title')}</h2>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {TEAM_MEMBERS.map((m, i) => (
+              {teamMembers.map((m, i) => (
                 <div key={i} className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-5 hover:border-emerald-500/30 transition-all group relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-xl group-hover:bg-emerald-500/10 transition-colors" />
                   <p className="text-[10px] text-emerald-400 font-black tracking-widest uppercase mb-1">{m.mssv}</p>
@@ -282,31 +326,31 @@ export default function StartupPitchDeck() {
           <section id="tong-quan" className="space-y-6 pt-4">
             <div className="flex items-center gap-3">
               <span className="w-2.5 h-6 bg-emerald-500 rounded-full" />
-              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">1. Mô tả dự án & Slogan</h2>
+              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">1. {t('sec_desc_slogan')}</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6">
                 <span className="text-3xl">🎯</span>
-                <h3 className="font-black text-white text-sm uppercase mt-4 mb-2">Slogan & Định Vị</h3>
+                <h3 className="font-black text-white text-sm uppercase mt-4 mb-2">{t('slogan_positioning')}</h3>
                 <p className="text-xs text-slate-400 leading-relaxed font-semibold">
-                  &quot;Leading the Zero-Waste Revolution&quot; - Dẫn đầu cuộc cách mạng không rác thải. Định vị trong lĩnh vực FoodTech và Kinh tế tuần hoàn.
+                  {t('slogan_desc')}
                 </p>
               </div>
 
               <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6">
                 <span className="text-3xl">⚙</span>
-                <h3 className="font-black text-white text-sm uppercase mt-4 mb-2">Trụ Cột Cốt Lõi</h3>
+                <h3 className="font-black text-white text-sm uppercase mt-4 mb-2">{t('core_pillars')}</h3>
                 <p className="text-xs text-slate-400 leading-relaxed font-semibold">
-                  Tối ưu hóa hàng tồn cận date bằng thuật toán định giá động AI, kết nối B2B (các chuỗi siêu thị GS25, WinMart) với B2C (Gen Z, sinh viên).
+                  {t('pillars_desc')}
                 </p>
               </div>
 
               <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6">
                 <span className="text-3xl">🌱</span>
-                <h3 className="font-black text-white text-sm uppercase mt-4 mb-2">Giá Trị Xanh (SDG 12)</h3>
+                <h3 className="font-black text-white text-sm uppercase mt-4 mb-2">{t('green_value')}</h3>
                 <p className="text-xs text-slate-400 leading-relaxed font-semibold">
-                  Bảo vệ môi trường thông qua việc định lượng lượng CO2 giảm thải tương ứng của mỗi món ăn giải cứu, quy đổi thành Tín chỉ Xanh (Green Credit).
+                  {t('green_value_desc')}
                 </p>
               </div>
             </div>
@@ -316,32 +360,32 @@ export default function StartupPitchDeck() {
           <section id="su-can-thiet" className="space-y-6 pt-4">
             <div className="flex items-center gap-3">
               <span className="w-2.5 h-6 bg-emerald-500 rounded-full" />
-              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">2. Sự cần thiết & Thực trạng thị trường</h2>
+              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">2. {t('sec_necessity')}</h2>
             </div>
 
             <div className="bg-gradient-to-br from-slate-950 to-[#0e1628] border border-slate-800 rounded-3xl p-6 md:p-8 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
               <div className="space-y-4">
                 <div className="inline-block px-3 py-1 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-black uppercase tracking-wider rounded-full">
-                  Thực trạng đáng báo động
+                  {t('alarm_status')}
                 </div>
-                <h3 className="text-lg md:text-xl font-black text-white uppercase">Việt Nam đứng thứ 2 thế giới về chỉ số lãng phí thực phẩm</h3>
+                <h3 className="text-lg md:text-xl font-black text-white uppercase">{t('vietnam_rank')}</h3>
                 <p className="text-xs text-slate-400 leading-relaxed font-medium">
-                  Theo số liệu của UNEP và VTV, trung bình một người dân Việt Nam lãng phí từ <strong className="text-red-400 font-bold">79kg - 121kg</strong> thực phẩm mỗi năm. Đây là một sự thất thoát tài chính và tài nguyên vô cùng khủng khiếp.
+                  {t('unep_vtv_stat')}
                 </p>
                 <p className="text-xs text-slate-400 leading-relaxed font-medium">
-                  Trong khi các siêu thị phải tiêu hủy hàng tấn thực phẩm cận date mỗi ngày để dọn kho, lạm phát và bão giá đã đẩy chỉ số giá tiêu dùng (CPI) nhóm lương thực tăng vọt hơn <strong className="text-emerald-400 font-bold">12.19%</strong>. F.R.E.S.H ra đời để giải quyết triệt để nghịch lý tàn khốc này.
+                  {t('market_paradox')}
                 </p>
               </div>
 
               {/* STATS CHART DRAWN WITH DYNAMIC SVGS */}
               <div className="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-5 space-y-4">
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider text-center">Tỷ Lệ Lãng Phí Thực Phẩm Trong Chuỗi Cung Ứng</p>
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider text-center">{t('waste_chart_title')}</p>
                 
                 <div className="space-y-3">
                   {[
-                    { label: 'Hộ gia đình', pct: 61, color: 'bg-emerald-500' },
-                    { label: 'Dịch vụ ăn uống', pct: 26, color: 'bg-orange-500' },
-                    { label: 'Chuỗi bán lẻ (Siêu thị...)', pct: 13, color: 'bg-blue-500' }
+                    { label: t('chart_household'), pct: 61, color: 'bg-emerald-500' },
+                    { label: t('chart_food_service'), pct: 26, color: 'bg-orange-500' },
+                    { label: t('chart_retail'), pct: 13, color: 'bg-blue-500' }
                   ].map((item, idx) => (
                     <div key={idx} className="space-y-1">
                       <div className="flex justify-between text-xs font-bold text-slate-300">
@@ -361,7 +405,7 @@ export default function StartupPitchDeck() {
                   ))}
                 </div>
                 <div className="text-[9px] text-slate-500 italic text-center pt-2">
-                  Nguồn dữ liệu: UNEP Food Waste Index Report & Đài truyền hình VTV (2024)
+                  {t('data_source')}
                 </div>
               </div>
             </div>
@@ -371,20 +415,20 @@ export default function StartupPitchDeck() {
               <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6">
                 <div className="flex items-center gap-3 mb-3">
                   <span className="text-xl">👥</span>
-                  <h4 className="font-black text-white text-xs uppercase tracking-wider">Khách hàng B2C (Giai đoạn 1)</h4>
+                  <h4 className="font-black text-white text-xs uppercase tracking-wider">{t('b2c_title')}</h4>
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed font-semibold">
-                  Sinh viên Đại học (UEF, v.v.), nhân viên văn phòng trẻ, Gen Z tại TP.HCM. Đặc tính: cực kỳ nhạy cảm về giá, thích phong cách sống xanh hiện đại và quan tâm đến các giá trị phát triển bền vững ESG.
+                  {t('b2c_desc')}
                 </p>
               </div>
 
               <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6">
                 <div className="flex items-center gap-3 mb-3">
                   <span className="text-xl">🏪</span>
-                  <h4 className="font-black text-white text-xs uppercase tracking-wider">Đối tác B2B (Siêu thị & Cửa hàng)</h4>
+                  <h4 className="font-black text-white text-xs uppercase tracking-wider">{t('b2b_title')}</h4>
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed font-semibold">
-                  Chuỗi bán lẻ hiện đại (WinMart+, GS25, Circle K, Aeon, Co.opmart), cửa hàng tiện lợi, tiệm bánh ngọt. Mục tiêu: giảm thiểu hàng hủy (shrink), tối ưu vốn thu hồi từ hàng tồn và nâng cao chỉ số ESG của doanh nghiệp.
+                  {t('b2b_desc')}
                 </p>
               </div>
             </div>
@@ -394,28 +438,28 @@ export default function StartupPitchDeck() {
           <section id="tinh-kha-thi" className="space-y-6 pt-4">
             <div className="flex items-center gap-3">
               <span className="w-2.5 h-6 bg-emerald-500 rounded-full" />
-              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">3. Tính khả thi & Chiến lược Vận hành</h2>
+              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">3. {t('sec_feasibility')}</h2>
             </div>
 
             <div className="bg-slate-900/40 border border-slate-800/60 rounded-3xl p-6 md:p-8 space-y-6">
               <p className="text-xs text-slate-300 font-medium leading-relaxed">
-                F.R.E.S.H áp dụng chiến thuật <strong>&quot;Lãnh đạo từng bước&quot;</strong> để đảm bảo tính khả thi tuyệt đối mà không cần siêu thị phải tích hợp hệ thống POS bảo mật ngay từ đầu:
+                {t('feasibility_intro')}
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-5 space-y-3">
                   <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-400 font-black flex items-center justify-center text-xs">1</div>
-                  <h4 className="font-black text-white text-xs uppercase tracking-wider">Giai đoạn 1: Mô hình Partner-App độc lập</h4>
+                  <h4 className="font-black text-white text-xs uppercase tracking-wider">{t('phase_1_title')}</h4>
                   <p className="text-xs text-slate-400 leading-relaxed font-semibold">
-                    Cung cấp app riêng cực kỳ đơn giản cho nhân viên siêu thị. Nhân viên chỉ cần quét mã vạch sản phẩm cận date. AI sẽ tự động đọc danh mục, hạn dùng và đẩy lên sàn cứu hộ, dẹp bỏ rào cản can thiệp hệ thống POS.
+                    {t('phase_1_desc')}
                   </p>
                 </div>
 
                 <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-5 space-y-3">
                   <div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-400 font-black flex items-center justify-center text-xs">2</div>
-                  <h4 className="font-black text-white text-xs uppercase tracking-wider">Giai đoạn 2: Tích hợp API hệ thống kho</h4>
+                  <h4 className="font-black text-white text-xs uppercase tracking-wider">{t('phase_2_title')}</h4>
                   <p className="text-xs text-slate-400 leading-relaxed font-semibold">
-                    Khi đã chứng minh được doanh thu thực tế và thiết lập lòng tin vững chắc, dự án sẽ đồng bộ hóa tự động API với hệ thống quản lý kho của đối tác để tối ưu nguồn lực nhân sự tự động hóa 100%.
+                    {t('phase_2_desc')}
                   </p>
                 </div>
               </div>
@@ -426,43 +470,43 @@ export default function StartupPitchDeck() {
           <section id="sanh-tao" className="space-y-6 pt-4">
             <div className="flex items-center gap-3">
               <span className="w-2.5 h-6 bg-emerald-500 rounded-full" />
-              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">4. Tính độc đáo & Trình mô phỏng Định giá AI</h2>
+              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">4. {t('sec_uniqueness')}</h2>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 space-y-2">
-                <span className="text-emerald-400 text-lg font-bold">01. Bản địa hóa sắc bén</span>
-                <h4 className="font-black text-white text-xs uppercase">Bán món lẻ thay vì túi mù</h4>
+                <span className="text-emerald-400 text-lg font-bold">{t('unique_1_title')}</span>
+                <h4 className="font-black text-white text-xs uppercase">{t('unique_1_sub')}</h4>
                 <p className="text-xs text-slate-400 leading-relaxed font-semibold">
-                  Khác với các đối thủ quốc tế Too Good To Go (bán túi mù thiếu minh bạch), F.R.E.S.H lựa chọn hiển thị minh bạch từng sản phẩm để người dùng tự chọn, đánh trúng tâm lý sinh viên Việt Nam.
+                  {t('unique_1_desc')}
                 </p>
               </div>
 
               <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 space-y-2">
-                <span className="text-orange-400 text-lg font-bold">02. Tín dụng Xanh (Green Credit)</span>
-                <h4 className="font-black text-white text-xs uppercase">Quy đổi carbon thành giá trị</h4>
+                <span className="text-orange-400 text-lg font-bold">{t('unique_2_title')}</span>
+                <h4 className="font-black text-white text-xs uppercase">{t('unique_2_sub')}</h4>
                 <p className="text-xs text-slate-400 leading-relaxed font-semibold">
-                  Điểm thưởng được quy đổi dựa trên lượng CO2 giảm thiểu. Điểm dùng để nhận voucher, giảm học phí tại trường ĐH hoặc xuất chứng chỉ lãnh đạo xanh gắn thẳng lên hồ sơ LinkedIn.
+                  {t('unique_2_desc')}
                 </p>
               </div>
 
               <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 space-y-2">
-                <span className="text-blue-400 text-lg font-bold">03. AI Dynamic Pricing Engine</span>
-                <h4 className="font-black text-white text-xs uppercase">Thuật toán tối ưu hóa thời gian thực</h4>
+                <span className="text-blue-400 text-lg font-bold">{t('unique_3_title')}</span>
+                <h4 className="font-black text-white text-xs uppercase">{t('unique_3_sub')}</h4>
                 <p className="text-xs text-slate-400 leading-relaxed font-semibold">
-                  AI liên tục điều chỉnh giá bán theo từng phút dựa trên hạn dùng còn lại, tồn kho hiện tại, thời tiết địa phương và nhu cầu của thị trường.
+                  {t('unique_3_desc')}
                 </p>
               </div>
             </div>
 
             {/* DYNAMIC PRICING FORMULA PRESENTATION */}
             <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 text-center space-y-4">
-              <p className="text-[10px] text-emerald-400 font-black uppercase tracking-wider">Hàm toán học tối ưu hóa lợi nhuận AI</p>
+              <p className="text-[10px] text-emerald-400 font-black uppercase tracking-wider">{t('math_title')}</p>
               <div className="inline-block bg-slate-900/80 border border-slate-800 rounded-2xl px-6 py-4 font-mono text-emerald-400 text-sm md:text-base">
                 P_d = P_0 &times; (t_left / t_total)<sup>&alpha;</sup> &times; f(demand) &times; f(weather)
               </div>
               <p className="text-xs text-slate-500 font-medium max-w-xl mx-auto">
-                Trong đó, <strong>P_d</strong> là giá AI đề xuất, <strong>P_0</strong> là giá gốc, <strong>&alpha;</strong> là hệ số suy hao (decay coefficient = 0.65), kết hợp với hàm nhu cầu và thời tiết địa phương.
+                {t('math_desc')}
               </p>
             </div>
 
@@ -470,11 +514,11 @@ export default function StartupPitchDeck() {
             <div className="bg-slate-900/40 border border-slate-850 rounded-[2.2rem] p-6 md:p-8 space-y-6">
               <div className="flex items-center gap-2">
                 <Cpu className="w-5 h-5 text-emerald-400" />
-                <h3 className="font-black text-white text-sm uppercase tracking-wider">Bản mô phỏng AI Dynamic Pricing thời gian thực</h3>
+                <h3 className="font-black text-white text-sm uppercase tracking-wider">{t('sim_title')}</h3>
               </div>
               
               <p className="text-xs text-slate-400 font-medium">
-                Kéo các thanh trượt bên dưới để xem thuật toán AI của F.R.E.S.H tự động thay đổi giá cứu hộ và tính toán lượng CO2 giảm thiểu:
+                {t('sim_desc')}
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
@@ -482,7 +526,7 @@ export default function StartupPitchDeck() {
                 <div className="space-y-5">
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs font-bold text-slate-300">
-                      <span>Giá gốc sản phẩm:</span>
+                      <span>{t('sim_original_price')}</span>
                       <span className="text-emerald-400">{originalPrice.toLocaleString()} VNĐ</span>
                     </div>
                     <input
@@ -494,8 +538,8 @@ export default function StartupPitchDeck() {
 
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs font-bold text-slate-300">
-                      <span>Số giờ còn lại đến hạn hủy:</span>
-                      <span className="text-orange-400">{hoursLeft} / {totalHours} giờ</span>
+                      <span>{t('sim_hours_left')}</span>
+                      <span className="text-orange-400">{hoursLeft} / {totalHours} {lang === 'vi' ? 'giờ' : 'hrs'}</span>
                     </div>
                     <input
                       type="range" min="1" max={totalHours} step="1" value={hoursLeft}
@@ -506,7 +550,7 @@ export default function StartupPitchDeck() {
 
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs font-bold text-slate-300">
-                      <span>Nhu cầu thị trường (Demand):</span>
+                      <span>{t('sim_demand')}</span>
                       <span className="text-blue-400">x{demandFactor.toFixed(1)}</span>
                     </div>
                     <input
@@ -522,20 +566,20 @@ export default function StartupPitchDeck() {
                   <div className="absolute top-[-20%] right-[-20%] w-24 h-24 bg-emerald-500/5 rounded-full blur-xl" />
                   
                   <div className="space-y-4">
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">AI đề xuất giá & carbon</p>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t('sim_output_title')}</p>
                     
                     <div className="space-y-1">
-                      <span className="text-[10px] text-slate-400 font-semibold uppercase">Giá bán cứu hộ AI</span>
+                      <span className="text-[10px] text-slate-400 font-semibold uppercase">{t('sim_rescue_price')}</span>
                       <p className="text-3xl font-black text-emerald-400">{simulatedPrice.toLocaleString()} VNĐ</p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-900">
                       <div>
-                        <span className="text-[9px] text-slate-500 font-semibold uppercase">Mức giảm giá</span>
+                        <span className="text-[9px] text-slate-500 font-semibold uppercase">{t('sim_discount')}</span>
                         <p className="text-sm font-black text-orange-400">-{Math.round((1 - (simulatedPrice / originalPrice)) * 100)}%</p>
                       </div>
                       <div>
-                        <span className="text-[9px] text-slate-500 font-semibold uppercase">CO₂ giảm thiểu</span>
+                        <span className="text-[9px] text-slate-500 font-semibold uppercase">{t('sim_co2')}</span>
                         <p className="text-sm font-black text-blue-400">~{co2SavedSimulated} kg</p>
                       </div>
                     </div>
@@ -543,7 +587,7 @@ export default function StartupPitchDeck() {
 
                   <div className="mt-4 pt-3 border-t border-slate-900 text-[10px] text-slate-500 font-bold flex items-center gap-2">
                     <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Thuật toán đang chạy tự động</span>
+                    <span>{t('sim_running')}</span>
                   </div>
                 </div>
               </div>
@@ -554,29 +598,29 @@ export default function StartupPitchDeck() {
           <section id="ke-hoach" className="space-y-6 pt-4">
             <div className="flex items-center gap-3">
               <span className="w-2.5 h-6 bg-emerald-500 rounded-full" />
-              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">5. Kế hoạch kinh doanh & Dự phóng Tài chính (2026-2030)</h2>
+              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">5. {t('sec_finance')}</h2>
             </div>
 
             <div className="bg-slate-900/40 border border-slate-800/60 rounded-3xl p-6 md:p-8 space-y-8">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <DollarSign className="w-5 h-5 text-emerald-400" />
-                  <h3 className="font-black text-white text-sm uppercase tracking-wider">Dự phóng chi tiết dòng tiền (Đơn vị: VNĐ)</h3>
+                  <h3 className="font-black text-white text-sm uppercase tracking-wider">{t('finance_sub')}</h3>
                 </div>
                 <p className="text-xs text-slate-400 font-medium">
-                  Với số vốn đầu tư ban đầu (CAPEX) 250 triệu và chi phí vận hành (OPEX) khoảng 40 triệu/tháng, dự án được hoạch định đạt <strong>điểm hòa vốn vào tháng thứ 10</strong>.
+                  {t('finance_desc')}
                 </p>
               </div>
 
               {/* INTERACTIVE YEAR SELECTION PANEL */}
               <div className="flex flex-wrap gap-2">
-                {FINANCIAL_PROJECTS.map(f => (
+                {financialProjects.map(f => (
                   <button
                     key={f.year}
                     onClick={() => setSelectedYear(f.year)}
                     className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${selectedYear === f.year ? 'bg-emerald-500 text-[#0b0f19] border-emerald-500 shadow-md shadow-emerald-500/20' : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:text-slate-200'}`}
                   >
-                    Năm {f.year}
+                    {t('finance_year')} {f.year}
                   </button>
                 ))}
               </div>
@@ -592,38 +636,38 @@ export default function StartupPitchDeck() {
                   className="bg-slate-950 border border-slate-800/80 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-3 gap-6"
                 >
                   <div className="space-y-4">
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Tổng quan ngân sách {selectedYear}</p>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t('budget_overview')} {selectedYear}</p>
                     
                     <div className="space-y-2">
                       <div>
-                        <span className="text-[9px] text-slate-400 font-semibold uppercase">Đầu tư (CAPEX)</span>
+                        <span className="text-[9px] text-slate-400 font-semibold uppercase">{t('capex')}</span>
                         <p className="text-xl font-black text-white">{selectedYearData.capex.toLocaleString()}đ</p>
                       </div>
                       <div>
-                        <span className="text-[9px] text-slate-400 font-semibold uppercase">Vận hành (OPEX)</span>
+                        <span className="text-[9px] text-slate-400 font-semibold uppercase">{t('opex')}</span>
                         <p className="text-xl font-black text-white">{selectedYearData.opex.toLocaleString()}đ</p>
                       </div>
                       <div className="h-px bg-slate-900" />
                       <div>
-                        <span className="text-[9px] text-emerald-400 font-bold uppercase">Tổng chi phí dự kiến</span>
+                        <span className="text-[9px] text-emerald-400 font-bold uppercase">{t('total_cost')}</span>
                         <p className="text-2xl font-black text-emerald-400">{selectedYearData.total.toLocaleString()}đ</p>
                       </div>
                     </div>
                   </div>
 
                   <div className="md:col-span-2 space-y-3">
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Phân bổ chi phí cụ thể</p>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t('cost_allocation')}</p>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                       {Object.entries(selectedYearData.details).map(([key, val]) => (
                         <div key={key} className="bg-slate-900/80 border border-slate-800/60 rounded-xl p-3">
                           <span className="text-[9px] text-slate-500 font-bold uppercase block mb-1">
                             {key === 'dev' && 'R&D/App/AI'}
-                            {key === 'legal' && 'Pháp lý & Thương hiệu'}
+                            {key === 'legal' && (lang === 'vi' ? 'Pháp lý & Thương hiệu' : 'Legal & Brand')}
                             {key === 'server' && 'IT & Cloud Server'}
-                            {key === 'staff' && 'Nhân sự & CSKH'}
-                            {key === 'marketing' && 'Marketing & Cộng đồng'}
-                            {key === 'reserve' && 'Dự phòng rủi ro'}
+                            {key === 'staff' && (lang === 'vi' ? 'Nhân sự & CSKH' : 'Staff & Support')}
+                            {key === 'marketing' && (lang === 'vi' ? 'Marketing & Cộng đồng' : 'Marketing & Community')}
+                            {key === 'reserve' && (lang === 'vi' ? 'Dự phòng rủi ro' : 'Financial Reserve')}
                           </span>
                           <span className="font-bold text-slate-300">{val}</span>
                         </div>
@@ -635,15 +679,15 @@ export default function StartupPitchDeck() {
 
               {/* PILOT YEAR REVENUE MILESTONES */}
               <div className="space-y-4 pt-4">
-                <h4 className="font-black text-white text-xs uppercase tracking-wider">Cột mốc doanh thu giai đoạn Pilot (Năm 2026)</h4>
+                <h4 className="font-black text-white text-xs uppercase tracking-wider">{t('milestones_title')}</h4>
                 
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                   {[
-                    { label: 'Tháng 1-3', shops: '5 điểm', revenue: '24.000.000đ', active: false },
-                    { label: 'Tháng 4-6', shops: '15 điểm', revenue: '72.000.000đ', active: false },
-                    { label: 'Tháng 7-9', shops: '30 điểm', revenue: '144.000.000đ', active: false },
-                    { label: 'Tháng 10', shops: '50 điểm', revenue: '240.000.000đ', active: true, desc: 'Hòa vốn' },
-                    { label: 'Tháng 11-12', shops: '70 điểm', revenue: '336.000.000đ', active: false }
+                    { label: t('m_month_1_3'), shops: lang === 'vi' ? '5 điểm' : '5 stores', revenue: '24.000.000đ', active: false },
+                    { label: t('m_month_4_6'), shops: lang === 'vi' ? '15 điểm' : '15 stores', revenue: '72.000.000đ', active: false },
+                    { label: t('m_month_7_9'), shops: lang === 'vi' ? '30 điểm' : '30 stores', revenue: '144.000.000đ', active: false },
+                    { label: t('m_month_10'), shops: lang === 'vi' ? '50 điểm' : '50 stores', revenue: '240.000.000đ', active: true, desc: t('breakeven') },
+                    { label: t('m_month_11_12'), shops: lang === 'vi' ? '70 điểm' : '70 stores', revenue: '336.000.000đ', active: false }
                   ].map((milestone, idx) => (
                     <div
                       key={idx}
@@ -668,23 +712,23 @@ export default function StartupPitchDeck() {
           <section id="nguon-luc" className="space-y-6 pt-4">
             <div className="flex items-center gap-3">
               <span className="w-2.5 h-6 bg-emerald-500 rounded-full" />
-              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">6. Huy động nguồn lực & Đối tác</h2>
+              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">6. {t('sec_resources')}</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6 space-y-3">
                 <span className="text-2xl">⚡</span>
-                <h3 className="font-black text-white text-xs uppercase tracking-wider">Đối tác chính trong Hệ sinh thái</h3>
+                <h3 className="font-black text-white text-xs uppercase tracking-wider">{t('partners_title')}</h3>
                 <p className="text-xs text-slate-400 leading-relaxed font-semibold">
-                  Các chuỗi bán lẻ, siêu thị tiện lợi đối tác; Hệ thống các trường Đại học (phối hợp triển khai tích lũy Green Credit đổi quà); Công ty bảo hiểm rủi ro thực phẩm; Cổng thanh toán ví điện tử.
+                  {t('partners_desc')}
                 </p>
               </div>
 
               <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6 space-y-3">
                 <span className="text-2xl">💸</span>
-                <h3 className="font-black text-white text-xs uppercase tracking-wider">Kế hoạch huy động vốn</h3>
+                <h3 className="font-black text-white text-xs uppercase tracking-wider">{t('funding_title')}</h3>
                 <p className="text-xs text-slate-400 leading-relaxed font-semibold">
-                  Bắt đầu bằng hình thức tự thân vận hành (Bootstrapping) =&gt; Kêu gọi vốn hạt giống (Seed) từ các cuộc thi và quỹ hỗ trợ ESG, vườn ươm sinh viên =&gt; Kêu gọi nhà đầu tư thiên thần (Angel Investors) khi đạt mốc hòa vốn.
+                  {t('funding_desc')}
                 </p>
               </div>
             </div>
@@ -694,38 +738,37 @@ export default function StartupPitchDeck() {
           <section id="truyen-thong" className="space-y-6 pt-4">
             <div className="flex items-center gap-3">
               <span className="w-2.5 h-6 bg-emerald-500 rounded-full" />
-              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">7. Kênh truyền thông & Giải pháp khác biệt</h2>
+              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">7. {t('sec_channels')}</h2>
             </div>
 
             <div className="bg-slate-900/40 border border-slate-800/60 rounded-3xl p-6 md:p-8 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="inline-block px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-wider rounded-full">
-                    Thông điệp chủ đạo
+                    {t('message_badge')}
                   </div>
                   <blockquote className="border-l-4 border-emerald-500 pl-4 text-sm font-black italic text-slate-200">
-                    &quot;Sống Xanh không khó, lại còn rẻ!&quot; và <br />
-                    &quot;Green Credit - Chứng chỉ xanh nâng tầm sự nghiệp.&quot;
+                    {t('message_quote')}
                   </blockquote>
                   <p className="text-xs text-slate-400 leading-relaxed font-medium">
-                    Không đánh vào sự thương hại giải cứu thực phẩm thông thường, F.R.E.S.H đề cao tính thời thượng, thông minh và sành điệu trong lối sống tiêu dùng xanh của người trẻ.
+                    {t('message_desc')}
                   </p>
                 </div>
 
                 <div className="bg-slate-950/80 border border-slate-850 rounded-2xl p-5 space-y-3">
-                  <h4 className="font-black text-white text-xs uppercase tracking-wider">Chiến dịch trọng tâm</h4>
+                  <h4 className="font-black text-white text-xs uppercase tracking-wider">{t('campaigns_title')}</h4>
                   <ul className="space-y-2 text-xs text-slate-400 font-semibold">
                     <li className="flex items-center gap-2">
                       <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                      Social Media (TikTok, IG Reels) Food Rescue Challenge
+                      {t('c_social')}
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                      Local Activation: Bảng hiệu Signage thông minh tại điểm bán
+                      {t('c_local')}
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                      Bảng xếp hạng Waste Warriors hàng tháng trên ứng dụng
+                      {t('c_leaderboard')}
                     </li>
                   </ul>
                 </div>
@@ -735,16 +778,16 @@ export default function StartupPitchDeck() {
 
           {/* FINAL CTA BACK TO HOME */}
           <div className="bg-gradient-to-r from-emerald-900/30 to-[#0e271f] border border-emerald-800/40 rounded-[2rem] p-8 text-center space-y-6">
-            <h3 className="text-lg md:text-xl font-black text-white uppercase tracking-wider">Trải nghiệm Nền tảng ngay bây giờ</h3>
+            <h3 className="text-lg md:text-xl font-black text-white uppercase tracking-wider">{t('try_platform')}</h3>
             <p className="text-xs text-slate-400 max-w-xl mx-auto font-medium">
-              Chạy thử nghiệm giao diện app dành cho khách hàng, đối tác cửa hàng hoặc bảng quản trị hệ thống của F.R.E.S.H.
+              {t('try_desc')}
             </p>
             <div className="flex justify-center gap-4">
               <Link href="/customer" className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-[#0b0f19] font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-500/25">
-                Vào Hệ sinh thái
+                {t('enter_ecosystem')}
               </Link>
               <Link href="/" className="px-6 py-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-black text-xs uppercase tracking-widest rounded-xl transition-all">
-                Trang chủ Landing Page
+                {t('home_page')}
               </Link>
             </div>
           </div>
@@ -755,7 +798,7 @@ export default function StartupPitchDeck() {
       {/* FOOTER */}
       <footer className="border-t border-slate-900 mt-20 bg-slate-950/60 py-8 text-center text-xs text-slate-500 font-bold uppercase tracking-wider">
         <p>&copy; {new Date().getFullYear()} F.R.E.S.H Project. All rights reserved.</p>
-        <p className="text-[10px] text-slate-600 mt-1">Đề án Khởi nghiệp trường ĐH Kinh tế - Tài chính TP.HCM (UEF)</p>
+        <p className="text-[10px] text-slate-600 mt-1">{t('footer_sig')}</p>
       </footer>
 
     </div>

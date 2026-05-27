@@ -153,8 +153,15 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
             <Heart className={`w-6 h-6 ${favorited ? 'fill-red-500' : ''} transition-all`} />
           </motion.button>
         </div>
-        <div className="w-full h-full flex items-center justify-center">
-          <motion.div animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.05, 1] }} transition={{ duration: 6, repeat: Infinity }} className="text-9xl opacity-30">{product.image || '🍱'}</motion.div>
+        <div className="w-full h-full flex items-center justify-center relative">
+          {product.image && (product.image.startsWith('http') || product.image.startsWith('/')) ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={product.image} alt={product.name} className="w-full h-full object-cover opacity-60" />
+          ) : (
+            <motion.div animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.05, 1] }} transition={{ duration: 6, repeat: Infinity }} className="text-9xl opacity-30">
+              {product.image || '🍱'}
+            </motion.div>
+          )}
         </div>
       </div>
 
@@ -193,10 +200,8 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
               <motion.button whileTap={{ scale: 0.9 }} onClick={() => setQuantity(Math.min(10, quantity + 1))} disabled={quantity >= 10} className="w-10 h-10 rounded-xl bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 flex items-center justify-center disabled:opacity-30 transition-all hover:bg-gray-100">
                 <Plus className="w-4 h-4 text-gray-600 dark:text-slate-300" />
               </motion.button>
-            </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 border-y border-gray-100 dark:border-slate-800 py-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-y border-gray-100 dark:border-slate-800 py-8">
             <div className="space-y-4">
               <h3 className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
                 <Clock className="w-4 h-4" /> Freshness Timeline
@@ -204,7 +209,16 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
               <div className="w-full bg-gray-100 dark:bg-slate-800 h-3 rounded-full overflow-hidden flex">
                 {(() => { const bars = getFreshnessBars(product.createdAt, product.expiry); return (<><motion.div initial={{ width: 0 }} animate={{ width: `${bars.green}%` }} transition={{ duration: 1 }} className="bg-emerald-500 h-full" /><motion.div initial={{ width: 0 }} animate={{ width: `${bars.orange}%` }} transition={{ duration: 1, delay: 0.2 }} className="bg-orange-500 h-full" /><motion.div initial={{ width: 0 }} animate={{ width: `${bars.red}%` }} transition={{ duration: 1, delay: 0.4 }} className="bg-red-500 h-full" /></>); })()}
               </div>
-              <p className="text-xs font-bold text-gray-500 dark:text-slate-400">Best consumed within <span className="text-orange-500">{getFreshnessBarsBestBefore(product.createdAt, product.expiry)}</span> for peak quality.</p>
+              <div className="grid grid-cols-2 gap-4 text-xs font-mono mt-2 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-850/50">
+                <div>
+                  <span className="block text-[9px] text-gray-400 uppercase font-bold">Ngày sản xuất (MFG)</span>
+                  <span className="font-extrabold text-slate-700 dark:text-slate-200">{product.mfgDate || '2026-05-26 06:00'}</span>
+                </div>
+                <div>
+                  <span className="block text-[9px] text-gray-400 uppercase font-bold">Hạn sử dụng (EXP)</span>
+                  <span className="font-extrabold text-rose-500">{product.expiryDate || product.expiry}</span>
+                </div>
+              </div>
             </div>
             <div className="space-y-4">
               <h3 className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
@@ -219,6 +233,26 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
                   <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Equivalent to {Math.round((product.co2Saved || 0) * quantity * 3.125)}km driving</div>
                 </div>
               </motion.div>
+            </div>
+          </div>
+
+          {/* Product Description and Technical Details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-b border-gray-100 dark:border-slate-800 pb-8 mb-8">
+            <div className="space-y-2">
+              <h3 className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">
+                Mô tả sản phẩm
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-slate-350 leading-relaxed font-medium">
+                {product.description || 'Sản phẩm giải cứu chất lượng từ supply chain địa phương, đảm bảo tiêu chuẩn vệ sinh an toàn thực phẩm.'}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">
+                Chi tiết sản phẩm
+              </h3>
+              <p className="text-xs text-gray-600 dark:text-slate-350 leading-relaxed font-medium bg-slate-50 dark:bg-slate-800/20 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800/40">
+                {product.details || 'Bao bì nguyên vẹn. Bảo quản ở nhiệt độ thích hợp. Khuyên dùng trước hạn sử dụng ghi trên bao bì để đảm bảo chất lượng ngon nhất.'}
+              </p>
             </div>
           </div>
 
@@ -239,9 +273,9 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
               ))}
             </div>
             <p className="text-sm text-gray-500 dark:text-slate-400 font-medium leading-relaxed">
-              Our AI vision system has analyzed this {product.name.toLowerCase()}. {product.nutrition ? `It contains ${product.nutrition.protein}g protein and ${product.nutrition.carbs}g carbs` : 'Nutritional analysis available'}. All ingredients are fresh from {product.storeName} local supply chain.
+              Hệ thống AI của chúng tôi đã phân tích dinh dưỡng cho {product.name.toLowerCase()}. {product.nutrition ? `Món ăn chứa khoảng ${product.nutrition.protein}g protein và ${product.nutrition.carbs}g carbs` : 'Chỉ số dinh dưỡng sẵn sàng'}. Toàn bộ thành phần đều được cung cấp tươi mới từ đối tác {product.storeName}.
             </p>
-          </div>
+          </div></div>
         </motion.div>
       </div>
 

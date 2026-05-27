@@ -27,7 +27,18 @@ export default function PartnerInventory() {
   const [mounted, setMounted] = useState(false);
   const reduced = useSafeReducedMotion();
 
-  const [form, setForm] = useState({ name: '', category: '', stock: 0, originalPrice: 0, aiPrice: 0, expiry: '' });
+  const [form, setForm] = useState({ 
+    name: '', 
+    category: '', 
+    stock: 0, 
+    originalPrice: 0, 
+    aiPrice: 0, 
+    expiry: '',
+    description: '',
+    details: '',
+    mfgDate: '',
+    expiryDate: ''
+  });
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -56,7 +67,18 @@ export default function PartnerInventory() {
     }
   }, [search, products]);
 
-  const resetForm = () => setForm({ name: '', category: '', stock: 0, originalPrice: 0, aiPrice: 0, expiry: '' });
+  const resetForm = () => setForm({ 
+    name: '', 
+    category: '', 
+    stock: 0, 
+    originalPrice: 0, 
+    aiPrice: 0, 
+    expiry: '',
+    description: '',
+    details: '',
+    mfgDate: '',
+    expiryDate: ''
+  });
 
   const handleAdd = async () => {
     if (!form.name || !form.category) {
@@ -71,12 +93,16 @@ export default function PartnerInventory() {
         stock: form.stock,
         originalPrice: form.originalPrice,
         aiPrice: form.aiPrice || 0,
-        expiry: form.expiry,
+        expiry: form.expiryDate || form.expiry,
         status: 'live',
         image: '📦',
         storeId,
         storeName,
         discount: form.aiPrice ? Math.round((1 - form.aiPrice / form.originalPrice) * 100) : 0,
+        description: form.description,
+        details: form.details,
+        mfgDate: form.mfgDate,
+        expiryDate: form.expiryDate || form.expiry,
       });
       if (newProduct) {
         setProducts(prev => [...prev, newProduct]);
@@ -102,8 +128,12 @@ export default function PartnerInventory() {
         stock: form.stock,
         originalPrice: form.originalPrice,
         aiPrice: form.aiPrice,
-        expiry: form.expiry,
+        expiry: form.expiryDate || form.expiry,
         discount: Math.round((1 - form.aiPrice / form.originalPrice) * 100),
+        description: form.description,
+        details: form.details,
+        mfgDate: form.mfgDate,
+        expiryDate: form.expiryDate || form.expiry,
       });
       if (updated) {
         setProducts(prev => prev.map(p => p.id === updated.id ? updated : p));
@@ -139,6 +169,10 @@ export default function PartnerInventory() {
       originalPrice: product.originalPrice,
       aiPrice: product.aiPrice,
       expiry: product.expiry,
+      description: product.description || '',
+      details: product.details || '',
+      mfgDate: product.mfgDate || '',
+      expiryDate: product.expiryDate || product.expiry || '',
     });
   };
 
@@ -300,6 +334,23 @@ export default function PartnerInventory() {
                     <option value="Beverages">{t('beverages')}</option>
                   </select>
                 </motion.div>
+
+                {/* Bổ sung trường mô tả và chi tiết sản phẩm */}
+                <motion.div variants={staggerItem}>
+                  <label className="block text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase mb-1">Mô tả ngắn</label>
+                  <input value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+                    className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 rounded-xl px-4 py-3 text-sm font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#057A42]"
+                    placeholder="Mô tả tóm tắt sản phẩm (ví dụ: Bánh Croissant bơ thơm giòn)"
+                  />
+                </motion.div>
+                <motion.div variants={staggerItem}>
+                  <label className="block text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase mb-1">Chi tiết sản phẩm</label>
+                  <textarea value={form.details} onChange={e => setForm(p => ({ ...p, details: e.target.value }))}
+                    className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 rounded-xl px-4 py-3 text-sm font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#057A42] min-h-[80px] resize-y"
+                    placeholder="Thành phần chi tiết, cách bảo quản, hạn bảo quản và cách sử dụng..."
+                  />
+                </motion.div>
+
                 <motion.div variants={staggerItem} className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase mb-1">{t('stock')}</label>
@@ -322,12 +373,21 @@ export default function PartnerInventory() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase mb-1">{t('expiry_date')}</label>
-                    <input type="text" value={form.expiry} onChange={e => setForm(p => ({ ...p, expiry: e.target.value }))}
+                    <label className="block text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase mb-1">Ngày hết hạn (EXP)</label>
+                    <input type="text" value={form.expiryDate || form.expiry} onChange={e => setForm(p => ({ ...p, expiryDate: e.target.value, expiry: e.target.value }))}
                       className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 rounded-xl px-4 py-3 text-sm font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#057A42]"
-                      placeholder="2026-05-15 18:00"
+                      placeholder="YYYY-MM-DD HH:mm"
                     />
                   </div>
+                </motion.div>
+
+                {/* Bổ sung ngày sản xuất */}
+                <motion.div variants={staggerItem}>
+                  <label className="block text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase mb-1">Ngày sản xuất (MFG)</label>
+                  <input type="text" value={form.mfgDate} onChange={e => setForm(p => ({ ...p, mfgDate: e.target.value }))}
+                    className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 rounded-xl px-4 py-3 text-sm font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#057A42]"
+                    placeholder="YYYY-MM-DD HH:mm"
+                  />
                 </motion.div>
                 <motion.button 
                   variants={staggerItem} 

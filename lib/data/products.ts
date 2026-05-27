@@ -23,7 +23,12 @@ export interface Product {
   allergens?: string[];
   nutrition?: { calories: number; protein: number; carbs: number; fat: number; fiber: number };
   distance?: number;
+  description?: string;
+  details?: string;
+  mfgDate?: string;
+  expiryDate?: string;
 }
+
 
 export interface Store {
   id: string;
@@ -59,13 +64,25 @@ function safeJsonParse(str: string | null | undefined, fallback: any = []) {
 }
 
 function parseProduct(p: any): Product {
+  const nutritionObj = typeof p.nutrition === 'string' ? safeJsonParse(p.nutrition, {}) : p.nutrition || {};
   return {
     ...p,
     ingredients: typeof p.ingredients === 'string' ? safeJsonParse(p.ingredients) : p.ingredients || [],
     allergens: typeof p.allergens === 'string' ? safeJsonParse(p.allergens) : p.allergens || [],
-    nutrition: typeof p.nutrition === 'string' ? safeJsonParse(p.nutrition, {}) : p.nutrition || { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
+    nutrition: {
+      calories: typeof nutritionObj.calories === 'number' ? nutritionObj.calories : parseInt(nutritionObj.calories) || 0,
+      protein: typeof nutritionObj.protein === 'number' ? nutritionObj.protein : parseInt(nutritionObj.protein) || 0,
+      carbs: typeof nutritionObj.carbs === 'number' ? nutritionObj.carbs : parseInt(nutritionObj.carbs) || 0,
+      fat: typeof nutritionObj.fat === 'number' ? nutritionObj.fat : parseInt(nutritionObj.fat) || 0,
+      fiber: typeof nutritionObj.fiber === 'number' ? nutritionObj.fiber : parseInt(nutritionObj.fiber) || 0,
+    },
+    description: p.description || nutritionObj.description || '',
+    details: p.details || nutritionObj.details || '',
+    mfgDate: p.mfg_date || p.mfgDate || nutritionObj.mfgDate || '',
+    expiryDate: p.expiry_date || p.expiryDate || nutritionObj.expiryDate || p.expiry || '',
   };
 }
+
 
 export const productService = {
   async getAll(): Promise<Product[]> {

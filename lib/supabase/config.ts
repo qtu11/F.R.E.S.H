@@ -63,5 +63,7 @@ export function saveConfig(input: Partial<SupabaseConfig>): SupabaseConfig {
 export function getConnectionString(config: SupabaseConfig): string {
   const ref = getProjectRef(config.supabaseUrl);
   if (!ref || !config.dbPassword) return '';
-  return `postgresql://postgres:${encodeURIComponent(config.dbPassword)}@db.${ref}.supabase.co:5432/postgres`;
+  // Sử dụng transaction pooler (IPv4) của Supabase tại aws-1-ap-southeast-1.pooler.supabase.com vì kết nối trực tiếp db.ktnhoiqqecygxztsugkx.supabase.co dùng IPv6-only có thể không khả dụng trên môi trường hiện tại
+  return `postgresql://postgres.${ref}:${encodeURIComponent(config.dbPassword)}@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require`;
 }
+

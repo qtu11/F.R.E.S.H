@@ -3,6 +3,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { toCamelCase } from '@/lib/supabase/transform';
 import { signToken, COOKIE_NAME, COOKIE_MAX_AGE } from '@/lib/auth/jwt';
 import bcrypt from 'bcryptjs';
+import { sendWelcomeEmail } from '@/utils/email/mailer';
 
 export async function POST(req: Request) {
   try {
@@ -90,6 +91,11 @@ export async function POST(req: Request) {
 
     const { password: _, ...user } = toCamelCase(data);
     const token = signToken(data.id, data.role);
+
+    // Gửi email chào mừng phi đồng bộ (không block luồng đăng ký nếu Resend chậm)
+    sendWelcomeEmail(email.toLowerCase(), name).catch(err => {
+      console.error('Welcome email sending failed:', err);
+    });
 
     const response = NextResponse.json({ user, token });
     response.cookies.set(COOKIE_NAME, token, {

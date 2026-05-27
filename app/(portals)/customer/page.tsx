@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGlobal } from '@/app/providers';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { productService, Product } from '@/lib/data/products';
+import ProductDetailModal from '@/components/ProductDetailModal';
 import { orderService } from '@/lib/data/orders';
 import { transactionService } from '@/lib/data/transactions';
 import { showToast } from '@/lib/data/notifications';
@@ -35,6 +36,7 @@ export default function CustomerApp() {
   const router = useRouter();
   
   const [deals, setDeals] = useState<Product[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [rescuingId, setRescuingId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -405,7 +407,8 @@ export default function CustomerApp() {
               return (
                 <div 
                   key={item.id}
-                  className="bg-white/60 dark:bg-slate-900/65 backdrop-blur-xl rounded-2xl p-5 border border-white/20 dark:border-slate-800/80 shadow-md hover:shadow-lg transition-all group flex flex-col justify-between"
+                  onClick={() => setSelectedProduct(item)}
+                  className="bg-white/60 dark:bg-slate-900/65 backdrop-blur-xl rounded-2xl p-5 border border-white/20 dark:border-slate-800/80 shadow-md hover:shadow-lg transition-all group flex flex-col justify-between cursor-pointer"
                 >
                   <div>
                     {/* Header card info */}
@@ -420,9 +423,14 @@ export default function CustomerApp() {
 
                     {/* Food graphic or icon emoji & title */}
                     <div className="flex items-center gap-4 mt-4">
-                      <span className="text-4xl bg-slate-100 dark:bg-slate-800 w-14 h-14 rounded-xl flex items-center justify-center shadow-inner border border-white/10 shrink-0 select-none group-hover:rotate-12 transition-transform">
-                        {item.image}
-                      </span>
+                      <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-850 flex items-center justify-center shadow-inner border border-white/10 shrink-0 overflow-hidden select-none group-hover:rotate-12 transition-transform">
+                        {item.image && (item.image.startsWith('http') || item.image.startsWith('/')) ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-3xl">{item.image || '🥦'}</span>
+                        )}
+                      </div>
                       <div>
                         <h4 className="font-extrabold text-slate-800 dark:text-white text-base block group-hover:text-emerald-500 transition-colors">
                           {item.name}
@@ -445,7 +453,7 @@ export default function CustomerApp() {
                     </div>
 
                     <button
-                      onClick={() => handleRescueNow(item)}
+                      onClick={(e) => { e.stopPropagation(); handleRescueNow(item); }}
                       disabled={item.stock <= 0 || isExpired || rescuingId === item.id}
                       className="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-sky-500 hover:brightness-110 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-500/10 disabled:opacity-40 transition-all flex items-center gap-1"
                     >
@@ -537,6 +545,19 @@ export default function CustomerApp() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Product Detail Modal */}
+      <ProductDetailModal
+        product={selectedProduct}
+        isOpen={!!selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+        onRescue={async (p) => {
+          setSelectedProduct(null);
+          await handleRescueNow(p);
+        }}
+        rescuingId={rescuingId}
+        walletBalance={user?.walletBalance || 0}
+      />
     </div>
   );
 }

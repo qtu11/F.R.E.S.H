@@ -1,7 +1,32 @@
 import { createClient } from '@supabase/supabase-js';
+import { readFileSync, existsSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-const URL = 'https://ktnhoiqqecygxztsugkx.supabase.co';
-const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0bmhvaXFxZWN5Z3h6dHN1Z2t4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTA3MzEyMywiZXhwIjoyMDk0NjQ5MTIzfQ.gfeY57zD2DqZw857wMTF8H0rgcexw6dElvAA-fVfhhk';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const rescueData = JSON.parse(readFileSync(join(__dirname, '../lib/data/rescue-products-db.json'), 'utf-8'));
+
+function loadSupabaseConfig() {
+  const configPath = join(__dirname, '../config/supabase.json');
+  if (existsSync(configPath)) {
+    const file = JSON.parse(readFileSync(configPath, 'utf-8'));
+    return {
+      url: process.env.NEXT_PUBLIC_SUPABASE_URL || file.supabaseUrl,
+      key: process.env.SUPABASE_SERVICE_ROLE_KEY || file.serviceRoleKey,
+    };
+  }
+  return {
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    key: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  };
+}
+
+const { url: URL, key: KEY } = loadSupabaseConfig();
+if (!URL || !KEY) {
+  console.error('Missing Supabase config. Set config/supabase.json or env NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY.');
+  process.exit(1);
+}
+
 const supabase = createClient(URL, KEY);
 
 const now = new Date();
@@ -18,48 +43,13 @@ const USERS = [
 ];
 
 const STORES = [
-  { id: 's1', name: 'WinMart+', address: 'Số 1 Nguyễn Huệ, Quận 1', phone: '02838223344', rating: 4.5, review_count: 1250, is_open: true, open_hours: '06:00-23:00', distance: 0.8, deals_count: 12, image: 'https://picsum.photos/seed/winmart/400/300', since: '2022-06-01' },
+  ...rescueData.stores,
   { id: 's2', name: 'GS25', address: '65 Lê Lợi, Quận 1', phone: '02838225566', rating: 4.2, review_count: 890, is_open: true, open_hours: '00:00-24:00', distance: 1.2, deals_count: 8, image: 'https://picsum.photos/seed/gs25/400/300', since: '2023-01-15' },
   { id: 's3', name: 'Circle K', address: '180 Nguyễn Đình Chiểu, Quận 3', phone: '02839334455', rating: 4.0, review_count: 670, is_open: true, open_hours: '00:00-24:00', distance: 1.5, deals_count: 6, image: 'https://picsum.photos/seed/circle/400/300', since: '2022-09-01' },
-  { id: 's4', name: 'AEON Mall', address: 'Tân Phú, HCM', phone: '02837626688', rating: 4.7, review_count: 2100, is_open: true, open_hours: '09:00-22:00', distance: 5.2, deals_count: 25, image: 'https://picsum.photos/seed/aeon/400/300', since: '2021-11-01' },
-  { id: 's5', name: 'Co.opmart', address: '190 Cống Quỳnh, Quận 1', phone: '02839223344', rating: 4.3, review_count: 1560, is_open: true, open_hours: '07:00-22:00', distance: 2.1, deals_count: 15, image: 'https://picsum.photos/seed/coop/400/300', since: '2022-03-01' },
   { id: 's6', name: 'FamilyMart', address: '39 Nguyễn Trãi, Quận 5', phone: '02838334455', rating: 4.1, review_count: 780, is_open: true, open_hours: '00:00-24:00', distance: 2.5, deals_count: 9, image: 'https://picsum.photos/seed/family/400/300', since: '2023-04-01' },
-  { id: 's7', name: 'Lotte Mart', address: 'Nam Kỳ Khởi Nghĩa, Quận 3', phone: '02839332211', rating: 4.4, review_count: 1340, is_open: true, open_hours: '08:00-22:00', distance: 3.8, deals_count: 18, image: 'https://picsum.photos/seed/lotte/400/300', since: '2022-08-01' },
-  { id: 's8', name: 'MM Mega Market', address: 'Quốc Lộ 13, Bình Thạnh', phone: '02835556677', rating: 4.0, review_count: 560, is_open: true, open_hours: '06:00-21:00', distance: 6.5, deals_count: 10, image: 'https://picsum.photos/seed/mm/400/300', since: '2023-06-01' },
 ];
 
-const CATEGORIES = ['Bakery', 'Fast Food', 'Vegetables', 'Fruits', 'Frozen', 'Beverages', 'Dairy', 'Meals', 'Snacks', 'Produce'];
-
-const PRODUCTS = [
-  { id: 'p1', name: 'Bánh mì baguette', category: 'Bakery', stock: 8, original_price: 35000, ai_price: 12000, expiry: day(1), status: 'live', image: 'https://picsum.photos/seed/bread1/400/300', store_id: 's1', store_name: 'WinMart+', discount: 66, created_at: day(-2), rating: 4.5, review_count: 23, co2_saved: 0.5, rescued_score: 85, ingredients: JSON.stringify(['Bột mì', 'Men', 'Muối']), allergens: JSON.stringify(['Gluten']), nutrition: JSON.stringify({ calories: 250, protein: 8, carbs: 45, fat: 2, fiber: 3 }), distance: 0.8 },
-  { id: 'p2', name: 'Croissant bơ', category: 'Bakery', stock: 5, original_price: 45000, ai_price: 15000, expiry: day(1), status: 'live', image: 'https://picsum.photos/seed/croissant/400/300', store_id: 's1', store_name: 'WinMart+', discount: 67, created_at: day(-1), rating: 4.8, review_count: 15, co2_saved: 0.3, rescued_score: 90, ingredients: JSON.stringify(['Bột mì', 'Bơ', 'Trứng']), allergens: JSON.stringify(['Gluten', 'Egg']), nutrition: JSON.stringify({ calories: 320, protein: 6, carbs: 35, fat: 18, fiber: 1 }), distance: 0.8 },
-  { id: 'p3', name: 'Cơm gà sốt teriyaki', category: 'Meals', stock: 3, original_price: 65000, ai_price: 25000, expiry: day(1), status: 'live', image: 'https://picsum.photos/seed/chicken/400/300', store_id: 's2', store_name: 'GS25', discount: 62, created_at: day(-1), rating: 4.3, review_count: 42, co2_saved: 0.8, rescued_score: 78, ingredients: JSON.stringify(['Cơm', 'Gà', 'Sốt teriyaki', 'Rau củ']), allergens: JSON.stringify(['Soy']), nutrition: JSON.stringify({ calories: 580, protein: 35, carbs: 65, fat: 15, fiber: 2 }), distance: 1.2 },
-  { id: 'p4', name: 'Mì cay Hàn Quốc', category: 'Fast Food', stock: 10, original_price: 28000, ai_price: 9000, expiry: day(2), status: 'live', image: 'https://picsum.photos/seed/ramen/400/300', store_id: 's2', store_name: 'GS25', discount: 68, created_at: day(-1), rating: 4.1, review_count: 67, co2_saved: 0.2, rescued_score: 82, ingredients: JSON.stringify(['Mì', 'Tương ớt', 'Rau khô']), allergens: JSON.stringify(['Gluten', 'Soy']), nutrition: JSON.stringify({ calories: 420, protein: 10, carbs: 72, fat: 12, fiber: 1 }), distance: 1.2 },
-  { id: 'p5', name: 'Sữa tươi trân châu', category: 'Beverages', stock: 15, original_price: 32000, ai_price: 11000, expiry: day(1), status: 'live', image: 'https://picsum.photos/seed/milktea/400/300', store_id: 's3', store_name: 'Circle K', discount: 66, created_at: day(0), rating: 4.6, review_count: 38, co2_saved: 0.3, rescued_score: 88, ingredients: JSON.stringify(['Sữa tươi', 'Trân châu', 'Đường']), allergens: JSON.stringify(['Dairy']), nutrition: JSON.stringify({ calories: 350, protein: 8, carbs: 55, fat: 10, fiber: 0 }), distance: 1.5 },
-  { id: 'p6', name: 'Bánh mì que (gói 10)', category: 'Bakery', stock: 20, original_price: 25000, ai_price: 7000, expiry: day(2), status: 'live', image: 'https://picsum.photos/seed/breadstick/400/300', store_id: 's3', store_name: 'Circle K', discount: 72, created_at: day(-2), rating: 4.0, review_count: 56, co2_saved: 0.1, rescued_score: 75, ingredients: JSON.stringify(['Bột mì', 'Bơ', 'Muối']), allergens: JSON.stringify(['Gluten']), nutrition: JSON.stringify({ calories: 120, protein: 3, carbs: 20, fat: 4, fiber: 1 }), distance: 1.5 },
-  { id: 'p7', name: 'Rau xà lách hữu cơ', category: 'Vegetables', stock: 7, original_price: 40000, ai_price: 15000, expiry: day(1), status: 'live', image: 'https://picsum.photos/seed/salad/400/300', store_id: 's4', store_name: 'AEON Mall', discount: 63, created_at: day(0), rating: 4.4, review_count: 29, co2_saved: 0.4, rescued_score: 80, ingredients: JSON.stringify(['Xà lách']), allergens: JSON.stringify([]), nutrition: JSON.stringify({ calories: 15, protein: 1, carbs: 3, fat: 0, fiber: 2 }), distance: 5.2 },
-  { id: 'p8', name: 'Trái cây mix (tray)', category: 'Fruits', stock: 4, original_price: 85000, ai_price: 35000, expiry: day(1), status: 'live', image: 'https://picsum.photos/seed/fruits/400/300', store_id: 's4', store_name: 'AEON Mall', discount: 59, created_at: day(0), rating: 4.7, review_count: 18, co2_saved: 0.6, rescued_score: 86, ingredients: JSON.stringify(['Dâu', 'Kiwi', 'Cam', 'Táo']), allergens: JSON.stringify([]), nutrition: JSON.stringify({ calories: 120, protein: 2, carbs: 28, fat: 1, fiber: 6 }), distance: 5.2 },
-  { id: 'p9', name: 'Cơm tấm sườn bì', category: 'Meals', stock: 2, original_price: 55000, ai_price: 22000, expiry: day(1), status: 'live', image: 'https://picsum.photos/seed/comtam/400/300', store_id: 's5', store_name: 'Co.opmart', discount: 60, created_at: day(-1), rating: 4.6, review_count: 89, co2_saved: 0.7, rescued_score: 92, ingredients: JSON.stringify(['Cơm', 'Sườn', 'Bì', 'Trứng']), allergens: JSON.stringify(['Egg', 'Soy']), nutrition: JSON.stringify({ calories: 620, protein: 38, carbs: 70, fat: 18, fiber: 1 }), distance: 2.1 },
-  { id: 'p10', name: 'Nước cam ép', category: 'Beverages', stock: 12, original_price: 35000, ai_price: 12000, expiry: day(1), status: 'live', image: 'https://picsum.photos/seed/orangejuice/400/300', store_id: 's5', store_name: 'Co.opmart', discount: 66, created_at: day(0), rating: 4.3, review_count: 45, co2_saved: 0.2, rescued_score: 77, ingredients: JSON.stringify(['Cam tươi']), allergens: JSON.stringify([]), nutrition: JSON.stringify({ calories: 160, protein: 2, carbs: 36, fat: 0, fiber: 1 }), distance: 2.1 },
-  { id: 'p11', name: 'Kem vanila (hộp)', category: 'Frozen', stock: 6, original_price: 48000, ai_price: 18000, expiry: day(3), status: 'live', image: 'https://picsum.photos/seed/icecream/400/300', store_id: 's6', store_name: 'FamilyMart', discount: 63, created_at: day(-2), rating: 4.2, review_count: 34, co2_saved: 0.3, rescued_score: 73, ingredients: JSON.stringify(['Kem sữa', 'Vanila', 'Đường']), allergens: JSON.stringify(['Dairy']), nutrition: JSON.stringify({ calories: 290, protein: 4, carbs: 32, fat: 16, fiber: 0 }), distance: 2.5 },
-  { id: 'p12', name: 'Khoai tây chiên', category: 'Frozen', stock: 18, original_price: 35000, ai_price: 10000, expiry: day(5), status: 'live', image: 'https://picsum.photos/seed/fries/400/300', store_id: 's6', store_name: 'FamilyMart', discount: 71, created_at: day(-3), rating: 3.9, review_count: 72, co2_saved: 0.2, rescued_score: 70, ingredients: JSON.stringify(['Khoai tây', 'Dầu thực vật']), allergens: JSON.stringify([]), nutrition: JSON.stringify({ calories: 380, protein: 5, carbs: 42, fat: 22, fiber: 3 }), distance: 2.5 },
-  { id: 'p13', name: 'Pizza pepperoni', category: 'Meals', stock: 1, original_price: 120000, ai_price: 45000, expiry: day(1), status: 'live', image: 'https://picsum.photos/seed/pizza/400/300', store_id: 's7', store_name: 'Lotte Mart', discount: 63, created_at: day(0), rating: 4.5, review_count: 95, co2_saved: 1.2, rescued_score: 94, ingredients: JSON.stringify(['Bột pizza', 'Pepperoni', 'Phô mai', 'Sốt cà']), allergens: JSON.stringify(['Gluten', 'Dairy']), nutrition: JSON.stringify({ calories: 850, protein: 40, carbs: 80, fat: 38, fiber: 2 }), distance: 3.8 },
-  { id: 'p14', name: 'Sữa chua Hy Lạp', category: 'Dairy', stock: 24, original_price: 22000, ai_price: 8000, expiry: day(2), status: 'live', image: 'https://picsum.photos/seed/yogurt/400/300', store_id: 's7', store_name: 'Lotte Mart', discount: 64, created_at: day(-1), rating: 4.4, review_count: 41, co2_saved: 0.2, rescued_score: 81, ingredients: JSON.stringify(['Sữa', 'Men sữa chua']), allergens: JSON.stringify(['Dairy']), nutrition: JSON.stringify({ calories: 140, protein: 12, carbs: 8, fat: 6, fiber: 0 }), distance: 3.8 },
-  { id: 'p15', name: 'Snack khoai tây (gói lớn)', category: 'Snacks', stock: 30, original_price: 28000, ai_price: 9000, expiry: day(10), status: 'live', image: 'https://picsum.photos/seed/chips/400/300', store_id: 's8', store_name: 'MM Mega Market', discount: 68, created_at: day(-5), rating: 4.0, review_count: 112, co2_saved: 0.1, rescued_score: 68, ingredients: JSON.stringify(['Khoai tây', 'Dầu', 'Muối']), allergens: JSON.stringify([]), nutrition: JSON.stringify({ calories: 260, protein: 3, carbs: 30, fat: 15, fiber: 2 }), distance: 6.5 },
-  { id: 'p16', name: 'Bánh bông lan cuộn', category: 'Bakery', stock: 4, original_price: 38000, ai_price: 14000, expiry: day(1), status: 'live', image: 'https://picsum.photos/seed/cake/400/300', store_id: 's1', store_name: 'WinMart+', discount: 63, created_at: day(0), rating: 4.6, review_count: 27, co2_saved: 0.3, rescued_score: 87, ingredients: JSON.stringify(['Bột mì', 'Trứng', 'Kem tươi']), allergens: JSON.stringify(['Gluten', 'Egg', 'Dairy']), nutrition: JSON.stringify({ calories: 380, protein: 6, carbs: 48, fat: 18, fiber: 1 }), distance: 0.8 },
-  { id: 'p17', name: 'Cơm cuộn Hàn Quốc', category: 'Meals', stock: 0, original_price: 45000, ai_price: 18000, expiry: day(1), status: 'out_of_stock', image: 'https://picsum.photos/seed/kimbap/400/300', store_id: 's2', store_name: 'GS25', discount: 60, created_at: day(-3), rating: 4.2, review_count: 53, co2_saved: 0.5, rescued_score: 0, ingredients: JSON.stringify(['Cơm', 'Rong biển', 'Rau củ', 'Thịt']), allergens: JSON.stringify(['Soy']), nutrition: JSON.stringify({ calories: 450, protein: 18, carbs: 60, fat: 12, fiber: 3 }), distance: 1.2 },
-  { id: 'p18', name: 'Dưa hấu (1/2 trái)', category: 'Fruits', stock: 2, original_price: 30000, ai_price: 12000, expiry: day(1), status: 'live', image: 'https://picsum.photos/seed/watermelon/400/300', store_id: 's4', store_name: 'AEON Mall', discount: 60, created_at: day(0), rating: 4.1, review_count: 15, co2_saved: 0.5, rescued_score: 79, ingredients: JSON.stringify(['Dưa hấu']), allergens: JSON.stringify([]), nutrition: JSON.stringify({ calories: 90, protein: 2, carbs: 22, fat: 0, fiber: 3 }), distance: 5.2 },
-  { id: 'p19', name: 'Sữa hạt hạnh nhân', category: 'Beverages', stock: 9, original_price: 42000, ai_price: 16000, expiry: day(2), status: 'live', image: 'https://picsum.photos/seed/almondmilk/400/300', store_id: 's5', store_name: 'Co.opmart', discount: 62, created_at: day(-1), rating: 4.3, review_count: 31, co2_saved: 0.2, rescued_score: 76, ingredients: JSON.stringify(['Sữa hạnh nhân', 'Vitamin']), allergens: JSON.stringify(['Tree nuts']), nutrition: JSON.stringify({ calories: 80, protein: 3, carbs: 8, fat: 4, fiber: 1 }), distance: 2.1 },
-  { id: 'p20', name: 'Xúc xích Đức (gói 5)', category: 'Fast Food', stock: 11, original_price: 55000, ai_price: 20000, expiry: day(2), status: 'live', image: 'https://picsum.photos/seed/sausage/400/300', store_id: 's6', store_name: 'FamilyMart', discount: 64, created_at: day(-2), rating: 4.0, review_count: 48, co2_saved: 0.4, rescued_score: 74, ingredients: JSON.stringify(['Thịt heo', 'Gia vị']), allergens: JSON.stringify([]), nutrition: JSON.stringify({ calories: 480, protein: 22, carbs: 6, fat: 42, fiber: 0 }), distance: 2.5 },
-  { id: 'p21', name: 'Bánh mì sandwich', category: 'Bakery', stock: 0, original_price: 22000, ai_price: 7000, expiry: day(2), status: 'out_of_stock', image: 'https://picsum.photos/seed/sandwich/400/300', store_id: 's7', store_name: 'Lotte Mart', discount: 68, created_at: day(-4), rating: 3.8, review_count: 22, co2_saved: 0.1, rescued_score: 0, ingredients: JSON.stringify(['Bột mì', 'Men', 'Muối']), allergens: JSON.stringify(['Gluten']), nutrition: JSON.stringify({ calories: 200, protein: 6, carbs: 36, fat: 3, fiber: 2 }), distance: 3.8 },
-  { id: 'p22', name: 'Rau cải bó xôi', category: 'Vegetables', stock: 6, original_price: 25000, ai_price: 9000, expiry: day(1), status: 'live', image: 'https://picsum.photos/seed/spinach/400/300', store_id: 's8', store_name: 'MM Mega Market', discount: 64, created_at: day(0), rating: 4.0, review_count: 11, co2_saved: 0.3, rescued_score: 72, ingredients: JSON.stringify(['Cải bó xôi']), allergens: JSON.stringify([]), nutrition: JSON.stringify({ calories: 23, protein: 3, carbs: 4, fat: 0, fiber: 2 }), distance: 6.5 },
-  { id: 'p23', name: 'Cá hồi phi lê (200g)', category: 'Frozen', stock: 3, original_price: 150000, ai_price: 65000, expiry: day(1), status: 'live', image: 'https://picsum.photos/seed/salmon/400/300', store_id: 's4', store_name: 'AEON Mall', discount: 57, created_at: day(0), rating: 4.8, review_count: 63, co2_saved: 1.5, rescued_score: 91, ingredients: JSON.stringify(['Cá hồi']), allergens: JSON.stringify(['Fish']), nutrition: JSON.stringify({ calories: 420, protein: 40, carbs: 0, fat: 28, fiber: 0 }), distance: 5.2 },
-  { id: 'p24', name: 'Nước ngọt Coca-Cola (lon)', category: 'Beverages', stock: 48, original_price: 10000, ai_price: 4000, expiry: day(30), status: 'live', image: 'https://picsum.photos/seed/coke/400/300', store_id: 's1', store_name: 'WinMart+', discount: 60, created_at: day(-7), rating: 3.5, review_count: 200, co2_saved: 0.05, rescued_score: 60, ingredients: JSON.stringify(['Nước', 'Đường', 'CO2']), allergens: JSON.stringify([]), nutrition: JSON.stringify({ calories: 140, protein: 0, carbs: 39, fat: 0, fiber: 0 }), distance: 0.8 },
-  { id: 'p25', name: 'Thịt ba chỉ heo (500g)', category: 'Produce', stock: 5, original_price: 75000, ai_price: 30000, expiry: day(1), status: 'live', image: 'https://picsum.photos/seed/pork/400/300', store_id: 's5', store_name: 'Co.opmart', discount: 60, created_at: day(0), rating: 4.1, review_count: 37, co2_saved: 1.0, rescued_score: 84, ingredients: JSON.stringify(['Thịt heo']), allergens: JSON.stringify([]), nutrition: JSON.stringify({ calories: 650, protein: 35, carbs: 0, fat: 55, fiber: 0 }), distance: 2.1 },
-  { id: 'p26', name: 'Bia Hà Nội (lon 330ml)', category: 'Beverages', stock: 24, original_price: 15000, ai_price: 6000, expiry: day(60), status: 'live', image: 'https://picsum.photos/seed/beer/400/300', store_id: 's3', store_name: 'Circle K', discount: 60, created_at: day(-10), rating: 3.8, review_count: 88, co2_saved: 0.1, rescued_score: 55, ingredients: JSON.stringify(['Nước', 'Malt', 'Hoa bia']), allergens: JSON.stringify(['Gluten']), nutrition: JSON.stringify({ calories: 150, protein: 1, carbs: 12, fat: 0, fiber: 0 }), distance: 1.5 },
-  { id: 'p27', name: 'Táo đỏ nhập khẩu (1kg)', category: 'Fruits', stock: 0, original_price: 120000, ai_price: 55000, expiry: day(1), status: 'out_of_stock', image: 'https://picsum.photos/seed/apple/400/300', store_id: 's7', store_name: 'Lotte Mart', discount: 54, created_at: day(-2), rating: 4.5, review_count: 28, co2_saved: 0.8, rescued_score: 0, ingredients: JSON.stringify(['Táo đỏ']), allergens: JSON.stringify([]), nutrition: JSON.stringify({ calories: 320, protein: 2, carbs: 80, fat: 0, fiber: 10 }), distance: 3.8 },
-  { id: 'p28', name: 'Cơm chiên hải sản', category: 'Meals', stock: 4, original_price: 58000, ai_price: 23000, expiry: day(1), status: 'live', image: 'https://picsum.photos/seed/friedrice/400/300', store_id: 's2', store_name: 'GS25', discount: 60, created_at: day(0), rating: 4.3, review_count: 46, co2_saved: 0.6, rescued_score: 83, ingredients: JSON.stringify(['Cơm', 'Tôm', 'Mực', 'Rau củ']), allergens: JSON.stringify(['Shellfish']), nutrition: JSON.stringify({ calories: 540, protein: 28, carbs: 65, fat: 16, fiber: 1 }), distance: 1.2 },
-];
+const PRODUCTS = rescueData.products;
 
 const ORDERS = [
   { id: 'o1', user_id: 'u1', store_name: 'GS25', store_id: 's2', subtotal: 65000, delivery_fee: 10000, service_fee: 3000, discount: 5000, total: 73000, status: 'delivered', delivery_method: 'delivery', payment_method: 'momo', created_at: day(-3), estimated_delivery: day(-3), delivered_at: day(-3), qr_code: null, notes: 'Gọi trước khi giao', address: 'Quận 1, HCM' },
@@ -165,14 +155,25 @@ const NOTIFICATIONS = [
   { id: 'n8', type: 'community', title: 'Bảng xếp hạng ESG', message: 'Bạn đang ở top 5% người dùng tích cực nhất', time: day(-3), read: true, icon: 'Leaf', action_url: '/customer' },
 ];
 
+function sslHint(err) {
+  const code = err?.cause?.code || err?.code;
+  if (code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' || String(err?.message).includes('fetch failed')) {
+    return ' (SSL: chạy lại với `npm run seed:rescue` hoặc `node --use-system-ca scripts/seed.mjs`)';
+  }
+  return '';
+}
+
 async function insert(table, rows) {
   if (!rows.length) return;
-  // Insert in batches of 20
   for (let i = 0; i < rows.length; i += 20) {
     const batch = rows.slice(i, i + 20);
     const { error } = await supabase.from(table).upsert(batch, { onConflict: 'id', ignoreDuplicates: false });
-    if (error) console.error(`  ${table} error:`, error.message.slice(0, 80));
-    else console.log(`  ${table}: inserted ${batch.length} rows`);
+    if (error) {
+      const msg = error.message || String(error);
+      console.error(`  ${table} error:`, msg.slice(0, 120) + sslHint(error));
+    } else {
+      console.log(`  ${table}: inserted ${batch.length} rows`);
+    }
   }
 }
 
