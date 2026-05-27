@@ -7,7 +7,8 @@ import {
   ArrowLeft, Leaf, Award, TrendingUp, ShieldCheck, MapPin, Users,
   Target, AlertTriangle, Coins, DollarSign, LineChart, Sparkles,
   BookOpen, ChevronRight, BarChart3, Clock, HelpCircle, FileText,
-  Briefcase, Globe, Cpu, ArrowUpRight, Activity, GitBranch, LeafyGreen, Swords
+  Briefcase, Globe, Cpu, ArrowUpRight, Activity, GitBranch, LeafyGreen, Swords,
+  Settings, Store, GraduationCap, XCircle, CheckCircle2, Coffee, Zap, Smartphone
 } from 'lucide-react';
 import { useGlobal } from '@/app/providers';
 
@@ -337,28 +338,40 @@ export default function StartupPitchDeck() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6">
-                <span className="text-3xl">🎯</span>
-                <h3 className="font-black text-white text-sm uppercase mt-4 mb-2">{t('slogan_positioning')}</h3>
-                <p className="text-xs text-slate-400 leading-relaxed font-semibold">
-                  {t('slogan_desc')}
-                </p>
+              <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 space-y-4">
+                <div className="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/20">
+                  <Target className="w-6 h-6 text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="font-black text-white text-sm uppercase mb-2">{t('slogan_positioning')}</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed font-semibold">
+                    {t('slogan_desc')}
+                  </p>
+                </div>
               </div>
 
-              <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6">
-                <span className="text-3xl">⚙</span>
-                <h3 className="font-black text-white text-sm uppercase mt-4 mb-2">{t('core_pillars')}</h3>
-                <p className="text-xs text-slate-400 leading-relaxed font-semibold">
-                  {t('pillars_desc')}
-                </p>
+              <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 space-y-4">
+                <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center border border-blue-500/20">
+                  <Settings className="w-6 h-6 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="font-black text-white text-sm uppercase mb-2">{t('core_pillars')}</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed font-semibold">
+                    {t('pillars_desc')}
+                  </p>
+                </div>
               </div>
 
-              <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6">
-                <span className="text-3xl">🌱</span>
-                <h3 className="font-black text-white text-sm uppercase mt-4 mb-2">{t('green_value')}</h3>
-                <p className="text-xs text-slate-400 leading-relaxed font-semibold">
-                  {t('green_value_desc')}
-                </p>
+              <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 space-y-4">
+                <div className="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/20">
+                  <Leaf className="w-6 h-6 text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="font-black text-white text-sm uppercase mb-2">{t('green_value')}</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed font-semibold">
+                    {t('green_value_desc')}
+                  </p>
+                </div>
               </div>
             </div>
           </section>
@@ -421,7 +434,7 @@ export default function StartupPitchDeck() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6">
                 <div className="flex items-center gap-3 mb-3">
-                  <span className="text-xl">👥</span>
+                  <Users className="w-5 h-5 text-blue-400" />
                   <h4 className="font-black text-white text-xs uppercase tracking-wider">{t('b2c_title')}</h4>
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed font-semibold">
@@ -431,7 +444,7 @@ export default function StartupPitchDeck() {
 
               <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6">
                 <div className="flex items-center gap-3 mb-3">
-                  <span className="text-xl">🏪</span>
+                  <Store className="w-5 h-5 text-emerald-400" />
                   <h4 className="font-black text-white text-xs uppercase tracking-wider">{t('b2b_title')}</h4>
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed font-semibold">
@@ -477,49 +490,57 @@ export default function StartupPitchDeck() {
                 </h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-slate-950/80 border border-blue-500/20 rounded-2xl p-5 space-y-3">
+                <div className="bg-slate-950/80 border border-blue-500/20 rounded-2xl p-5 space-y-4">
                   <div className="flex items-center gap-3">
-                    <span className="text-3xl">🎓</span>
+                    <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center border border-blue-500/20">
+                      <GraduationCap className="w-5 h-5 text-blue-400" />
+                    </div>
                     <div>
                       <h4 className="font-black text-blue-400 text-sm">{lang === 'vi' ? 'An — Sinh viên' : 'An — Student'}</h4>
                       <span className="text-[10px] text-slate-500 font-bold">{lang === 'vi' ? '20 tuổi · SV năm 3 · TP.HCM' : '20 y/o · 3rd year · HCMC'}</span>
                     </div>
                   </div>
-                  <div className="space-y-1.5 text-[11px] text-slate-400 font-semibold">
-                    <p>💰 {lang === 'vi' ? 'Thu nhập: 3-5 triệu/tháng (bố mẹ + part-time)' : 'Income: 3-5M/month (family + part-time)'}</p>
-                    <p>😤 {lang === 'vi' ? 'Pain: Cuối tháng hết tiền, muốn ăn ngon giá rẻ' : 'Pain: End of month broke, wants good food cheap'}</p>
-                    <p>🎯 {lang === 'vi' ? 'Mong muốn: Ăn ngon, tiết kiệm, sống xanh để flex' : 'Want: Good food, savings, green living to flex'}</p>
-                    <p>📱 {lang === 'vi' ? 'Hành vi: Dùng app 2-3 lần/tuần, thích gamification' : 'Behavior: Uses app 2-3x/week, loves gamification'}</p>
+                  <div className="space-y-2 text-[11px] text-slate-400 font-semibold">
+                    <p><span className="text-emerald-400 font-bold mr-1">{lang === 'vi' ? 'Ngân sách:' : 'Budget:'}</span> {lang === 'vi' ? '3-5 triệu/tháng (bố mẹ + part-time)' : '3-5M/month (family + part-time)'}</p>
+                    <p><span className="text-red-400 font-bold mr-1">{lang === 'vi' ? 'Khó khăn:' : 'Pain point:'}</span> {lang === 'vi' ? 'Cuối tháng hết tiền, muốn ăn ngon giá rẻ' : 'End of month broke, wants good food cheap'}</p>
+                    <p><span className="text-blue-400 font-bold mr-1">{lang === 'vi' ? 'Mục tiêu:' : 'Goal:'}</span> {lang === 'vi' ? 'Ăn ngon, tiết kiệm, sống xanh để trải nghiệm' : 'Good food, savings, green living'}</p>
+                    <p><span className="text-purple-400 font-bold mr-1">{lang === 'vi' ? 'Hành vi:' : 'Behavior:'}</span> {lang === 'vi' ? 'Dùng app 2-3 lần/tuần, thích tích điểm' : 'Uses app 2-3x/week, loves gamification'}</p>
                   </div>
                 </div>
-                <div className="bg-slate-950/80 border border-emerald-500/20 rounded-2xl p-5 space-y-3">
+
+                <div className="bg-slate-950/80 border border-emerald-500/20 rounded-2xl p-5 space-y-4">
                   <div className="flex items-center gap-3">
-                    <span className="text-3xl">🏪</span>
+                    <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/20">
+                      <Store className="w-5 h-5 text-emerald-400" />
+                    </div>
                     <div>
                       <h4 className="font-black text-emerald-400 text-sm">{lang === 'vi' ? 'Chị Lan — Chủ tiệm bánh' : 'Ms. Lan — Bakery Owner'}</h4>
                       <span className="text-[10px] text-slate-500 font-bold">{lang === 'vi' ? '35 tuổi · Quận 3 · 2 nhân viên' : '35 y/o · District 3 · 2 staff'}</span>
                     </div>
                   </div>
-                  <div className="space-y-1.5 text-[11px] text-slate-400 font-semibold">
-                    <p>💰 {lang === 'vi' ? 'Doanh thu: 30-50 triệu/tháng' : 'Revenue: 30-50M/month'}</p>
-                    <p>😤 {lang === 'vi' ? 'Pain: Cuối ngày vứt 15-20% NVL, xót tiền' : 'Pain: Throws away 15-20% materials daily, wasteful'}</p>
-                    <p>🎯 {lang === 'vi' ? 'Mong muốn: Thu hồi chi phí, thêm khách mới' : 'Want: Recover costs, attract new customers'}</p>
-                    <p>📱 {lang === 'vi' ? 'Hành vi: Đăng hàng cuối ngày từ điện thoại' : 'Behavior: Lists items end of day from phone'}</p>
+                  <div className="space-y-2 text-[11px] text-slate-400 font-semibold">
+                    <p><span className="text-emerald-400 font-bold mr-1">{lang === 'vi' ? 'Doanh thu:' : 'Revenue:'}</span> {lang === 'vi' ? '30-50 triệu/tháng' : '30-50M/month'}</p>
+                    <p><span className="text-red-400 font-bold mr-1">{lang === 'vi' ? 'Khó khăn:' : 'Pain point:'}</span> {lang === 'vi' ? 'Cuối ngày vứt 15-20% NVL, hao phí cao' : 'Throws away 15-20% materials daily, wasteful'}</p>
+                    <p><span className="text-blue-400 font-bold mr-1">{lang === 'vi' ? 'Mục tiêu:' : 'Goal:'}</span> {lang === 'vi' ? 'Thu hồi chi phí, tiếp cận khách hàng mới' : 'Recover costs, attract new customers'}</p>
+                    <p><span className="text-purple-400 font-bold mr-1">{lang === 'vi' ? 'Hành vi:' : 'Behavior:'}</span> {lang === 'vi' ? 'Đăng bán thực phẩm cận date trực tiếp từ điện thoại' : 'Lists items end of day from phone'}</p>
                   </div>
                 </div>
-                <div className="bg-slate-950/80 border border-orange-500/20 rounded-2xl p-5 space-y-3">
+
+                <div className="bg-slate-950/80 border border-orange-500/20 rounded-2xl p-5 space-y-4">
                   <div className="flex items-center gap-3">
-                    <span className="text-3xl">👩‍💼</span>
+                    <div className="w-10 h-10 bg-orange-500/10 rounded-xl flex items-center justify-center border border-orange-500/20">
+                      <Briefcase className="w-5 h-5 text-orange-400" />
+                    </div>
                     <div>
                       <h4 className="font-black text-orange-400 text-sm">{lang === 'vi' ? 'Minh — Nhân viên VP' : 'Minh — Office Worker'}</h4>
                       <span className="text-[10px] text-slate-500 font-bold">{lang === 'vi' ? '28 tuổi · Quận 1 · Lương 12-15tr' : '28 y/o · District 1 · Salary 12-15M'}</span>
                     </div>
                   </div>
-                  <div className="space-y-1.5 text-[11px] text-slate-400 font-semibold">
-                    <p>💰 {lang === 'vi' ? 'Chi tiêu F&B: 4-6 triệu/tháng' : 'F&B spending: 4-6M/month'}</p>
-                    <p>😤 {lang === 'vi' ? 'Pain: Quan tâm môi trường nhưng không biết bắt đầu từ đâu' : 'Pain: Cares about environment but doesn\'t know where to start'}</p>
-                    <p>🎯 {lang === 'vi' ? 'Mong muốn: Tiện lợi, chất lượng, đóng góp xã hội' : 'Want: Convenience, quality, social contribution'}</p>
-                    <p>📱 {lang === 'vi' ? 'Hành vi: Dùng app trưa/chiều, thích khuyến mãi flash' : 'Behavior: Uses app noon/afternoon, likes flash deals'}</p>
+                  <div className="space-y-2 text-[11px] text-slate-400 font-semibold">
+                    <p><span className="text-emerald-400 font-bold mr-1">{lang === 'vi' ? 'Chi tiêu F&B:' : 'F&B Spending:'}</span> {lang === 'vi' ? '4-6 triệu/tháng' : '4-6M/month'}</p>
+                    <p><span className="text-red-400 font-bold mr-1">{lang === 'vi' ? 'Khó khăn:' : 'Pain point:'}</span> {lang === 'vi' ? 'Quan tâm môi trường nhưng khó thực hiện thực tế' : 'Cares about environment but doesn\'t know where to start'}</p>
+                    <p><span className="text-blue-400 font-bold mr-1">{lang === 'vi' ? 'Mục tiêu:' : 'Goal:'}</span> {lang === 'vi' ? 'Tiện lợi, chất lượng, tích điểm xanh ESG' : 'Convenience, quality, social contribution'}</p>
+                    <p><span className="text-purple-400 font-bold mr-1">{lang === 'vi' ? 'Hành vi:' : 'Behavior:'}</span> {lang === 'vi' ? 'Dùng app trưa/chiều, chuộng flash sale' : 'Uses app noon/afternoon, likes flash deals'}</p>
                   </div>
                 </div>
               </div>
@@ -727,7 +748,10 @@ export default function StartupPitchDeck() {
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-4 space-y-2">
-                  <h4 className="font-black text-red-400 text-xs uppercase">❌ {lang === 'vi' ? 'Surprise Clearance (Túi mù)' : 'Surprise Clearance (Blind Bags)'}</h4>
+                  <h4 className="font-black text-red-400 text-xs uppercase flex items-center gap-1.5">
+                    <XCircle className="w-4 h-4 text-red-400" />
+                    {lang === 'vi' ? 'Surprise Clearance (Túi mù)' : 'Surprise Clearance (Blind Bags)'}
+                  </h4>
                   <ul className="text-[11px] text-slate-400 space-y-1.5 font-semibold">
                     <li>• {lang === 'vi' ? 'Không biết sản phẩm trước khi mua' : 'Unknown products before purchase'}</li>
                     <li>• {lang === 'vi' ? 'Nguy cơ lãng phí thứ cấp tại hộ gia đình' : 'Secondary waste risk at household level'}</li>
@@ -736,7 +760,10 @@ export default function StartupPitchDeck() {
                   </ul>
                 </div>
                 <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4 space-y-2">
-                  <h4 className="font-black text-emerald-400 text-xs uppercase">✅ {lang === 'vi' ? 'Transparent Clearance (F.R.E.S.H)' : 'Transparent Clearance (F.R.E.S.H)'}</h4>
+                  <h4 className="font-black text-emerald-400 text-xs uppercase flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    {lang === 'vi' ? 'Transparent Clearance (F.R.E.S.H)' : 'Transparent Clearance (F.R.E.S.H)'}
+                  </h4>
                   <ul className="text-[11px] text-slate-400 space-y-1.5 font-semibold">
                     <li>• {lang === 'vi' ? 'Hiển thị đầy đủ: ảnh thực, thành phần, HSD, mức giảm' : 'Full display: real photos, ingredients, expiry, discount'}</li>
                     <li>• {lang === 'vi' ? 'Người mua chỉ chọn đúng món cần — giảm lãng phí' : 'Buyers choose exactly what they need — reduces waste'}</li>
@@ -753,32 +780,44 @@ export default function StartupPitchDeck() {
                 {lang === 'vi' ? 'Đề xuất Giá trị theo từng Phân khúc' : 'Value Proposition by Segment'}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-slate-950/80 border border-emerald-500/20 rounded-2xl p-5 space-y-2">
-                  <span className="text-2xl">🏪</span>
-                  <h4 className="font-black text-emerald-400 text-xs uppercase">{lang === 'vi' ? 'Long-tail F&B (B2B)' : 'Long-tail F&B (B2B)'}</h4>
-                  <p className="text-[11px] text-slate-400 leading-relaxed font-semibold">
-                    {lang === 'vi'
-                      ? 'Thu hồi 30-50% chi phí NVL từ hàng sẽ bỏ đi. Marketing zero-cost đến tệp Gen Z. Báo cáo tồn kho & ESG. Đăng hàng dưới 2 phút từ điện thoại.'
-                      : 'Recover 30-50% material costs from would-be waste. Zero-cost Gen Z marketing. Inventory & ESG reports. List products in under 2 mins from phone.'}
-                  </p>
+                <div className="bg-slate-950/80 border border-emerald-500/20 rounded-2xl p-5 space-y-3">
+                  <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/20">
+                    <Store className="w-5 h-5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-emerald-400 text-xs uppercase mb-1">{lang === 'vi' ? 'Long-tail F&B (B2B)' : 'Long-tail F&B (B2B)'}</h4>
+                    <p className="text-[11px] text-slate-400 leading-relaxed font-semibold">
+                      {lang === 'vi'
+                        ? 'Thu hồi 30-50% chi phí NVL từ hàng sẽ bỏ đi. Marketing zero-cost đến tệp Gen Z. Báo cáo tồn kho & ESG. Đăng hàng dưới 2 phút từ điện thoại.'
+                        : 'Recover 30-50% material costs from would-be waste. Zero-cost Gen Z marketing. Inventory & ESG reports. List products in under 2 mins from phone.'}
+                    </p>
+                  </div>
                 </div>
-                <div className="bg-slate-950/80 border border-blue-500/20 rounded-2xl p-5 space-y-2">
-                  <span className="text-2xl">🎓</span>
-                  <h4 className="font-black text-blue-400 text-xs uppercase">{lang === 'vi' ? 'Sinh viên & Gen Z (B2C)' : 'Students & Gen Z (B2C)'}</h4>
-                  <p className="text-[11px] text-slate-400 leading-relaxed font-semibold">
-                    {lang === 'vi'
-                      ? 'Tiết kiệm 30-70% so với giá gốc. Sản phẩm minh bạch (ảnh thật, HSD rõ). Hyper-local bán kính 500m. Green Credit & Waste Warriors Leaderboard.'
-                      : 'Save 30-70% off original price. Transparent products (real photos, clear expiry). Hyper-local 500m radius. Green Credit & Waste Warriors Leaderboard.'}
-                  </p>
+                <div className="bg-slate-950/80 border border-blue-500/20 rounded-2xl p-5 space-y-3">
+                  <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center border border-blue-500/20">
+                    <GraduationCap className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-blue-400 text-xs uppercase mb-1">{lang === 'vi' ? 'Sinh viên & Gen Z (B2C)' : 'Students & Gen Z (B2C)'}</h4>
+                    <p className="text-[11px] text-slate-400 leading-relaxed font-semibold">
+                      {lang === 'vi'
+                        ? 'Tiết kiệm 30-70% so với giá gốc. Sản phẩm minh bạch (ảnh thật, HSD rõ). Hyper-local bán kính 500m. Green Credit & Waste Warriors Leaderboard.'
+                        : 'Save 30-70% off original price. Transparent products (real photos, clear expiry). Hyper-local 500m radius. Green Credit & Waste Warriors Leaderboard.'}
+                    </p>
+                  </div>
                 </div>
-                <div className="bg-slate-950/80 border border-orange-500/20 rounded-2xl p-5 space-y-2">
-                  <span className="text-2xl">☕</span>
-                  <h4 className="font-black text-orange-400 text-xs uppercase">{lang === 'vi' ? 'Chuỗi F&B vừa (B2B – GĐ2)' : 'Mid-size F&B Chains (B2B – Phase 2)'}</h4>
-                  <p className="text-[11px] text-slate-400 leading-relaxed font-semibold">
-                    {lang === 'vi'
-                      ? 'SaaS Insights: báo cáo tồn kho nâng cao, dự báo nhu cầu theo mùa, phân tích chiến lược markdown. Tích hợp POS API tự động.'
-                      : 'SaaS Insights: advanced inventory reports, seasonal demand forecasting, markdown strategy analysis. Automated POS API integration.'}
-                  </p>
+                <div className="bg-slate-950/80 border border-orange-500/20 rounded-2xl p-5 space-y-3">
+                  <div className="w-10 h-10 bg-orange-500/10 rounded-xl flex items-center justify-center border border-orange-500/20">
+                    <Coffee className="w-5 h-5 text-orange-400" />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-orange-400 text-xs uppercase mb-1">{lang === 'vi' ? 'Chuỗi F&B vừa (B2B – GĐ2)' : 'Mid-size F&B Chains (B2B – Phase 2)'}</h4>
+                    <p className="text-[11px] text-slate-400 leading-relaxed font-semibold">
+                      {lang === 'vi'
+                        ? 'SaaS Insights: báo cáo tồn kho nâng cao, dự báo nhu cầu theo mùa, phân tích chiến lược markdown. Tích hợp POS API tự động.'
+                        : 'SaaS Insights: advanced inventory reports, seasonal demand forecasting, markdown strategy analysis. Automated POS API integration.'}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1101,20 +1140,28 @@ export default function StartupPitchDeck() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6 space-y-3">
-                <span className="text-2xl">⚡</span>
-                <h3 className="font-black text-white text-xs uppercase tracking-wider">{t('partners_title')}</h3>
-                <p className="text-xs text-slate-400 leading-relaxed font-semibold">
-                  {t('partners_desc')}
-                </p>
+              <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6 space-y-4">
+                <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/20">
+                  <Zap className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="font-black text-white text-xs uppercase tracking-wider mb-2">{t('partners_title')}</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed font-semibold">
+                    {t('partners_desc')}
+                  </p>
+                </div>
               </div>
 
-              <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6 space-y-3">
-                <span className="text-2xl">💸</span>
-                <h3 className="font-black text-white text-xs uppercase tracking-wider">{t('funding_title')}</h3>
-                <p className="text-xs text-slate-400 leading-relaxed font-semibold">
-                  {t('funding_desc')}
-                </p>
+              <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6 space-y-4">
+                <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/20">
+                  <DollarSign className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="font-black text-white text-xs uppercase tracking-wider mb-2">{t('funding_title')}</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed font-semibold">
+                    {t('funding_desc')}
+                  </p>
+                </div>
               </div>
             </div>
           </section>
@@ -1237,15 +1284,15 @@ export default function StartupPitchDeck() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {[
-                  { title: t('inno_1_title'), desc: t('inno_1_desc'), icon: '🤖' },
-                  { title: t('inno_2_title'), desc: t('inno_2_desc'), icon: '📊' },
-                  { title: t('inno_3_title'), desc: t('inno_3_desc'), icon: '📱' },
-                  { title: t('inno_4_title'), desc: t('inno_4_desc'), icon: '🏆' }
+                  { title: t('inno_1_title'), desc: t('inno_1_desc'), icon: <Cpu className="w-5 h-5 text-emerald-400" /> },
+                  { title: t('inno_2_title'), desc: t('inno_2_desc'), icon: <BarChart3 className="w-5 h-5 text-blue-400" /> },
+                  { title: t('inno_3_title'), desc: t('inno_3_desc'), icon: <Smartphone className="w-5 h-5 text-orange-400" /> },
+                  { title: t('inno_4_title'), desc: t('inno_4_desc'), icon: <Award className="w-5 h-5 text-purple-400" /> }
                 ].map((item, idx) => (
                   <div key={idx} className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-6 hover:border-emerald-500/30 transition-all relative overflow-hidden group">
                     <div className="absolute top-[-20%] right-[-20%] w-20 h-20 bg-emerald-500/5 rounded-full blur-xl group-hover:bg-emerald-500/10 transition-colors" />
                     <div className="flex items-start gap-4">
-                      <span className="text-3xl p-3 bg-slate-900 rounded-xl">{item.icon}</span>
+                      <span className="p-3 bg-slate-900 rounded-xl">{item.icon}</span>
                       <div className="space-y-2">
                         <h4 className="font-black text-white text-sm uppercase group-hover:text-emerald-400 transition-colors">{item.title}</h4>
                         <p className="text-xs text-slate-400 leading-relaxed font-semibold">{item.desc}</p>
