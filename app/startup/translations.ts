@@ -200,7 +200,53 @@ export const startupTranslations = {
     try_desc: 'Chạy thử nghiệm giao diện app dành cho khách hàng, đối tác cửa hàng hoặc bảng quản trị hệ thống của F.R.E.S.H.',
     enter_ecosystem: 'Vào Hệ sinh thái',
     home_page: 'Trang chủ Landing Page',
-    footer_sig: 'Đề án Khởi nghiệp trường ĐH Kinh tế - Tài chính TP.HCM (UEF)'
+    footer_sig: 'Đề án Khởi nghiệp trường ĐH Kinh tế - Tài chính TP.HCM (UEF)',
+
+    // Section Phân tích rủi ro & Đổi mới sáng tạo
+    sec_risks: 'Đánh giá & Kiểm soát Rủi ro',
+    sec_innovation_tech: 'Đổi mới Sáng tạo & KHCN',
+    
+    risk_title: 'Phân tích rủi ro & Giải pháp phòng ngừa',
+    risk_col_name: 'Loại rủi ro',
+    risk_col_level: 'Mức độ',
+    risk_col_prob: 'Xác suất',
+    risk_col_mitigation: 'Giải pháp phòng ngừa',
+    
+    risk_1_name: 'Đối tác không đăng hàng đều đặn sau 2 tuần đầu',
+    risk_1_level: 'Cao',
+    risk_1_prob: '50%',
+    risk_1_mitigation: 'Hệ thống nhắc nhở tự động qua Zalo/SMS lúc 4-5h chiều. Áp dụng Gamification đối tác: huy hiệu "Tiệm xanh tuần này". Sales gọi điện hỗ trợ cá nhân với đối tác chưa đăng hàng 3 ngày.',
+    
+    risk_2_name: 'Cạnh tranh từ các nền tảng lớn (Grab/Shopee) thêm tính năng tương tự',
+    risk_2_level: 'Cao',
+    risk_2_prob: '30% trong 12 tháng',
+    risk_2_mitigation: 'Tăng tốc mở rộng mạng lưới đối tác và tập dữ liệu. Xây dựng Green Credit và cộng đồng tiêu dùng ESG làm rào cản phòng thủ khó sao chép nhanh.',
+    
+    risk_3_name: 'Sự cố an toàn thực phẩm từ đối tác',
+    risk_3_level: 'Rất cao',
+    risk_3_prob: 'Thấp (<5%)',
+    risk_3_mitigation: 'Xác minh nghiêm ngặt giấy phép VSATTP khi onboarding. Cơ chế report và tự động khóa tài khoản trong 1h khi có phản hồi tiêu cực. Trích lập quỹ bồi thường 3% doanh thu.',
+    
+    risk_4_name: 'Tốc độ tăng trưởng người dùng chậm hơn dự phóng 30%',
+    risk_4_level: 'Trung bình',
+    risk_4_prob: '40%',
+    risk_4_mitigation: 'Tập trung tối ưu mật độ (densification) tại Bình Thạnh và Quận 1 đạt tối thiểu 20 đơn/km²/ngày trước khi mở rộng quận mới.',
+    
+    risk_5_name: 'Thiếu nhân sự kỹ thuật đúng hạn ra mắt app',
+    risk_5_level: 'Trung bình',
+    risk_5_prob: '35%',
+    risk_5_mitigation: 'Tuyển dụng sớm từ các trường ĐH đối tác. Có phương án backup sử dụng no-code (Glide/Bubble) cho MVP chạy trước, migrate sang native app sau 2-3 tháng.',
+
+    inno_title: 'Mức độ đổi mới sáng tạo & Ứng dụng KHCN',
+    inno_subtitle: 'F.R.E.S.H áp dụng công nghệ hiện đại vào mô hình kinh tế tuần hoàn để giải quyết triệt để bài toán lãng phí thực phẩm.',
+    inno_1_title: 'AI Dynamic Pricing Engine',
+    inno_1_desc: 'Thuật toán tự động giảm giá cứu hộ dựa trên thời gian thực (real-time decay), tích hợp các yếu tố nhu cầu địa phương, chủng loại thực phẩm và thời tiết.',
+    inno_2_title: 'Sổ cái Carbon & ESG Tracker',
+    inno_2_desc: 'Đo lường chính xác lượng phát thải CO2e được cắt giảm cho từng giao dịch dựa trên tiêu chuẩn UNEP, hỗ trợ doanh nghiệp làm báo cáo ESG và người dùng cá nhân.',
+    inno_3_title: 'Zero Friction Onboarding (GS1/QR)',
+    inno_3_desc: 'Cơ chế đồng bộ hàng tồn cận date cực nhanh qua mã vạch GS1 và mã QR động. Chủ tiệm chỉ cần 2 phút để chụp ảnh đăng bán trên điện thoại di động.',
+    inno_4_title: 'Hệ thống Green Credit & Đổi thưởng chéo',
+    inno_4_desc: 'Tích hợp Gamification thăng hạng người dùng xanh, đổi điểm tích lũy lấy ưu đãi tại hệ thống đối tác hoặc đổi điểm rèn luyện, học phí tại các trường ĐH lớn.'
   },
   en: {
     // Header
@@ -403,6 +449,52 @@ export const startupTranslations = {
     try_desc: 'Test the prototype interface for customers, retail partners, or the global administration console.',
     enter_ecosystem: 'Enter Ecosystem',
     home_page: 'Landing Page Home',
-    footer_sig: 'HCMC University of Economics and Finance (UEF) Startup Project'
+    footer_sig: 'HCMC University of Economics and Finance (UEF) Startup Project',
+
+    // Section Risk & Innovation
+    sec_risks: 'Risk Assessment & Mitigation',
+    sec_innovation_tech: 'Innovation & Technology',
+    
+    risk_title: 'Risk Analysis & Mitigation Plan',
+    risk_col_name: 'Risk Type',
+    risk_col_level: 'Impact Level',
+    risk_col_prob: 'Probability',
+    risk_col_mitigation: 'Mitigation Action',
+    
+    risk_1_name: 'Partners stop listing products regularly after 2 weeks',
+    risk_1_level: 'High',
+    risk_1_prob: '50%',
+    risk_1_mitigation: 'Automated Zalo/SMS reminder at 4-5 PM. Partner gamification ("Green Store of the Week"). Sales support call if inactive for 3 days.',
+    
+    risk_2_name: 'Large delivery platforms (Grab/Shopee) launch similar features',
+    risk_2_level: 'High',
+    risk_2_prob: '30% in 12 months',
+    risk_2_mitigation: 'Accelerate partner acquisition and dataset growth. Green Credit and ESG community act as entry barriers that are hard to replicate.',
+    
+    risk_3_name: 'Food safety incident from partner products',
+    risk_3_level: 'Very High',
+    risk_3_prob: 'Low (<5%)',
+    risk_3_mitigation: 'Mandatory Food Safety Certificate verification. 1-hour account suspension upon major complaints. 3% revenue reserve for user compensation.',
+    
+    risk_4_name: 'User growth rate 30% slower than projection',
+    risk_4_level: 'Medium',
+    risk_4_prob: '40%',
+    risk_4_mitigation: 'Focus on density (densification) in Binh Thanh & D1 (min 20 orders/km²/day) before expanding to new districts.',
+    
+    risk_5_name: 'Technical staff shortage delaying app launch',
+    risk_5_level: 'Medium',
+    risk_5_prob: '35%',
+    risk_5_mitigation: 'Recruit early from partner universities. Use no-code (Glide/Bubble) for MVP as backup, migrate to native app in 2-3 months.',
+
+    inno_title: 'Innovation Level & Technology Application',
+    inno_subtitle: 'F.R.E.S.H applies modern technology to circular business models to systematically resolve food waste.',
+    inno_1_title: 'AI Dynamic Pricing Engine',
+    inno_1_desc: 'Algorithmic discount adjustments based on time-decay, local demand indices, food categories, and real-time weather conditions.',
+    inno_2_title: 'Smart ESG Ledger & CO2 Tracker',
+    inno_2_desc: 'Accurately quantifies carbon emission reduction per transaction using UNEP standards, generating exportable ESG reports for businesses.',
+    inno_3_title: 'Zero Friction Onboarding (GS1/QR)',
+    inno_3_desc: 'Near-instant expiry inventory syncing via GS1 barcodes and dynamic QR codes, enabling small merchants to upload products in under 2 minutes.',
+    inno_4_title: 'Green Credit & Cross-Redemption',
+    inno_4_desc: 'Gamifies green consumption, converting carbon points into brand vouchers or university tuition/academic credits for students.'
   }
 };

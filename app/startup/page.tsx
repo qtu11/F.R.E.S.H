@@ -105,16 +105,18 @@ const getFinancialProjects = (lang: 'vi' | 'en') => [
 ];
 
 const getSections = (lang: 'vi' | 'en') => [
-  { id: 'tong-quan', name: lang === 'vi' ? 'Mô tả & Slogan' : 'Description & Slogan', icon: Sparkles },
-  { id: 'su-can-thiet', name: lang === 'vi' ? 'Sự cần thiết & Thực trạng' : 'Necessity & Market Status', icon: AlertTriangle },
-  { id: 'tinh-kha-thi', name: lang === 'vi' ? 'Tính khả thi & Vận hành' : 'Feasibility & Operations', icon: Target },
-  { id: 'quy-trinh', name: lang === 'vi' ? 'Quy trình vận hành' : 'Operating Flow', icon: GitBranch },
-  { id: 'sanh-tao', name: lang === 'vi' ? 'Độc đáo & Sáng tạo' : 'Uniqueness & AI Pricing', icon: Cpu },
-  { id: 'canh-tranh', name: lang === 'vi' ? 'Phân tích cạnh tranh' : 'Competitive Analysis', icon: Swords },
-  { id: 'ke-hoach', name: lang === 'vi' ? 'Kế hoạch & Dự phóng' : 'Plan & Projections', icon: LineChart },
-  { id: 'tac-dong', name: lang === 'vi' ? 'Tác động ESG' : 'ESG Impact', icon: LeafyGreen },
-  { id: 'nguon-luc', name: lang === 'vi' ? 'Nguồn lực thực hiện' : 'Resources & Partners', icon: Users },
-  { id: 'truyen-thong', name: lang === 'vi' ? 'Kênh truyền thông' : 'Marketing Channels', icon: Briefcase }
+  { id: 'tong-quan', name: lang === 'vi' ? '1. Mô tả & Slogan' : '1. Description & Slogan', icon: Sparkles },
+  { id: 'su-can-thiet', name: lang === 'vi' ? '2. Sự cần thiết & Thực trạng' : '2. Necessity & Market Status', icon: AlertTriangle },
+  { id: 'tinh-kha-thi', name: lang === 'vi' ? '3. Tính khả thi & Vận hành' : '3. Feasibility & Operations', icon: Target },
+  { id: 'quy-trinh', name: lang === 'vi' ? '4. Quy trình vận hành' : '4. Operating Flow', icon: GitBranch },
+  { id: 'sanh-tao', name: lang === 'vi' ? '5. Độc đáo & Sáng tạo' : '5. Uniqueness & AI Pricing', icon: Cpu },
+  { id: 'canh-tranh', name: lang === 'vi' ? '6. Phân tích cạnh tranh' : '6. Competitive Analysis', icon: Swords },
+  { id: 'rui-ro', name: lang === 'vi' ? '7. Đánh giá & Kiểm soát Rủi ro' : '7. Risk Analysis & Mitigation', icon: ShieldCheck },
+  { id: 'ke-hoach', name: lang === 'vi' ? '8. Kế hoạch & Dự phóng' : '8. Plan & Projections', icon: LineChart },
+  { id: 'tac-dong', name: lang === 'vi' ? '9. Tác động ESG' : '9. ESG Impact', icon: LeafyGreen },
+  { id: 'nguon-luc', name: lang === 'vi' ? '10. Nguồn lực thực hiện' : '10. Resources & Partners', icon: Users },
+  { id: 'truyen-thong', name: lang === 'vi' ? '11. Kênh truyền thông' : '11. Marketing Channels', icon: Briefcase },
+  { id: 'doi-moi', name: lang === 'vi' ? '12. Đổi mới sáng tạo & KHCN' : '12. Innovation & Tech', icon: Sparkles }
 ];
 
 export default function StartupPitchDeck() {
@@ -713,11 +715,62 @@ export default function StartupPitchDeck() {
             </div>
           </section>
 
+          {/* SECTION: PHAN TICH RUI RO */}
+          <section id="rui-ro" className="space-y-6 pt-4">
+            <div className="flex items-center gap-3">
+              <span className="w-2.5 h-6 bg-emerald-500 rounded-full" />
+              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">7. {t('sec_risks')}</h2>
+            </div>
+
+            <div className="bg-slate-900/40 border border-slate-800/60 rounded-3xl p-6 md:p-8 overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead>
+                  <tr className="border-b border-slate-800 text-slate-400 font-bold uppercase text-[10px]">
+                    <th className="py-3 px-4 w-1/4">{t('risk_col_name')}</th>
+                    <th className="py-3 px-3 text-center w-32">{t('risk_col_level')}</th>
+                    <th className="py-3 px-3 text-center w-32">{t('risk_col_prob')}</th>
+                    <th className="py-3 px-4">{t('risk_col_mitigation')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { id: 1, name: t('risk_1_name'), level: t('risk_1_level'), prob: t('risk_1_prob'), mitigation: t('risk_1_mitigation') },
+                    { id: 2, name: t('risk_2_name'), level: t('risk_2_level'), prob: t('risk_2_prob'), mitigation: t('risk_2_mitigation') },
+                    { id: 3, name: t('risk_3_name'), level: t('risk_3_level'), prob: t('risk_3_prob'), mitigation: t('risk_3_mitigation') },
+                    { id: 4, name: t('risk_4_name'), level: t('risk_4_level'), prob: t('risk_4_prob'), mitigation: t('risk_4_mitigation') },
+                    { id: 5, name: t('risk_5_name'), level: t('risk_5_level'), prob: t('risk_5_prob'), mitigation: t('risk_5_mitigation') }
+                  ].map((row) => (
+                    <tr key={row.id} className="border-b border-slate-800/60 hover:bg-slate-800/30 transition-colors">
+                      <td className="py-4 px-4 font-bold text-slate-200">
+                        {row.id}. {row.name}
+                      </td>
+                      <td className="py-4 px-3 text-center">
+                        <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-[10px] font-black uppercase ${
+                          row.level.includes('Rất cao') || row.level.includes('Very High') ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                          row.level.includes('Cao') || row.level.includes('High') ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' :
+                          'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                        }`}>
+                          {row.level}
+                        </span>
+                      </td>
+                      <td className="py-4 px-3 text-center text-slate-300 font-bold">
+                        {row.prob}
+                      </td>
+                      <td className="py-4 px-4 text-slate-400 leading-relaxed font-semibold">
+                        {row.mitigation}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
           {/* SECTION: KE HOACH & DU PHONG FINANCE */}
           <section id="ke-hoach" className="space-y-6 pt-4">
             <div className="flex items-center gap-3">
               <span className="w-2.5 h-6 bg-emerald-500 rounded-full" />
-              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">5. {t('sec_finance')}</h2>
+              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">8. {t('sec_finance')}</h2>
             </div>
 
             <div className="bg-slate-900/40 border border-slate-800/60 rounded-3xl p-6 md:p-8 space-y-8">
@@ -840,7 +893,7 @@ export default function StartupPitchDeck() {
           <section id="nguon-luc" className="space-y-6 pt-4">
             <div className="flex items-center gap-3">
               <span className="w-2.5 h-6 bg-emerald-500 rounded-full" />
-              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">6. {t('sec_resources')}</h2>
+              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">10. {t('sec_resources')}</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -866,7 +919,7 @@ export default function StartupPitchDeck() {
           <section id="truyen-thong" className="space-y-6 pt-4">
             <div className="flex items-center gap-3">
               <span className="w-2.5 h-6 bg-emerald-500 rounded-full" />
-              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">7. {t('sec_channels')}</h2>
+              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">11. {t('sec_channels')}</h2>
             </div>
 
             <div className="bg-slate-900/40 border border-slate-800/60 rounded-3xl p-6 md:p-8 space-y-6">
@@ -908,7 +961,7 @@ export default function StartupPitchDeck() {
           <section id="tac-dong" className="space-y-6 pt-4">
             <div className="flex items-center gap-3">
               <span className="w-2.5 h-6 bg-emerald-500 rounded-full" />
-              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">{t('esg_section')}</h2>
+              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">9. {t('esg_section')}</h2>
             </div>
 
             <div className="bg-slate-900/40 border border-slate-800/60 rounded-3xl p-6 md:p-8 space-y-5">
@@ -962,6 +1015,40 @@ export default function StartupPitchDeck() {
                     ? 'Các chỉ số này được tích hợp trực tiếp vào dashboard Green Credit của người dùng và báo cáo ESG của đối tác doanh nghiệp.'
                     : 'These metrics are directly integrated into the user Green Credit dashboard and partner ESG reports.'}
                 </p>
+              </div>
+            </div>
+          </section>
+
+          {/* SECTION: DOI MOI SANG TAO */}
+          <section id="doi-moi" className="space-y-6 pt-4">
+            <div className="flex items-center gap-3">
+              <span className="w-2.5 h-6 bg-emerald-500 rounded-full" />
+              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">12. {t('sec_innovation_tech')}</h2>
+            </div>
+
+            <div className="bg-slate-900/40 border border-slate-800/60 rounded-3xl p-6 md:p-8 space-y-6">
+              <p className="text-xs text-slate-400 leading-relaxed font-semibold">
+                {t('inno_subtitle')}
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[
+                  { title: t('inno_1_title'), desc: t('inno_1_desc'), icon: '🤖' },
+                  { title: t('inno_2_title'), desc: t('inno_2_desc'), icon: '📊' },
+                  { title: t('inno_3_title'), desc: t('inno_3_desc'), icon: '📱' },
+                  { title: t('inno_4_title'), desc: t('inno_4_desc'), icon: '🏆' }
+                ].map((item, idx) => (
+                  <div key={idx} className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-6 hover:border-emerald-500/30 transition-all relative overflow-hidden group">
+                    <div className="absolute top-[-20%] right-[-20%] w-20 h-20 bg-emerald-500/5 rounded-full blur-xl group-hover:bg-emerald-500/10 transition-colors" />
+                    <div className="flex items-start gap-4">
+                      <span className="text-3xl p-3 bg-slate-900 rounded-xl">{item.icon}</span>
+                      <div className="space-y-2">
+                        <h4 className="font-black text-white text-sm uppercase group-hover:text-emerald-400 transition-colors">{item.title}</h4>
+                        <p className="text-xs text-slate-400 leading-relaxed font-semibold">{item.desc}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </section>
