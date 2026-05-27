@@ -30,7 +30,10 @@ export default function CustomerDeals() {
 
   useEffect(() => {
     productService.getLive().then(data => {
-      setDeals(data);
+      const filteredData = (data || []).filter(
+        (p: any) => !p.id.startsWith('p') || p.id.startsWith('rp')
+      );
+      setDeals(filteredData);
       setLoading(false);
     }).catch(err => {
       console.error(err);

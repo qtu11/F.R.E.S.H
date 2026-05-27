@@ -34,32 +34,35 @@ export async function GET(req: Request) {
     const { data, error } = await builder;
     if (error) return handleError(error);
 
-    if (id) return NextResponse.json(withCatalogImages(toCamelCase(data?.[0] || null)));
+    // Filter out old seed trash products starting with 'p' (but keep 'rp' and UUIDs)
+    const filteredData = (data || []).filter((p: any) => !p.id.startsWith('p') || p.id.startsWith('rp'));
+
+    if (id) return NextResponse.json(withCatalogImages(toCamelCase(filteredData?.[0] || null)));
     if (query) {
       const q = query.toLowerCase();
-      const filtered = (data || []).filter((p: any) =>
+      const filtered = filteredData.filter((p: any) =>
         p.name?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q) || p.store_name?.toLowerCase().includes(q)
       );
       return NextResponse.json(withCatalogImages(toCamelCase(filtered)));
     }
     if (nearby) {
       const maxDist = parseFloat(nearby);
-      return NextResponse.json(withCatalogImages(toCamelCase((data || []).filter((p: any) => (p.distance ?? 999) <= maxDist))));
+      return NextResponse.json(withCatalogImages(toCamelCase(filteredData.filter((p: any) => (p.distance ?? 999) <= maxDist))));
     }
     if (topRated) {
-      return NextResponse.json(withCatalogImages(toCamelCase([...(data || [])].sort((a: any, b: any) => (b.rating ?? 0) - (a.rating ?? 0)).slice(0, parseInt(topRated)))));
+      return NextResponse.json(withCatalogImages(toCamelCase([...filteredData].sort((a: any, b: any) => (b.rating ?? 0) - (a.rating ?? 0)).slice(0, parseInt(topRated)))));
     }
     if (endingSoon) {
       const hours = parseInt(endingSoon);
       const now = new Date();
       const threshold = new Date(now.getTime() + hours * 3600000);
-      return NextResponse.json(withCatalogImages(toCamelCase((data || []).filter((p: any) => {
+      return NextResponse.json(withCatalogImages(toCamelCase(filteredData.filter((p: any) => {
         const expiry = new Date(p.expiry);
         return expiry <= threshold && expiry > now;
       }).sort((a: any, b: any) => new Date(a.expiry).getTime() - new Date(b.expiry).getTime()))));
     }
 
-    return NextResponse.json(withCatalogImages(toCamelCase(data || [])));
+    return NextResponse.json(withCatalogImages(toCamelCase(filteredData)));
   } catch (err) { return handleError(err); }
 }
 

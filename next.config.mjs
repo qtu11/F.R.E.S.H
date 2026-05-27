@@ -1,3 +1,5 @@
+import path from 'path';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -13,6 +15,7 @@ const nextConfig = {
     // Bỏ qua lỗi TypeScript khi build để đảm bảo độ ổn định cao nhất khi deploy
     ignoreBuildErrors: true,
   },
+  outputFileTracingRoot: path.resolve(process.cwd()),
 };
 
 export default nextConfig;

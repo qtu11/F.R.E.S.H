@@ -61,7 +61,11 @@ export default function CustomerApp() {
     setLoading(true);
     productService.getLive()
       .then((products) => {
-        setDeals(products || []);
+        // Filter out old seed trash products starting with 'p' (but keep 'rp' and UUIDs)
+        const filteredProducts = (products || []).filter(
+          (p) => !p.id.startsWith('p') || p.id.startsWith('rp')
+        );
+        setDeals(filteredProducts);
         setLoading(false);
       })
       .catch(err => {
