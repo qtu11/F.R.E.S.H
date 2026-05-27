@@ -100,6 +100,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized: You do not have access to this store' }, { status: 403 });
     }
 
+    // Lấy store_name chuẩn từ DB để tránh lỗi ràng buộc NOT NULL của bảng products
+    const { data: storeObj, error: storeErr } = await supabase
+      .from('stores')
+      .select('name')
+      .eq('id', storeId)
+      .single();
+
+    if (storeErr || !storeObj) {
+      return NextResponse.json({ error: 'Cửa hàng liên kết không tồn tại hoặc đã bị xóa' }, { status: 404 });
+    }
+    const storeName = storeObj.name;
+
     const cleanBody = {
       ...rawBody,
       store_id: storeId,
@@ -110,9 +122,15 @@ export async function POST(req: Request) {
     delete cleanBody.mfgDate;
     delete cleanBody.expiryDate;
     delete cleanBody.storeId;
+    delete cleanBody.storeName;
 
     const data = toSnakeCase(cleanBody);
-    const newProduct = { ...data, id: crypto.randomUUID(), created_at: new Date().toISOString() };
+    const newProduct = { 
+      ...data, 
+      id: crypto.randomUUID(), 
+      store_name: storeName,
+      created_at: new Date().toISOString() 
+    };
     const { data: result, error } = await supabase.from('products').insert(newProduct).select().single();
     if (error) return handleError(error);
     return NextResponse.json(toCamelCase(result), { status: 201 });
