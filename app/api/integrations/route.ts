@@ -12,12 +12,34 @@ export async function GET(req: Request) {
     const storeId = searchParams.get('storeId');
     const logs = searchParams.get('logs');
     if (logs && storeId) {
-      const { data, error } = await supabase.from('webhook_logs')
-        .select('*, integration:integrations(*)')
-        .eq('integration_id', logs)
-        .order('created_at', { ascending: false }).limit(50);
-      if (error) return handleError(error);
-      return NextResponse.json(toCamelCase(data || []));
+      if (logs === 'true') {
+        const { data: storeIntegrations, error: intError } = await supabase
+          .from('integrations')
+          .select('id')
+          .eq('store_id', storeId);
+        
+        if (intError) return handleError(intError);
+        
+        const integrationIds = (storeIntegrations || []).map((i: any) => i.id);
+        if (integrationIds.length === 0) {
+          return NextResponse.json([]);
+        }
+
+        const { data, error } = await supabase.from('webhook_logs')
+          .select('*, integration:integrations(*)')
+          .in('integration_id', integrationIds)
+          .order('created_at', { ascending: false }).limit(50);
+        
+        if (error) return handleError(error);
+        return NextResponse.json(toCamelCase(data || []));
+      } else {
+        const { data, error } = await supabase.from('webhook_logs')
+          .select('*, integration:integrations(*)')
+          .eq('integration_id', logs)
+          .order('created_at', { ascending: false }).limit(50);
+        if (error) return handleError(error);
+        return NextResponse.json(toCamelCase(data || []));
+      }
     }
     let builder = supabase.from('integrations').select('*');
     if (storeId) builder = builder.eq('store_id', storeId);
