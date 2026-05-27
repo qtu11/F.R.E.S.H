@@ -200,8 +200,9 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
               <motion.button whileTap={{ scale: 0.9 }} onClick={() => setQuantity(Math.min(10, quantity + 1))} disabled={quantity >= 10} className="w-10 h-10 rounded-xl bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 flex items-center justify-center disabled:opacity-30 transition-all hover:bg-gray-100">
                 <Plus className="w-4 h-4 text-gray-600 dark:text-slate-300" />
               </motion.button>
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-y border-gray-100 dark:border-slate-800 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-y border-gray-100 dark:border-slate-800 py-8">
             <div className="space-y-4">
               <h3 className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
                 <Clock className="w-4 h-4" /> Freshness Timeline
@@ -275,7 +276,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
             <p className="text-sm text-gray-500 dark:text-slate-400 font-medium leading-relaxed">
               Hệ thống AI của chúng tôi đã phân tích dinh dưỡng cho {product.name.toLowerCase()}. {product.nutrition ? `Món ăn chứa khoảng ${product.nutrition.protein}g protein và ${product.nutrition.carbs}g carbs` : 'Chỉ số dinh dưỡng sẵn sàng'}. Toàn bộ thành phần đều được cung cấp tươi mới từ đối tác {product.storeName}.
             </p>
-          </div></div>
+          </div>
         </motion.div>
       </div>
 
