@@ -310,6 +310,17 @@ export default function StartupPitchDeck() {
                 {t('project_desc')}
               </p>
             </div>
+
+            {/* Platform Preview Banner */}
+            <div className="mt-10 relative rounded-2xl overflow-hidden border border-slate-700/60 shadow-2xl group">
+              <img
+                src="/banner.png"
+                alt="F.R.E.S.H Platform Preview"
+                className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-105"
+                style={{ aspectRatio: '1200/630' }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0b0f19]/60 via-transparent to-transparent pointer-events-none" />
+            </div>
           </div>
 
           {/* TEAM MEMBERS SECTION */}
