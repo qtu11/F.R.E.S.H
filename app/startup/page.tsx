@@ -112,7 +112,7 @@ const getSections = (lang: 'vi' | 'en') => [
   { id: 'sanh-tao', name: lang === 'vi' ? 'Độc đáo & Sáng tạo' : 'Uniqueness & AI Pricing', icon: Cpu },
   { id: 'canh-tranh', name: lang === 'vi' ? 'Phân tích cạnh tranh' : 'Competitive Analysis', icon: Swords },
   { id: 'ke-hoach', name: lang === 'vi' ? 'Kế hoạch & Dự phóng' : 'Plan & Projections', icon: LineChart },
-  { id: 'esg', name: lang === 'vi' ? 'Tác động ESG' : 'ESG Impact', icon: LeafyGreen },
+  { id: 'tac-dong', name: lang === 'vi' ? 'Tác động ESG' : 'ESG Impact', icon: LeafyGreen },
   { id: 'nguon-luc', name: lang === 'vi' ? 'Nguồn lực thực hiện' : 'Resources & Partners', icon: Users },
   { id: 'truyen-thong', name: lang === 'vi' ? 'Kênh truyền thông' : 'Marketing Channels', icon: Briefcase }
 ];
@@ -900,80 +900,57 @@ export default function StartupPitchDeck() {
               <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">{t('esg_section')}</h2>
             </div>
 
-            <div className="bg-slate-900/40 border border-slate-800/60 rounded-3xl p-6 md:p-8">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <div className="bg-slate-950/80 border border-emerald-800/40 rounded-2xl p-5 space-y-3">
-                  <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-                    <Leaf className="w-5 h-5" />
-                  </div>
-                  <h4 className="font-black text-white text-xs uppercase tracking-wider">{t('esg_e_title')}</h4>
-                  <ul className="space-y-2 text-xs text-slate-400 font-medium">
-                    <li className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1 shrink-0" />
-                      {t('esg_e_1')}
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1 shrink-0" />
-                      {t('esg_e_2')}
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1 shrink-0" />
-                      {t('esg_e_3')}
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1 shrink-0" />
-                      {t('esg_e_4')}
-                    </li>
-                  </ul>
-                </div>
-                <div className="bg-slate-950/80 border border-blue-800/40 rounded-2xl p-5 space-y-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center">
-                    <Users className="w-5 h-5" />
-                  </div>
-                  <h4 className="font-black text-white text-xs uppercase tracking-wider">{t('esg_s_title')}</h4>
-                  <ul className="space-y-2 text-xs text-slate-400 font-medium">
-                    <li className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1 shrink-0" />
-                      {t('esg_s_1')}
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1 shrink-0" />
-                      {t('esg_s_2')}
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1 shrink-0" />
-                      {t('esg_s_3')}
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1 shrink-0" />
-                      {t('esg_s_4')}
-                    </li>
-                  </ul>
-                </div>
-                <div className="bg-slate-950/80 border border-amber-800/40 rounded-2xl p-5 space-y-3">
-                  <div className="w-10 h-10 rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center">
-                    <ShieldCheck className="w-5 h-5" />
-                  </div>
-                  <h4 className="font-black text-white text-xs uppercase tracking-wider">{t('esg_g_title')}</h4>
-                  <ul className="space-y-2 text-xs text-slate-400 font-medium">
-                    <li className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mt-1 shrink-0" />
-                      {t('esg_g_1')}
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mt-1 shrink-0" />
-                      {t('esg_g_2')}
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mt-1 shrink-0" />
-                      {t('esg_g_3')}
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mt-1 shrink-0" />
-                      {t('esg_g_4')}
-                    </li>
-                  </ul>
-                </div>
+            <div className="bg-slate-900/40 border border-slate-800/60 rounded-3xl p-6 md:p-8 space-y-5">
+              <p className="text-xs text-slate-400 leading-relaxed font-semibold">
+                {lang === 'vi'
+                  ? 'F.R.E.S.H không chỉ là một mô hình kinh doanh mà còn là một công cụ đo lường tác động xã hội cụ thể. Mỗi giao dịch trên nền tảng đều được gắn với các chỉ số ESG có thể báo cáo được.'
+                  : 'F.R.E.S.H is not just a business model but also a concrete social impact measurement tool. Every transaction on the platform is tied to reportable ESG metrics.'}
+              </p>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-700">
+                      <th className="text-left py-2.5 px-2 text-slate-400 font-bold uppercase text-[10px]">{t('esg_metric')}</th>
+                      <th className="text-center py-2.5 px-2 text-emerald-400 font-black text-[10px]">{t('esg_metric_2026')}</th>
+                      <th className="text-center py-2.5 px-2 text-emerald-400 font-black text-[10px]">{t('esg_metric_2027')}</th>
+                      <th className="text-center py-2.5 px-2 text-emerald-400 font-black text-[10px]">{t('esg_metric_2028')}</th>
+                      <th className="text-center py-2.5 px-2 text-emerald-400 font-black text-[10px]">{t('esg_metric_2030')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { key: 'food_saved', values: ['46', '138', '345', '1.380'] },
+                      { key: 'co2', values: ['69', '207', '518', '2.070'] },
+                      { key: 'stores', values: ['200', '600', '1.500', '6.000'] },
+                      { key: 'partner_revenue', values: ['8,37', '25,1', '62,8', '251'] },
+                      { key: 'user_savings', values: ['~25k', '~30k', '~35k', '~40k'] },
+                    ].map((row, idx) => {
+                      const labelKey = 'esg_' + row.key;
+                      return (
+                        <tr key={idx} className="border-b border-slate-800/60 hover:bg-slate-800/30 transition-colors">
+                          <td className="py-2.5 px-2 text-slate-300 font-bold">{t(labelKey)}</td>
+                          {row.values.map((v, vi) => (
+                            <td key={vi} className="text-center py-2.5 px-2 text-white font-bold">{v}</td>
+                          ))}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="text-[10px] text-slate-500 italic border-t border-slate-800 pt-3 space-y-1">
+                <p>
+                  {lang === 'vi'
+                    ? '(*) Cơ sở tính: Mỗi kg thực phẩm lãng phí phát thải ~1,5 kg CO2e (UNEP Food Waste Index 2021). AOV 45.000đ, trọng lượng TB ~300g/đơn.'
+                    : '(*) Basis: Each kg of wasted food emits ~1.5 kg CO2e (UNEP Food Waste Index 2021). AOV 45,000 VND, avg weight ~300g/order.'}
+                </p>
+                <p>
+                  {lang === 'vi'
+                    ? 'Các chỉ số này được tích hợp trực tiếp vào dashboard Green Credit của người dùng và báo cáo ESG của đối tác doanh nghiệp.'
+                    : 'These metrics are directly integrated into the user Green Credit dashboard and partner ESG reports.'}
+                </p>
               </div>
             </div>
           </section>

@@ -76,7 +76,8 @@ export const startupTranslations = {
     esg_food_saved: 'Thực phẩm giải cứu (tấn)',
     esg_co2: 'CO₂ giảm thiểu (tấn)',
     esg_stores: 'Hộ KD được hỗ trợ',
-    esg_partner_revenue: 'Doanh thu bổ sung cho ĐT',
+    esg_partner_revenue: 'Doanh thu bổ sung cho ĐT (tỷ)',
+    esg_user_savings: 'TK tiết kiệm (VNĐ/người/tháng)',
     esg_metric_2026: '2026',
     esg_metric_2027: '2027',
     esg_metric_2028: '2028',
@@ -234,6 +235,9 @@ export const startupTranslations = {
     sec_finance: 'Plan & Projections',
     sec_resources: 'Resources & Partners',
     sec_channels: 'Marketing Channels',
+    sec_esg: 'ESG Impact',
+    sec_competition: 'Competitive Analysis',
+    sec_operating: 'Operating Flow',
 
     // Section 1: Desc & Slogan
     slogan_positioning: 'Slogan & Positioning',
@@ -259,11 +263,13 @@ export const startupTranslations = {
     b2b_desc: 'Bakeries, lunch stalls, small cafes in HCMC - a segment with no existing solution for surplus inventory. Daily loss of 5-15kg food (500k-2m VND). F.R.E.S.H helps recover 30-50% of material costs and reach Gen Z with zero marketing spend.',
 
     // Section 3: Feasibility
-    feasibility_intro: 'F.R.E.S.H applies a "step-by-step" tactical roadmap to ensure absolute feasibility without demanding immediate secure POS system integrations from stores:',
-    phase_1_title: 'Phase 1: Independent Partner-App Model',
-    phase_1_desc: 'Providing an ultra-simple app for supermarket staff. Staff only scan near-expired product barcodes. The AI engine automatically parses details, expiry, and uploads it to the rescue platform, bypassing secure POS obstacles.',
-    phase_2_title: 'Phase 2: Warehouse API Integration',
-    phase_2_desc: "Once concrete revenue is proven and strong trust is established, the project will automatically sync APIs with partners' inventory management systems to achieve 100% automated efficiency.",
+    feasibility_intro: 'F.R.E.S.H develops in 3 phases, starting with a simple marketplace and evolving to AI integration once sufficient real transaction data is available:',
+    phase_0_title: 'Phase 0 - Validation (Jan-Mar 2026)',
+    phase_0_desc: 'Validate real demand using Zalo Bot + Google Form + Spreadsheet. Connect 20-30 test partners with 100-200 trial users in HCMC. Zero code, zero cost.',
+    phase_1_title: 'Phase 1 - MVP App (Mar-Sep 2026)',
+    phase_1_desc: 'Build User App & Partner App. Launch in Binh Thanh & District 1. Target: 200 partners, 2,000 users, 500 transactions/month. 8-10% commission goes live.',
+    phase_2_title: 'Phase 2 - AI & Scale (Sep 2026-Dec 2027)',
+    phase_2_desc: 'Deploy Rule-based Auto Pricing. Expand to 5 districts in HCMC and pilot Hanoi. Integrate POS API for chain partners. Activate ML model upon 10,000 transactions.',
 
     // Section 4: Uniqueness & Simulator
     unique_1_title: '01. Sharp Localization',
@@ -358,7 +364,8 @@ export const startupTranslations = {
     esg_food_saved: 'Food rescued (tons)',
     esg_co2: 'CO₂ reduced (tons)',
     esg_stores: 'Stores supported',
-    esg_partner_revenue: 'Partner added revenue',
+    esg_partner_revenue: 'Partner added revenue (B)',
+    esg_user_savings: 'User saves (VND/person/month)',
     esg_metric_2026: '2026',
     esg_metric_2027: '2027',
     esg_metric_2028: '2028',
