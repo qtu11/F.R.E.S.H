@@ -35,9 +35,31 @@ export async function GET(req: Request) {
     if (auth.user.role === 'customer') {
       query = query.eq('user_id', auth.user.userId);
     } else if (auth.user.role === 'partner') {
-      const { data: stores } = await supabase.from('stores').select('id').eq('partner_id', auth.user.userId);
-      const storeIds = (stores || []).map(s => s.id);
-      query = query.in('store_id', storeIds);
+      // Lấy các organization mà user làm owner
+      const { data: ownedOrgs } = await supabase.from('organizations').select('id').eq('owner_id', auth.user.userId);
+      const ownedOrgIds = (ownedOrgs || []).map(o => o.id);
+
+      // Lấy các organization mà user làm member (admin hoặc manager)
+      const { data: memberOrgs } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', auth.user.userId)
+        .eq('status', 'active')
+        .in('role', ['admin', 'manager']);
+      const memberOrgIds = (memberOrgs || []).map(m => m.organization_id);
+
+      const allOrgIds = Array.from(new Set([...ownedOrgIds, ...memberOrgIds]));
+
+      let storeIds: string[] = [];
+      if (allOrgIds.length > 0) {
+        const { data: branches } = await supabase
+          .from('organization_branches')
+          .select('store_id')
+          .in('organization_id', allOrgIds);
+        storeIds = (branches || []).map(b => b.store_id).filter(Boolean) as string[];
+      }
+
+      query = query.in('store_id', storeIds.length > 0 ? storeIds : ['__none__']);
     }
 
     const { data: orders, error } = await query.order('created_at', { ascending: false });
@@ -106,7 +128,7 @@ export async function POST(req: Request) {
         if (orderItemData && orderItemData.length > 0) {
           for (const item of orderItemData) {
             const products = await sql`
-              SELECT id, name, stock, status, ai_price::numeric as ai_price 
+              SELECT id, name, stock, status, ai_price::numeric as ai_price, image 
               FROM products WHERE id = ${item.product_id}
             `;
 
@@ -121,6 +143,7 @@ export async function POST(req: Request) {
 
             // Ghi đè đơn giá từ database để chống Client tự thay đổi giá sản phẩm
             item.unit_price = Number(product.ai_price);
+            item.product_image = product.image || '';
             computedSubtotal += Number(product.ai_price) * item.quantity;
             productsToUpdate.push({ id: item.product_id, quantity: item.quantity });
           }
@@ -245,30 +268,37 @@ export async function POST(req: Request) {
           }
         }
 
+        // Lấy tên cửa hàng (store_name) từ DB để khớp với ràng buộc NOT NULL của bảng orders
+        const stores = await sql`
+          SELECT name FROM stores WHERE id = ${orderData.store_id}
+        `;
+        if (stores.length === 0) {
+          throw new Error('Cửa hàng không tồn tại');
+        }
+        const storeName = stores[0].name;
+
         // 5. Tạo đơn hàng (Order)
         const dbOrder = {
           id,
           user_id: userId,
-          store_id: orderData.store_id || null,
-          status: 'pending',
-          payment_method: orderData.payment_method,
-          delivery_method: orderData.delivery_method,
-          delivery_address: orderData.delivery_address || null,
-          delivery_notes: orderData.delivery_notes || null,
+          store_name: storeName,
+          store_id: orderData.store_id,
           subtotal: orderData.subtotal,
           delivery_fee: orderData.delivery_fee,
           service_fee: orderData.service_fee,
           discount: orderData.discount,
           total: orderData.total,
-          co2_saved: orderData.co2_saved || 0,
-          points_earned: orderData.points_earned || 0,
-          voucher_id: orderData.voucher_id || null,
+          status: 'pending',
+          delivery_method: orderData.delivery_method,
+          payment_method: orderData.payment_method,
           created_at: now,
-          estimated_delivery: new Date(Date.now() + 20 * 60000).toISOString()
+          estimated_delivery: new Date(Date.now() + 20 * 60000).toISOString(),
+          address: orderData.delivery_address || orderData.address || null,
+          notes: orderData.delivery_notes || orderData.notes || null
         };
 
         await sql`
-          INSERT INTO orders ${sql(dbOrder, 'id', 'user_id', 'store_id', 'status', 'payment_method', 'delivery_method', 'delivery_address', 'delivery_notes', 'subtotal', 'delivery_fee', 'service_fee', 'discount', 'total', 'co2_saved', 'points_earned', 'voucher_id', 'created_at', 'estimated_delivery')}
+          INSERT INTO orders ${sql(dbOrder, 'id', 'user_id', 'store_name', 'store_id', 'subtotal', 'delivery_fee', 'service_fee', 'discount', 'total', 'status', 'delivery_method', 'payment_method', 'created_at', 'estimated_delivery', 'address', 'notes')}
         `;
 
         // 6. Tạo các sản phẩm trong đơn hàng (Order Items)
@@ -277,11 +307,12 @@ export async function POST(req: Request) {
             order_id: id,
             product_id: item.product_id,
             product_name: item.product_name || 'Sản phẩm giải cứu',
+            product_image: item.product_image || '',
             quantity: item.quantity,
             unit_price: item.unit_price
           }));
           await sql`
-            INSERT INTO order_items ${sql(itemsToInsert, 'order_id', 'product_id', 'product_name', 'quantity', 'unit_price')}
+            INSERT INTO order_items ${sql(itemsToInsert, 'order_id', 'product_id', 'product_name', 'product_image', 'quantity', 'unit_price')}
           `;
         }
 
@@ -310,6 +341,7 @@ export async function POST(req: Request) {
         `;
       });
     } catch (dbErr: any) {
+      console.error('Order database transaction error:', dbErr);
       await logSecurityEvent(req, currentUserId, '/api/orders', 'POST', 400, Date.now() - startTime);
       return NextResponse.json({ error: dbErr.message || 'Đặt hàng thất bại do lỗi cơ sở dữ liệu' }, { status: 400 });
     }
@@ -347,6 +379,7 @@ export async function POST(req: Request) {
     await logSecurityEvent(req, currentUserId, '/api/orders', 'POST', 201, Date.now() - startTime);
     return NextResponse.json(toCamelCase({ ...order, items: items || [], trackingSteps: steps || [] }), { status: 201 });
   } catch (err: any) {
+    console.error('Order POST internal error:', err);
     await logSecurityEvent(req, currentUserId, '/api/orders', 'POST', 500, Date.now() - startTime);
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   } finally {

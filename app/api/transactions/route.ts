@@ -53,10 +53,11 @@ export async function POST(req: Request) {
     // Đảm bảo user_id luôn khớp với phiên đăng nhập để tránh IDOR nạp/rút tiền của tài khoản khác
     const targetUserId = auth.user.role === 'admin' ? (body.user_id || auth.user.userId) : auth.user.userId;
     
-    // Kiểm tra an toàn tài chính ví
-    if (body.type === 'topup' && body.amount <= 0) {
-      return NextResponse.json({ error: 'Số tiền nạp phải lớn hơn 0' }, { status: 400 });
+    const amountVal = Number(body.amount);
+    if (isNaN(amountVal) || amountVal <= 0) {
+      return NextResponse.json({ error: 'Số tiền giao dịch không hợp lệ (phải lớn hơn 0)' }, { status: 400 });
     }
+    body.amount = amountVal;
 
     sql = await getDbClient();
     if (!sql) return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });

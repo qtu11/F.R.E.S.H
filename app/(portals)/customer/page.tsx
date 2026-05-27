@@ -183,17 +183,6 @@ export default function CustomerApp() {
         address: user.address || 'Hồ Chí Minh, Việt Nam',
       });
 
-      // 2. Subtract balance on frontend instantly via transaction service callback
-      await transactionService.addTransaction({
-        userId: user.id,
-        amount: -totalCost,
-        type: 'payment',
-        date: new Date().toISOString(),
-        status: 'completed',
-        description: `Thanh toán cứu hộ món ăn: ${product.name}`,
-        paymentMethod: 'wallet'
-      });
-
       await refreshUser();
       triggerConfetti();
       showToast('success', 'Giải Cứu Thành Công!', `Đơn hàng ${product.name} đang được chuẩn bị.`);

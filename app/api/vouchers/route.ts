@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { handleError } from '@/lib/supabase/helpers';
 import { toCamelCase, toSnakeCase } from '@/lib/supabase/transform';
-import { requireRole, requireAnyRole, requireAuth } from '@/lib/auth/middleware';
+import { requireRole, requireAnyRole, requireAuth, checkStoreAccess } from '@/lib/auth/middleware';
 
 export async function GET(req: Request) {
   try {
@@ -122,21 +122,40 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
-    const auth = await requireAnyRole(['customer', 'partner', 'admin']);
+    const auth = await requireAnyRole(['partner', 'admin']); // Chỉ cho phép partner hoặc admin cập nhật trạng thái voucher trực tiếp
     if ('status' in auth) return auth;
 
     const supabase = getServerClient();
     if (!supabase) return NextResponse.json({ error: 'Not configured' }, { status: 503 });
     const body = toSnakeCase(await req.json());
-    const { id, ...updates } = body;
+    const { voucher_id, user_id, used_at, order_id } = body;
 
-    // Phân quyền & IDOR: Khách hàng chỉ được cập nhật voucher của chính mình, admin được phép cập nhật tất cả
-    if (auth.user.role === 'customer' && updates.user_id !== auth.user.userId) {
-      return NextResponse.json({ error: 'Unauthorized: IDOR detected' }, { status: 403 });
+    if (!voucher_id || !user_id) {
+      return NextResponse.json({ error: 'voucher_id and user_id are required' }, { status: 400 });
     }
 
-    await supabase.from('user_vouchers').update({ used_at: updates.used_at, order_id: updates.order_id })
-      .eq('user_id', updates.user_id).eq('voucher_id', id);
+    // Kiểm tra quyền hạn đối tác đối với voucher (IDOR check)
+    if (auth.user.role === 'partner') {
+      const { data: voucher } = await supabase
+        .from('vouchers')
+        .select('store_id')
+        .eq('id', voucher_id)
+        .maybeSingle(); // Dùng maybeSingle tránh ném lỗi single
+      
+      if (!voucher) {
+        return NextResponse.json({ error: 'Không tìm thấy voucher' }, { status: 404 });
+      }
+
+      if (voucher.store_id) {
+        const hasAccess = await checkStoreAccess(auth.user.userId, auth.user.role, voucher.store_id);
+        if (!hasAccess) {
+          return NextResponse.json({ error: 'Bạn không có quyền cập nhật voucher này' }, { status: 403 });
+        }
+      }
+    }
+
+    await supabase.from('user_vouchers').update({ used_at, order_id })
+      .eq('user_id', user_id).eq('voucher_id', voucher_id);
     return NextResponse.json({ success: true });
   } catch (err) { return handleError(err); }
 }

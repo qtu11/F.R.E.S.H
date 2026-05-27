@@ -10,7 +10,9 @@ export async function POST(req: Request) {
   let userIdForLog: string | null = null;
   
   try {
-    const { email, password } = await req.json();
+    const body = await req.json();
+    const { password } = body;
+    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
 
     if (!email || !password) {
       await logSecurityEvent(req, null, '/api/auth/login', 'POST', 400, Date.now() - startTime);

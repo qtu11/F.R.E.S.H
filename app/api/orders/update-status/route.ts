@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { handleError } from '@/lib/supabase/helpers';
 import { toCamelCase } from '@/lib/supabase/transform';
-import { requireAnyRole } from '@/lib/auth/middleware';
+import { requireAnyRole, checkStoreAccess } from '@/lib/auth/middleware';
 import crypto from 'crypto';
 
 export async function PATCH(req: Request) {
@@ -26,6 +26,14 @@ export async function PATCH(req: Request) {
 
     if (orderErr || !order) {
       return NextResponse.json({ error: 'Không tìm thấy đơn hàng' }, { status: 404 });
+    }
+
+    // Kiểm tra quyền hạn Store Access (IDOR check)
+    if (auth.user.role === 'partner') {
+      const hasAccess = await checkStoreAccess(auth.user.userId, auth.user.role, order.store_id);
+      if (!hasAccess) {
+        return NextResponse.json({ error: 'Bạn không có quyền cập nhật đơn hàng này' }, { status: 403 });
+      }
     }
 
     const previousStatus = order.status;

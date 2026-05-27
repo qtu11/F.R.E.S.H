@@ -59,7 +59,7 @@ export default function CustomerRegister() {
       } else {
         localStorage.removeItem('remember_email');
       }
-      router.push('/customer');
+      window.location.href = '/customer';
     } else {
       setError(result.error || 'Failed to create account.');
     }

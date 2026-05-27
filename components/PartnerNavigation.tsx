@@ -59,25 +59,35 @@ export function PartnerNavigation({ isPending }: Props) {
   const renderNavLink = (item: typeof navItems[0], isMobile: boolean) => {
     const isActive = pathname === item.href;
     const locked = isPending && item.requiresApproval;
-    const LinkOrSpan = locked ? 'span' : Link;
-    const props = locked ? {} : { href: item.href, onClick: isMobile ? () => setMenuOpen(false) : undefined };
     const label = labelOverrides[item.label] || item.label;
 
+    if (locked) {
+      return (
+        <span key={item.href} className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-gray-300 dark:text-slate-600 cursor-not-allowed opacity-50">
+          <item.icon className="w-5 h-5 z-10" />
+          <span className="z-10">{label}</span>
+          <Lock className="w-3.5 h-3.5 ml-auto text-gray-300 dark:text-slate-600" />
+        </span>
+      );
+    }
+
     return (
-      <LinkOrSpan key={item.href} {...props} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${locked
-        ? 'text-gray-300 dark:text-slate-600 cursor-not-allowed opacity-50'
-        : isActive
+      <Link
+        key={item.href}
+        href={item.href}
+        onClick={isMobile ? () => setMenuOpen(false) : undefined}
+        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive
           ? 'bg-[#e8f5e9] dark:bg-emerald-500/10 text-[#057A42] dark:text-emerald-400 font-semibold border border-[#c8e6c9] dark:border-emerald-500/20'
           : 'text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white border border-transparent'
-      }`}>
+        }`}
+      >
         <item.icon className="w-5 h-5 z-10" />
         <span className="z-10">{label}</span>
-        {locked && <Lock className="w-3.5 h-3.5 ml-auto text-gray-300 dark:text-slate-600" />}
-        {!locked && isActive && !isMobile && (
+        {isActive && !isMobile && (
           <motion.div layoutId="desktopNavIndicatorPartner" className="absolute left-0 w-1 h-8 bg-[#057A42] dark:bg-emerald-400 rounded-r-full shadow-[0_0_10px_rgba(5,122,66,0.3)] dark:shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
         )}
-        {!locked && isActive && isMobile && <div className="ml-auto w-2 h-2 rounded-full bg-[#057A42] dark:bg-emerald-400" />}
-      </LinkOrSpan>
+        {isActive && isMobile && <div className="ml-auto w-2 h-2 rounded-full bg-[#057A42] dark:bg-emerald-400" />}
+      </Link>
     );
   };
 

@@ -8,7 +8,8 @@ import { sendWelcomeEmail } from '@/utils/email/mailer';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, password, name, role = 'customer', phone, address } = body;
+    const { password, name, role = 'customer', phone, address } = body;
+    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
 
     if (!email || !password || !name) {
       return NextResponse.json({ error: 'Email, password, and name are required' }, { status: 400 });
@@ -18,8 +19,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
     }
 
-    if (!['customer', 'partner', 'admin'].includes(role)) {
-      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+    if (role !== 'customer') {
+      return NextResponse.json({ error: 'Chỉ được phép đăng ký tài khoản khách hàng (customer) qua luồng này. Đối tác vui lòng sử dụng luồng đăng ký đối tác riêng biệt.' }, { status: 400 });
     }
 
     const supabase = getServerClient();
@@ -28,11 +29,15 @@ export async function POST(req: Request) {
     }
 
     // 1. Kiểm tra xem email đã tồn tại trong public.users chưa
-    const { data: existingUser } = await supabase
+    const { data: existingUser, error: existError } = await supabase
       .from('users')
       .select('id')
       .eq('email', email.toLowerCase())
-      .single();
+      .maybeSingle();
+
+    if (existError) {
+      console.error('Check existing user error:', existError);
+    }
 
     if (existingUser) {
       return NextResponse.json({ error: 'Email already registered' }, { status: 409 });
