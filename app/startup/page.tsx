@@ -18,6 +18,7 @@ const getTeamMembers = (lang: 'vi' | 'en') => [
   { name: 'Trương Thị Anh Thư', mssv: '225086464', email: 'thutta22@uef.edu.vn', role: lang === 'vi' ? 'CEO & Product Lead - Quản trị Chiến lược & Quan hệ nhà đầu tư' : 'CEO & Product Lead - Strategic Management & Investor Relations' },
   { name: 'Lương Hoàng Bửu Ngọc', mssv: '255146242', email: 'ngoclhb25@uef.edu.vn', role: lang === 'vi' ? 'CMO & Growth Lead - Marketing, Truyền thông & Tăng trưởng' : 'CMO & Growth Lead - Marketing, Communications & Growth' },
   { name: 'Nguyễn Thị Thanh Hằng', mssv: '235087692', email: 'hangntt23@uef.edu.vn', role: lang === 'vi' ? 'CFO & Operations Lead - Tài chính, Vận hành & Pháp lý' : 'CFO & Operations Lead - Finance, Operations & Legal' },
+  { name: 'Nguyễn Quang Tú', mssv: '255015965', email: 'tunq25@uef.edu.vn', role: lang === 'vi' ? 'Xây dựng hệ thống' : 'System Builder' },
 ];
 
 const getFinancialProjects = (lang: 'vi' | 'en') => [
