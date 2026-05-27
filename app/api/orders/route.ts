@@ -5,6 +5,15 @@ import { toCamelCase, toSnakeCase } from '@/lib/supabase/transform';
 import { requireAuth, requireRole } from '@/lib/auth/middleware';
 import { logSecurityEvent } from '@/lib/auth/security';
 import { sendOrderConfirmationEmail } from '@/utils/email/mailer';
+import { loadConfig, getConnectionString } from '@/lib/supabase/config';
+import postgres from 'postgres';
+
+async function getDbClient() {
+  const config = loadConfig();
+  const connStr = getConnectionString(config);
+  if (!connStr) return null;
+  return postgres(connStr, { max: 1 });
+}
 
 export async function GET(req: Request) {
   const startTime = Date.now();
@@ -54,6 +63,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const startTime = Date.now();
   let currentUserId: string | null = null;
+  let sql: postgres.Sql | null = null;
   try {
     const auth = await requireRole('customer');
     if ('status' in auth) {
@@ -78,200 +88,233 @@ export async function POST(req: Request) {
     const userId = auth.user.userId;
     const paymentMethod = orderData.payment_method;
 
-    // 1. Tính toán lại subtotal từ database và kiểm tra tồn kho sản phẩm
-    let computedSubtotal = 0;
-    if (orderItemData && orderItemData.length > 0) {
-      for (const item of orderItemData) {
-        const { data: product, error: prodErr } = await supabase
-          .from('products')
-          .select('name, stock, status, ai_price')
-          .eq('id', item.product_id)
-          .single();
-
-        if (prodErr || !product) {
-          return NextResponse.json({ error: `Sản phẩm không tồn tại trong hệ thống` }, { status: 400 });
-        }
-
-        if (product.stock < item.quantity || product.status === 'out_of_stock') {
-          return NextResponse.json({ error: `Sản phẩm "${product.name}" đã hết hàng hoặc không đủ tồn kho` }, { status: 400 });
-        }
-
-        // Ghi đè đơn giá từ database để chống Client tự thay đổi giá sản phẩm
-        item.unit_price = product.ai_price;
-        computedSubtotal += product.ai_price * item.quantity;
-      }
-    } else {
-      return NextResponse.json({ error: 'Đơn hàng phải chứa ít nhất 1 sản phẩm' }, { status: 400 });
+    sql = await getDbClient();
+    if (!sql) {
+      await logSecurityEvent(req, currentUserId, '/api/orders', 'POST', 500, Date.now() - startTime);
+      return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
     }
 
-    // 2. Xác thực Voucher (nếu có voucher_id) và tính toán discount
     let discount = 0;
     const voucherId = orderData.voucher_id || data.voucher_id;
+    let computedSubtotal = 0;
+    const productsToUpdate: { id: string; quantity: number }[] = [];
 
-    if (voucherId) {
-      // Kiểm tra xem khách hàng có sở hữu voucher này và chưa sử dụng không
-      const { data: userVoucher, error: uvErr } = await supabase
-        .from('user_vouchers')
-        .select('*, voucher:vouchers(*)')
-        .eq('user_id', userId)
-        .eq('voucher_id', voucherId)
-        .maybeSingle();
+    // Bắt đầu database transaction
+    try {
+      await sql.begin(async sql => {
+        // 1. Tính toán lại subtotal từ database và kiểm tra tồn kho sản phẩm
+        if (orderItemData && orderItemData.length > 0) {
+          for (const item of orderItemData) {
+            const products = await sql`
+              SELECT id, name, stock, status, ai_price::numeric as ai_price 
+              FROM products WHERE id = ${item.product_id}
+            `;
 
-      if (uvErr || !userVoucher) {
-        return NextResponse.json({ error: 'Bạn không sở hữu voucher này hoặc voucher không hợp lệ' }, { status: 400 });
-      }
+            if (products.length === 0) {
+              throw new Error(`Sản phẩm với ID ${item.product_id} không tồn tại trong hệ thống`);
+            }
+            const product = products[0];
 
-      if (userVoucher.used_at) {
-        return NextResponse.json({ error: 'Voucher này đã được sử dụng trước đó' }, { status: 400 });
-      }
+            if (product.stock < item.quantity || product.status === 'out_of_stock') {
+              throw new Error(`Sản phẩm "${product.name}" đã hết hàng hoặc không đủ tồn kho`);
+            }
 
-      const voucher = userVoucher.voucher;
-      if (!voucher) {
-        return NextResponse.json({ error: 'Thông tin voucher không tồn tại trên hệ thống' }, { status: 400 });
-      }
+            // Ghi đè đơn giá từ database để chống Client tự thay đổi giá sản phẩm
+            item.unit_price = Number(product.ai_price);
+            computedSubtotal += Number(product.ai_price) * item.quantity;
+            productsToUpdate.push({ id: item.product_id, quantity: item.quantity });
+          }
+        } else {
+          throw new Error('Đơn hàng phải chứa ít nhất 1 sản phẩm');
+        }
 
-      // Kiểm tra hạn sử dụng của voucher
-      if (voucher.valid_until && new Date(voucher.valid_until).getTime() < Date.now()) {
-        return NextResponse.json({ error: 'Voucher này đã hết hạn sử dụng' }, { status: 400 });
-      }
-      if (voucher.valid_from && new Date(voucher.valid_from).getTime() > Date.now()) {
-        return NextResponse.json({ error: 'Voucher chưa đến thời gian áp dụng' }, { status: 400 });
-      }
+        // 2. Xác thực Voucher (nếu có voucher_id) và tính toán discount
+        if (voucherId) {
+          const userVouchers = await sql`
+            SELECT uv.used_at, v.discount_type, v.discount_value::numeric, v.max_discount::numeric, v.min_order::numeric, v.valid_until, v.valid_from, v.store_id
+            FROM user_vouchers uv
+            JOIN vouchers v ON uv.voucher_id = v.id
+            WHERE uv.user_id = ${userId} AND uv.voucher_id = ${voucherId}
+          `;
 
-      // Kiểm tra điều kiện đơn hàng tối thiểu
-      const minOrder = voucher.min_order || 0;
-      if (computedSubtotal < minOrder) {
-        return NextResponse.json({ error: `Đơn hàng tối thiểu để dùng voucher này là ${minOrder.toLocaleString('vi-VN')}đ` }, { status: 400 });
-      }
+          if (userVouchers.length === 0) {
+            throw new Error('Bạn không sở hữu voucher này hoặc voucher không hợp lệ');
+          }
 
-      // Kiểm tra xem voucher có áp dụng cho đúng store của đơn hàng không
-      if (voucher.store_id && voucher.store_id !== orderData.store_id) {
-        return NextResponse.json({ error: 'Voucher không áp dụng cho cửa hàng này' }, { status: 400 });
-      }
+          const uv = userVouchers[0];
+          if (uv.used_at) {
+            throw new Error('Voucher này đã được sử dụng trước đó');
+          }
 
-      // Tính toán giá trị giảm giá thực tế
-      if (voucher.discount_type === 'percentage') {
-        const pctDiscount = Math.round((computedSubtotal * voucher.discount_value) / 100);
-        discount = voucher.max_discount ? Math.min(pctDiscount, voucher.max_discount) : pctDiscount;
-      } else if (voucher.discount_type === 'fixed') {
-        discount = voucher.discount_value;
-      }
+          // Kiểm tra hạn sử dụng của voucher
+          if (uv.valid_until && new Date(uv.valid_until).getTime() < Date.now()) {
+            throw new Error('Voucher này đã hết hạn sử dụng');
+          }
+          if (uv.valid_from && new Date(uv.valid_from).getTime() > Date.now()) {
+            throw new Error('Voucher chưa đến thời gian áp dụng');
+          }
 
-      discount = Math.min(discount, computedSubtotal); // Giới hạn discount không vượt quá subtotal
-    }
+          // Kiểm tra điều kiện đơn hàng tối thiểu
+          const minOrder = Number(uv.min_order || 0);
+          if (computedSubtotal < minOrder) {
+            throw new Error(`Đơn hàng tối thiểu để dùng voucher này là ${minOrder.toLocaleString('vi-VN')}đ`);
+          }
 
-    // Thiết lập các chi phí cố định và tổng tiền thanh toán an toàn
-    const deliveryFee = orderData.delivery_method === 'pickup' ? 0 : 5000;
-    const serviceFee = 2000;
-    const total = Math.max(0, computedSubtotal + deliveryFee + serviceFee - discount);
+          // Kiểm tra xem voucher có áp dụng cho đúng store của đơn hàng không
+          if (uv.store_id && uv.store_id !== orderData.store_id) {
+            throw new Error('Voucher không áp dụng cho cửa hàng này');
+          }
 
-    // Ghi đè dữ liệu tính toán từ Backend để lưu vào database
-    orderData.subtotal = computedSubtotal;
-    orderData.delivery_fee = deliveryFee;
-    orderData.service_fee = serviceFee;
-    orderData.discount = discount;
-    orderData.total = total;
+          // Tính toán giá trị giảm giá thực tế
+          if (uv.discount_type === 'percentage') {
+            const pctDiscount = Math.round((computedSubtotal * Number(uv.discount_value)) / 100);
+            discount = uv.max_discount ? Math.min(pctDiscount, Number(uv.max_discount)) : pctDiscount;
+          } else if (uv.discount_type === 'fixed') {
+            discount = Number(uv.discount_value);
+          }
 
-    // 3. Nếu thanh toán qua ví, kiểm tra số dư ví khách hàng
-    if (paymentMethod === 'wallet') {
-      const { data: user, error: userErr } = await supabase
-        .from('users')
-        .select('wallet_balance')
-        .eq('id', userId)
-        .single();
+          discount = Math.min(discount, computedSubtotal); // Giới hạn discount không vượt quá subtotal
+        }
 
-      if (userErr || !user) {
-        return NextResponse.json({ error: 'Không thể xác thực thông tin tài khoản người dùng' }, { status: 400 });
-      }
+        // Thiết lập các chi phí cố định và tổng tiền thanh toán an toàn
+        const deliveryFee = orderData.delivery_method === 'pickup' ? 0 : 5000;
+        const serviceFee = 2000;
+        const total = Math.max(0, computedSubtotal + deliveryFee + serviceFee - discount);
 
-      if ((user.wallet_balance || 0) < total) {
-        return NextResponse.json({ error: 'Số dư ví FRESH không đủ để thực hiện thanh toán đơn hàng này' }, { status: 400 });
-      }
+        // Ghi đè dữ liệu tính toán từ Backend để lưu vào database
+        orderData.subtotal = computedSubtotal;
+        orderData.delivery_fee = deliveryFee;
+        orderData.service_fee = serviceFee;
+        orderData.discount = discount;
+        orderData.total = total;
 
-      // Trừ tiền ví của khách hàng
-      const newBalance = user.wallet_balance - total;
-      const { error: balanceErr } = await supabase
-        .from('users')
-        .update({ wallet_balance: newBalance })
-        .eq('id', userId);
+        // 3. Nếu thanh toán qua ví, trừ tiền ví khách hàng atomic
+        if (paymentMethod === 'wallet') {
+          const userRows = await sql`
+            SELECT COALESCE(wallet_balance, 0)::numeric as wallet_balance 
+            FROM users WHERE id = ${userId}
+          `;
 
-      if (balanceErr) return handleError(balanceErr);
+          if (userRows.length === 0) {
+            throw new Error('Không thể xác thực thông tin tài khoản người dùng');
+          }
+          const userBalance = Number(userRows[0].wallet_balance);
 
-      // Tạo bản ghi giao dịch (transaction) ví cho khách hàng
-      const { error: txErr } = await supabase.from('transactions').insert({
-        id: crypto.randomUUID(),
-        user_id: userId,
-        type: 'payment',
-        amount: -total,
-        date: now,
-        status: 'completed',
-        description: `Thanh toán đơn hàng #${id.substring(0, 8)}`,
-        payment_method: 'wallet'
+          if (userBalance < total) {
+            throw new Error('Số dư ví FRESH không đủ để thực hiện thanh toán đơn hàng này');
+          }
+
+          // Trừ tiền ví của khách hàng atomic
+          const walletUpdate = await sql`
+            UPDATE users 
+            SET wallet_balance = COALESCE(wallet_balance, 0) - ${total} 
+            WHERE id = ${userId} AND COALESCE(wallet_balance, 0) >= ${total}
+            RETURNING wallet_balance
+          `;
+          if (walletUpdate.length === 0) {
+            throw new Error('Số dư ví FRESH thay đổi hoặc không đủ, vui lòng đặt hàng lại');
+          }
+
+          // Tạo bản ghi giao dịch (transaction) ví cho khách hàng
+          const txRecord = {
+            id: crypto.randomUUID(),
+            user_id: userId,
+            type: 'payment',
+            amount: -total,
+            date: now,
+            status: 'completed',
+            description: `Thanh toán đơn hàng #${id.substring(0, 8)}`,
+            payment_method: 'wallet'
+          };
+          await sql`
+            INSERT INTO transactions ${sql(txRecord, 'id', 'user_id', 'type', 'amount', 'date', 'status', 'description', 'payment_method')}
+          `;
+        }
+
+        // 4. Cập nhật số lượng sản phẩm (stock) trong kho atomic
+        for (const item of productsToUpdate) {
+          const stockUpdate = await sql`
+            UPDATE products 
+            SET stock = stock - ${item.quantity},
+                status = CASE WHEN stock - ${item.quantity} = 0 THEN 'out_of_stock'::text ELSE 'live'::text END
+            WHERE id = ${item.id} AND stock >= ${item.quantity}
+            RETURNING stock
+          `;
+          if (stockUpdate.length === 0) {
+            throw new Error('Một hoặc nhiều sản phẩm thay đổi số lượng tồn kho hoặc đã hết hàng, vui lòng thử lại');
+          }
+        }
+
+        // 5. Tạo đơn hàng (Order)
+        const dbOrder = {
+          id,
+          user_id: userId,
+          store_id: orderData.store_id || null,
+          status: 'pending',
+          payment_method: orderData.payment_method,
+          delivery_method: orderData.delivery_method,
+          delivery_address: orderData.delivery_address || null,
+          delivery_notes: orderData.delivery_notes || null,
+          subtotal: orderData.subtotal,
+          delivery_fee: orderData.delivery_fee,
+          service_fee: orderData.service_fee,
+          discount: orderData.discount,
+          total: orderData.total,
+          co2_saved: orderData.co2_saved || 0,
+          points_earned: orderData.points_earned || 0,
+          voucher_id: orderData.voucher_id || null,
+          created_at: now,
+          estimated_delivery: new Date(Date.now() + 20 * 60000).toISOString()
+        };
+
+        await sql`
+          INSERT INTO orders ${sql(dbOrder, 'id', 'user_id', 'store_id', 'status', 'payment_method', 'delivery_method', 'delivery_address', 'delivery_notes', 'subtotal', 'delivery_fee', 'service_fee', 'discount', 'total', 'co2_saved', 'points_earned', 'voucher_id', 'created_at', 'estimated_delivery')}
+        `;
+
+        // 6. Tạo các sản phẩm trong đơn hàng (Order Items)
+        if (orderItemData?.length) {
+          const itemsToInsert = orderItemData.map((item: any) => ({
+            order_id: id,
+            product_id: item.product_id,
+            product_name: item.product_name || 'Sản phẩm giải cứu',
+            quantity: item.quantity,
+            unit_price: item.unit_price
+          }));
+          await sql`
+            INSERT INTO order_items ${sql(itemsToInsert, 'order_id', 'product_id', 'product_name', 'quantity', 'unit_price')}
+          `;
+        }
+
+        // 7. Cập nhật trạng thái voucher đã sử dụng trong user_vouchers (Đề phòng Double Spending)
+        if (voucherId) {
+          await sql`
+            UPDATE user_vouchers 
+            SET used_at = ${now}, order_id = ${id} 
+            WHERE user_id = ${userId} AND voucher_id = ${voucherId}
+          `;
+        }
+
+        // 8. Tạo tracking steps
+        const trackingTime = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        const trackingSteps = [
+          { order_id: id, status: 'pending', time: trackingTime, completed: true },
+          ...statusFlow.slice(1).map(s => ({
+            order_id: id,
+            status: s,
+            time: '',
+            completed: false
+          }))
+        ];
+        await sql`
+          INSERT INTO tracking_steps ${sql(trackingSteps, 'order_id', 'status', 'time', 'completed')}
+        `;
       });
-
-      if (txErr) return handleError(txErr);
+    } catch (dbErr: any) {
+      await logSecurityEvent(req, currentUserId, '/api/orders', 'POST', 400, Date.now() - startTime);
+      return NextResponse.json({ error: dbErr.message || 'Đặt hàng thất bại do lỗi cơ sở dữ liệu' }, { status: 400 });
     }
 
-    // 4. Cập nhật số lượng sản phẩm (stock) trong kho
-    if (orderItemData && orderItemData.length > 0) {
-      for (const item of orderItemData) {
-        const { data: product } = await supabase
-          .from('products')
-          .select('stock')
-          .eq('id', item.product_id)
-          .single();
-
-        const currentStock = product?.stock || 0;
-        const newStock = Math.max(0, currentStock - item.quantity);
-        
-        await supabase
-          .from('products')
-          .update({ 
-            stock: newStock,
-            status: newStock === 0 ? 'out_of_stock' : 'live'
-          })
-          .eq('id', item.product_id);
-      }
-    }
-
-    // 5. Tạo đơn hàng (Order)
-    const { error: orderErr } = await supabase.from('orders').insert({
-      ...orderData,
-      id,
-      user_id: userId,
-      status: 'pending',
-      created_at: now,
-      estimated_delivery: new Date(Date.now() + 20 * 60000).toISOString(),
-    });
-    if (orderErr) return handleError(orderErr);
-
-    // 6. Tạo các sản phẩm trong đơn hàng (Order Items)
-    if (orderItemData?.length) {
-      const { error: itemsErr } = await supabase.from('order_items').insert(
-        orderItemData.map((item: any) => ({ ...item, order_id: id }))
-      );
-      if (itemsErr) return handleError(itemsErr);
-    }
-
-    // 7. Cập nhật trạng thái voucher đã sử dụng trong user_vouchers (Đề phòng Double Spending)
-    if (voucherId) {
-      const { error: uvUpdErr } = await supabase
-        .from('user_vouchers')
-        .update({ used_at: now, order_id: id })
-        .eq('user_id', userId)
-        .eq('voucher_id', voucherId);
-
-      if (uvUpdErr) return handleError(uvUpdErr);
-    }
-
-    // 8. Tạo tracking steps
-    const time = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-    const { error: stepsErr } = await supabase.from('tracking_steps').insert([
-      { order_id: id, status: 'pending', time, completed: true },
-      ...statusFlow.slice(1).map(s => ({ order_id: id, status: s, time: '', completed: false })),
-    ]);
-    if (stepsErr) return handleError(stepsErr);
-
+    // Truy xuất thông tin an toàn trả về Client qua Supabase client
     const { data: order } = await supabase.from('orders').select('*').eq('id', id).single();
     const { data: items } = await supabase.from('order_items').select('*').eq('order_id', id);
     const { data: steps } = await supabase.from('tracking_steps').select('*').eq('order_id', id);
@@ -286,14 +329,14 @@ export async function POST(req: Request) {
       }));
       
       const co2Saved = orderData.co2_saved || (3.6 * (items?.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0) || 1));
-      const pointsEarned = orderData.points_earned || Math.floor(total / 1000);
+      const pointsEarned = orderData.points_earned || Math.floor(orderData.total / 1000);
 
       sendOrderConfirmationEmail(
         user.email,
         user.name || 'Thành viên',
         id.substring(0, 8).toUpperCase(),
         emailItems,
-        total,
+        orderData.total,
         co2Saved,
         pointsEarned
       ).catch(err => {
@@ -303,8 +346,10 @@ export async function POST(req: Request) {
 
     await logSecurityEvent(req, currentUserId, '/api/orders', 'POST', 201, Date.now() - startTime);
     return NextResponse.json(toCamelCase({ ...order, items: items || [], trackingSteps: steps || [] }), { status: 201 });
-  } catch (err) {
+  } catch (err: any) {
     await logSecurityEvent(req, currentUserId, '/api/orders', 'POST', 500, Date.now() - startTime);
-    return handleError(err);
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
+  } finally {
+    if (sql) await sql.end();
   }
 }

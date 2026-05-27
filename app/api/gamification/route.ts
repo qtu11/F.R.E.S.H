@@ -52,6 +52,16 @@ export async function GET(req: Request) {
   } catch (err) { return handleError(err); }
 }
 
+import { loadConfig, getConnectionString } from '@/lib/supabase/config';
+import postgres from 'postgres';
+
+async function getDbClient() {
+  const config = loadConfig();
+  const connStr = getConnectionString(config);
+  if (!connStr) return null;
+  return postgres(connStr, { max: 1 });
+}
+
 export async function POST(req: Request) {
   try {
     const auth = await requireRole('customer');
@@ -76,21 +86,54 @@ export async function POST(req: Request) {
       if (!mission) {
         return NextResponse.json({ error: 'Mission not found' }, { status: 400 });
       }
-      await supabase.from('user_missions').update({ claimed: true }).eq('user_id', body.userId).eq('mission_id', body.missionId);
-      
-      // Khắc phục lỗi RPC increment: Đọc điểm hiện tại và cộng dồn qua update
-      const { data: user } = await supabase.from('users').select('green_points').eq('id', body.userId).single();
-      const currentPoints = user?.green_points || 0;
-      const newPoints = currentPoints + mission.points_reward;
-      
-      await supabase.from('users').update({ green_points: newPoints }).eq('id', body.userId);
-      await supabase.from('points_history').insert({
-        user_id: body.userId, points: mission.points_reward, type: 'earned',
-        source: `mission:${mission.title}`, description: `Completed mission: ${mission.title}`, created_at: new Date().toISOString(),
-      });
+
+      const sql = await getDbClient();
+      if (!sql) return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
+
+      try {
+        await sql.begin(async sql => {
+          const updateRes = await sql`
+            UPDATE user_missions 
+            SET claimed = true 
+            WHERE user_id = ${body.userId} AND mission_id = ${body.missionId} AND completed = true AND claimed = false
+            RETURNING id
+          `;
+          if (updateRes.length === 0) {
+            throw new Error('Nhiệm vụ chưa hoàn thành hoặc đã được nhận thưởng từ trước');
+          }
+
+          await sql`
+            UPDATE users 
+            SET green_points = COALESCE(green_points, 0) + ${mission.points_reward} 
+            WHERE id = ${body.userId}
+          `;
+
+          await sql`
+            INSERT INTO points_history (id, user_id, points, type, source, description, created_at)
+            VALUES (
+              ${crypto.randomUUID()},
+              ${body.userId}, 
+              ${mission.points_reward}, 
+              'earned',
+              ${`mission:${mission.title}`}, 
+              ${`Completed mission: ${mission.title}`}, 
+              NOW()
+            )
+          `;
+        });
+      } catch (dbErr: any) {
+        return NextResponse.json({ error: dbErr.message || 'Giao dịch thất bại' }, { status: 400 });
+      } finally {
+        await sql.end();
+      }
+
       return NextResponse.json({ success: true });
     }
     if (body.action === 'update_progress') {
+      // Chỉ cho phép admin tự cập nhật tiến trình để chống client cheat điểm
+      if (auth.user.role !== 'admin') {
+        return NextResponse.json({ error: 'Unauthorized: Only admins can trigger manual progress updates' }, { status: 403 });
+      }
       const { data: existing } = await supabase.from('user_missions').select('*')
         .eq('user_id', body.userId).eq('mission_id', body.missionId).single();
       if (existing) {

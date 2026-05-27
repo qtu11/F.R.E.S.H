@@ -32,13 +32,21 @@ export async function GET(req: Request) {
   } catch (err) { return handleError(err); }
 }
 
+import { loadConfig, getConnectionString } from '@/lib/supabase/config';
+import postgres from 'postgres';
+
+async function getDbClient() {
+  const config = loadConfig();
+  const connStr = getConnectionString(config);
+  if (!connStr) return null;
+  return postgres(connStr, { max: 1 });
+}
+
 export async function POST(req: Request) {
+  let sql: postgres.Sql | null = null;
   try {
     const auth = await requireAuth();
     if ('status' in auth) return auth;
-
-    const supabase = getServerClient();
-    if (!supabase) return NextResponse.json({ error: 'Not configured' }, { status: 503 });
 
     const body = toSnakeCase(await req.json());
     
@@ -50,49 +58,108 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Số tiền nạp phải lớn hơn 0' }, { status: 400 });
     }
 
-    // Lấy số dư ví hiện tại
-    const { data: user, error: userErr } = await supabase.from('users').select('wallet_balance, name, email').eq('id', targetUserId).single();
-    if (userErr) return handleError(userErr);
+    sql = await getDbClient();
+    if (!sql) return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
+
+    const newTxId = crypto.randomUUID();
+    let finalBalance = 0;
+    let userEmail = '';
+    let userName = '';
+
+    // Lấy thông tin user hiện tại
+    const userRows = await sql`
+      SELECT name, email, COALESCE(wallet_balance, 0)::numeric as wallet_balance 
+      FROM users WHERE id = ${targetUserId}
+    `;
+    if (userRows.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    const user = userRows[0];
+    userEmail = user.email || '';
+    userName = user.name || 'Thành viên';
 
     if (body.type === 'withdrawal') {
       const withdrawAmount = Math.abs(body.amount);
-      if ((user?.wallet_balance || 0) < withdrawAmount) {
-        return NextResponse.json({ error: 'Số dư ví FRESH không đủ để thực hiện rút tiền' }, { status: 400 });
-      }
-      // Đảm bảo amount lưu vào db luôn là số âm cho withdrawal
       body.amount = -withdrawAmount;
     }
 
-    const newTx = { 
-      ...body, 
-      id: crypto.randomUUID(),
-      user_id: targetUserId
-    };
-    
-    const { error: txErr } = await supabase.from('transactions').insert(newTx);
-    if (txErr) return handleError(txErr);
-
-    if (user) {
-      const newBalance = (user.wallet_balance || 0) + body.amount;
-      const { error: updateErr } = await supabase.from('users').update({ wallet_balance: newBalance }).eq('id', targetUserId);
-      if (updateErr) return handleError(updateErr);
-
-      // Gửi email thông báo nạp/rút tiền thành công
-      if (user.email) {
-        if (body.type === 'topup' && body.amount > 0) {
-          sendDepositSuccessEmail(user.email, user.name || 'Thành viên', body.amount, newTx.id, newBalance).catch(err => {
-            console.error('Failed to send deposit email:', err);
-          });
-        } else if (body.type === 'withdrawal' && body.amount < 0) {
-          sendWithdrawalSuccessEmail(user.email, user.name || 'Thành viên', Math.abs(body.amount), newTx.id, newBalance).catch(err => {
-            console.error('Failed to send withdrawal email:', err);
-          });
+    // Bắt đầu transaction
+    try {
+      await sql.begin(async sql => {
+        // Cập nhật số dư ví atomic
+        if (body.type === 'withdrawal') {
+          const withdrawAmount = Math.abs(body.amount);
+          const updateRes = await sql`
+            UPDATE users 
+            SET wallet_balance = COALESCE(wallet_balance, 0) - ${withdrawAmount} 
+            WHERE id = ${targetUserId} AND COALESCE(wallet_balance, 0) >= ${withdrawAmount}
+            RETURNING wallet_balance
+          `;
+          if (updateRes.length === 0) {
+            throw new Error('Số dư ví FRESH không đủ để thực hiện rút tiền');
+          }
+          finalBalance = Number(updateRes[0].wallet_balance);
+        } else {
+          // topup
+          const updateRes = await sql`
+            UPDATE users 
+            SET wallet_balance = COALESCE(wallet_balance, 0) + ${body.amount} 
+            WHERE id = ${targetUserId}
+            RETURNING wallet_balance
+          `;
+          finalBalance = Number(updateRes[0].wallet_balance);
         }
+
+        // Tạo bản ghi giao dịch
+        const newTx = {
+          id: newTxId,
+          user_id: targetUserId,
+          type: body.type,
+          amount: body.amount,
+          date: new Date().toISOString(),
+          status: 'completed',
+          description: body.description || (body.type === 'topup' ? 'Nạp tiền vào ví FRESH' : 'Rút tiền từ ví FRESH'),
+          payment_method: body.payment_method || 'bank_transfer'
+        };
+
+        await sql`
+          INSERT INTO transactions ${sql(newTx, 'id', 'user_id', 'type', 'amount', 'date', 'status', 'description', 'payment_method')}
+        `;
+      });
+    } catch (dbErr: any) {
+      return NextResponse.json({ error: dbErr.message || 'Giao dịch thất bại' }, { status: 400 });
+    }
+
+    const completedTx = {
+      id: newTxId,
+      userId: targetUserId,
+      type: body.type,
+      amount: body.amount,
+      date: new Date().toISOString(),
+      status: 'completed',
+      description: body.description || (body.type === 'topup' ? 'Nạp tiền vào ví FRESH' : 'Rút tiền từ ví FRESH'),
+      paymentMethod: body.payment_method || 'bank_transfer'
+    };
+
+    // Gửi email thông báo nạp/rút tiền thành công
+    if (userEmail) {
+      if (body.type === 'topup' && body.amount > 0) {
+        sendDepositSuccessEmail(userEmail, userName, body.amount, newTxId, finalBalance).catch(err => {
+          console.error('Failed to send deposit email:', err);
+        });
+      } else if (body.type === 'withdrawal' && body.amount < 0) {
+        sendWithdrawalSuccessEmail(userEmail, userName, Math.abs(body.amount), newTxId, finalBalance).catch(err => {
+          console.error('Failed to send withdrawal email:', err);
+        });
       }
     }
 
-    return NextResponse.json(toCamelCase(newTx), { status: 201 });
-  } catch (err) { return handleError(err); }
+    return NextResponse.json(completedTx, { status: 201 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
+  } finally {
+    if (sql) await sql.end();
+  }
 }
 
 export async function DELETE(req: Request) {

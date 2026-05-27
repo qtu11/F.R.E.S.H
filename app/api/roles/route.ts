@@ -74,6 +74,9 @@ function getRoleUIProps(roleName: string, index: number) {
 
 export async function GET() {
   try {
+    const auth = await requireRole('admin');
+    if ('status' in auth) return auth;
+
     const supabase = getServerClient();
     if (!supabase) return NextResponse.json({ error: 'Not configured' }, { status: 503 });
 
