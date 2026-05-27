@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { handleError } from '@/lib/supabase/helpers';
 import { toCamelCase, toSnakeCase } from '@/lib/supabase/transform';
-import { requireRole, requireAnyRole } from '@/lib/auth/middleware';
+import { requireRole, requireAnyRole, requireAuth } from '@/lib/auth/middleware';
 
 export async function GET(req: Request) {
   try {
@@ -12,6 +12,15 @@ export async function GET(req: Request) {
     const userId = searchParams.get('userId');
     const storeId = searchParams.get('storeId');
     if (userId) {
+      // Yêu cầu đăng nhập khi truy cập ví voucher cá nhân
+      const auth = await requireAuth();
+      if ('status' in auth) return auth;
+
+      // IDOR check: Chỉ admin hoặc chính chủ mới được xem ví voucher
+      if (auth.user.role !== 'admin' && auth.user.userId !== userId) {
+        return NextResponse.json({ error: 'Unauthorized: IDOR detected' }, { status: 403 });
+      }
+
       const { data: userVouchers, error } = await supabase
         .from('user_vouchers').select('*, voucher:vouchers(*)').eq('user_id', userId);
       if (error) return handleError(error);
