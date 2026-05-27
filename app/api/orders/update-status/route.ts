@@ -96,17 +96,27 @@ export async function PATCH(req: Request) {
       // Cập nhật ví đối tác (Cộng tiền doanh thu)
       let partnerUserId = null;
 
-      // Thử tìm partner theo bảng partners
-      const { data: partnerRec } = await supabase
-        .from('partners')
-        .select('*')
+      // Tìm partner user_id qua organization_branches → organization_members
+      const { data: branch } = await supabase
+        .from('organization_branches')
+        .select('organization_id')
         .eq('store_id', order.store_id)
         .maybeSingle();
 
-      if (partnerRec && partnerRec.user_id) {
-        partnerUserId = partnerRec.user_id;
-      } else {
-        // Tìm qua store name và user name
+      if (branch?.organization_id) {
+        const { data: owner } = await supabase
+          .from('organizations')
+          .select('owner_id')
+          .eq('id', branch.organization_id)
+          .single();
+
+        if (owner) {
+          partnerUserId = owner.owner_id;
+        }
+      }
+
+      if (!partnerUserId) {
+        // Fallback: tìm qua store name và user name
         const { data: store } = await supabase
           .from('stores')
           .select('name')

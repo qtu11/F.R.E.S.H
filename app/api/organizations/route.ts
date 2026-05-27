@@ -12,7 +12,11 @@ export async function GET() {
     const supabase = getServerClient();
     if (!supabase) return NextResponse.json({ error: 'Not configured' }, { status: 503 });
 
-    const { data, error } = await supabase.from('partners').select('*').eq('status', 'pending');
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('*, owner:owner_id(name, email)')
+      .order('created_at', { ascending: false });
+
     if (error) return handleError(error);
     return NextResponse.json(toCamelCase(data || []));
   } catch (err) { return handleError(err); }

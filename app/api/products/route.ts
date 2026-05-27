@@ -78,14 +78,29 @@ export async function POST(req: Request) {
     if (rawBody.mfgDate) nutrition.mfgDate = rawBody.mfgDate;
     if (rawBody.expiryDate) nutrition.expiryDate = rawBody.expiryDate;
 
+    // Auto-resolve store_id for partner users if missing or empty
+    let storeId = rawBody.storeId || rawBody.store_id;
+    if (!storeId && auth.user.role === 'partner') {
+      const { data: user } = await supabase.from('users').select('organization_id').eq('id', auth.user.userId).maybeSingle();
+      if (user?.organization_id) {
+        const { data: branch } = await supabase.from('organization_branches').select('store_id').eq('organization_id', user.organization_id).maybeSingle();
+        storeId = branch?.store_id;
+      }
+    }
+    if (!storeId) {
+      return NextResponse.json({ error: 'storeId is required' }, { status: 400 });
+    }
+
     const cleanBody = {
       ...rawBody,
+      store_id: storeId,
       nutrition: JSON.stringify(nutrition)
     };
     delete cleanBody.description;
     delete cleanBody.details;
     delete cleanBody.mfgDate;
     delete cleanBody.expiryDate;
+    delete cleanBody.storeId;
 
     const data = toSnakeCase(cleanBody);
     const newProduct = { ...data, id: crypto.randomUUID(), created_at: new Date().toISOString() };

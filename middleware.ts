@@ -8,6 +8,7 @@ const PUBLIC_PATHS = [
   '/customer/login',
   '/customer/register',
   '/partner/login',
+  '/partner/register',
   '/api/auth/login',
   '/api/auth/register',
   '/api/auth/logout',

@@ -7,7 +7,7 @@ import {
   ArrowLeft, Leaf, Award, TrendingUp, ShieldCheck, MapPin, Users,
   Target, AlertTriangle, Coins, DollarSign, LineChart, Sparkles,
   BookOpen, ChevronRight, BarChart3, Clock, HelpCircle, FileText,
-  Briefcase, Globe, Cpu, ArrowUpRight
+  Briefcase, Globe, Cpu, ArrowUpRight, Activity, GitBranch, LeafyGreen, Swords
 } from 'lucide-react';
 import { useGlobal } from '@/app/providers';
 
@@ -15,81 +15,90 @@ import { startupTranslations } from './translations';
 
 // --- DYNAMIC DATA HELPERS ---
 const getTeamMembers = (lang: 'vi' | 'en') => [
-  { name: 'Trương Thị Anh Thư', mssv: '225086464', email: 'thutta22@uef.edu.vn', role: lang === 'vi' ? 'CEO & Founder - Quản trị Chiến lược & Đàm phán B2B' : 'CEO & Founder - Strategic Management & B2B Negotiation' },
-  { name: 'Lương Hoàng Bửu Ngọc', mssv: '255146242', email: 'ngoclhb25@uef.edu.vn', role: lang === 'vi' ? 'COO - Vận hành chuỗi & Kiểm soát chất lượng thực phẩm' : 'COO - Supply Chain Operations & Food Quality Control' },
-  { name: 'Nguyễn Thị Thanh Hằng', mssv: '235087692', email: 'hangntt23@uef.edu.vn', role: lang === 'vi' ? 'CMO - Phát triển cộng đồng & Truyền thông Gen Z' : 'CMO - Community Development & Gen Z Marketing' },
-  { name: 'Nguyễn Quang Tú', mssv: '255015965', email: 'tunq25@uef.edu.vn', role: lang === 'vi' ? 'CTO - Kiến trúc sư Thuật toán AI & Tích hợp API' : 'CTO - AI Algorithm Architect & API Integration' },
+  { name: 'Trương Thị Anh Thư', mssv: '225086464', email: 'thutta22@uef.edu.vn', role: lang === 'vi' ? 'CEO & Product Lead - Quản trị Chiến lược & Quan hệ nhà đầu tư' : 'CEO & Product Lead - Strategic Management & Investor Relations' },
+  { name: 'Lương Hoàng Bửu Ngọc', mssv: '255146242', email: 'ngoclhb25@uef.edu.vn', role: lang === 'vi' ? 'CMO & Growth Lead - Marketing, Truyền thông & Tăng trưởng' : 'CMO & Growth Lead - Marketing, Communications & Growth' },
+  { name: 'Nguyễn Thị Thanh Hằng', mssv: '235087692', email: 'hangntt23@uef.edu.vn', role: lang === 'vi' ? 'CFO & Operations Lead - Tài chính, Vận hành & Pháp lý' : 'CFO & Operations Lead - Finance, Operations & Legal' },
 ];
 
 const getFinancialProjects = (lang: 'vi' | 'en') => [
   {
     year: '2026',
-    capex: 250000000,
-    opex: 480000000,
-    total: 730000000,
+    revenue: 827820000,
+    expenses: 1016000000,
+    netProfit: -188180000,
+    margin: '-22.7%',
+    partners: 200,
+    mau: 1500,
     details: {
-      dev: lang === 'vi' ? '150,000,000đ (Phát triển App/AI/API)' : '150,000,000 VND (App/AI/API Development)',
-      legal: lang === 'vi' ? '100,000,000đ (Pháp lý & Thương hiệu)' : '100,000,000 VND (Legal & Brand)',
-      server: lang === 'vi' ? '60,000,000đ (Server/IT)' : '60,000,000 VND (Server/IT)',
-      staff: lang === 'vi' ? '280,000,000đ (Nhân sự cốt lõi)' : '280,000,000 VND (Core Staff)',
-      marketing: lang === 'vi' ? '100,000,000đ (Chiến dịch Pilot)' : '100,000,000 VND (Pilot Campaign)',
-      reserve: lang === 'vi' ? '40,000,000đ (Dự phòng)' : '40,000,000 VND (Reserve)'
+      staff: lang === 'vi' ? '540,000,000đ (Nhân sự)' : '540,000,000 VND (Staff)',
+      tech: lang === 'vi' ? '48,000,000đ (Hosting/API/Infra)' : '48,000,000 VND (Hosting/API/Infra)',
+      marketing: lang === 'vi' ? '300,000,000đ (Marketing & Acquisition)' : '300,000,000 VND (Marketing & Acquisition)',
+      operations: lang === 'vi' ? '120,000,000đ (Văn phòng/Pháp lý)' : '120,000,000 VND (Office/Legal)',
+      loan: lang === 'vi' ? '8,000,000đ (Lãi vay)' : '8,000,000 VND (Loan Interest)'
     }
   },
   {
     year: '2027',
-    capex: 100000000,
-    opex: 960000000,
-    total: 1060000000,
+    revenue: 2603460000,
+    expenses: 1748000000,
+    netProfit: 684368000,
+    margin: '26.3%',
+    partners: 600,
+    mau: 8000,
     details: {
-      dev: lang === 'vi' ? '80,000,000đ (Nâng cấp hệ thống)' : '80,000,000 VND (System Upgrades)',
-      legal: lang === 'vi' ? '20,000,000đ (Bảo hộ & Giấy phép)' : '20,000,000 VND (Patent & Licensing)',
-      server: lang === 'vi' ? '120,000,000đ (Mở rộng hạ tầng)' : '120,000,000 VND (Infrastructure Expansion)',
-      staff: lang === 'vi' ? '540,000,000đ (Mở rộng CSKH)' : '540,000,000 VND (Support Team Expansion)',
-      marketing: lang === 'vi' ? '250,000,000đ (Phủ sóng TP.HCM)' : '250,000,000 VND (HCMC Expansion)',
-      reserve: lang === 'vi' ? '50,000,000đ (Dự phòng)' : '50,000,000 VND (Reserve)'
+      staff: lang === 'vi' ? '960,000,000đ (Nhân sự)' : '960,000,000 VND (Staff)',
+      tech: lang === 'vi' ? '120,000,000đ (Hosting/API/Infra)' : '120,000,000 VND (Hosting/API/Infra)',
+      marketing: lang === 'vi' ? '480,000,000đ (Marketing & Acquisition)' : '480,000,000 VND (Marketing & Acquisition)',
+      operations: lang === 'vi' ? '180,000,000đ (Văn phòng/Pháp lý)' : '180,000,000 VND (Office/Legal)',
+      loan: lang === 'vi' ? '8,000,000đ (Lãi vay)' : '8,000,000 VND (Loan Interest)'
     }
   },
   {
     year: '2028',
-    capex: 300000000,
-    opex: 1800000000,
-    total: 2100000000,
+    revenue: 7008650000,
+    expenses: 3186000000,
+    netProfit: 3058120000,
+    margin: '43.6%',
+    partners: 1500,
+    mau: 28000,
     details: {
-      dev: lang === 'vi' ? '200,000,000đ (AI Dynamic Pricing v2)' : '200,000,000 VND (AI Dynamic Pricing v2)',
-      legal: lang === 'vi' ? '100,000,000đ (Pháp lý liên tỉnh)' : '100,000,000 VND (Inter-provincial Legal)',
-      server: lang === 'vi' ? '250,000,000đ (Cloud Cluster)' : '250,000,000 VND (Cloud Cluster)',
-      staff: lang === 'vi' ? '1,000,000,000đ (Đội ngũ kỹ thuật)' : '1,000,000,000 VND (Engineering Team)',
-      marketing: lang === 'vi' ? '450,000,000đ (Khu vực Miền Nam)' : '450,000,000 VND (Southern Region)',
-      reserve: lang === 'vi' ? '100,000,000đ (Dự phòng)' : '100,000,000 VND (Reserve)'
+      staff: lang === 'vi' ? '1,800,000,000đ (Nhân sự)' : '1,800,000,000 VND (Staff)',
+      tech: lang === 'vi' ? '360,000,000đ (Hosting/API/Infra)' : '360,000,000 VND (Hosting/API/Infra)',
+      marketing: lang === 'vi' ? '720,000,000đ (Marketing & Acquisition)' : '720,000,000 VND (Marketing & Acquisition)',
+      operations: lang === 'vi' ? '300,000,000đ (Văn phòng/Pháp lý)' : '300,000,000 VND (Office/Legal)',
+      loan: lang === 'vi' ? '6,000,000đ (Lãi vay)' : '6,000,000 VND (Loan Interest)'
     }
   },
   {
     year: '2029',
-    capex: 500000000,
-    opex: 3200000000,
-    total: 3700000000,
+    revenue: 17086850000,
+    expenses: 5284000000,
+    netProfit: 9442280000,
+    margin: '55.3%',
+    partners: 3500,
+    mau: 70000,
     details: {
-      dev: lang === 'vi' ? '350,000,000đ (Tích hợp sâu API siêu thị lớn)' : '350,000,000 VND (Deep Enterprise API Integration)',
-      legal: lang === 'vi' ? '150,000,000đ (Thương hiệu Quốc gia)' : '150,000,000 VND (National Brand Registration)',
-      server: lang === 'vi' ? '450,000,000đ (Kiến trúc Microservices)' : '450,000,000 VND (Microservices Architecture)',
-      staff: lang === 'vi' ? '1,800,000,000đ (Mở rộng quy mô nhân sự)' : '1,800,000,000 VND (Scaling Workforce)',
-      marketing: lang === 'vi' ? '750,000,000đ (Truyền thông Toàn quốc)' : '750,000,000 VND (National Marketing Campaigns)',
-      reserve: lang === 'vi' ? '200,000,000đ (Dự phòng)' : '200,000,000 VND (Reserve)'
+      staff: lang === 'vi' ? '3,000,000,000đ (Nhân sự)' : '3,000,000,000 VND (Staff)',
+      tech: lang === 'vi' ? '600,000,000đ (Hosting/API/Infra)' : '600,000,000 VND (Hosting/API/Infra)',
+      marketing: lang === 'vi' ? '1,200,000,000đ (Marketing & Acquisition)' : '1,200,000,000 VND (Marketing & Acquisition)',
+      operations: lang === 'vi' ? '480,000,000đ (Văn phòng/Pháp lý)' : '480,000,000 VND (Office/Legal)',
+      loan: lang === 'vi' ? '4,000,000đ (Lãi vay)' : '4,000,000 VND (Loan Interest)'
     }
   },
   {
     year: '2030',
-    capex: 200000000,
-    opex: 4500000000,
-    total: 4700000000,
+    revenue: 31034600000,
+    expenses: 8220000000,
+    netProfit: 18251680000,
+    margin: '58.8%',
+    partners: 6000,
+    mau: 140000,
     details: {
-      dev: lang === 'vi' ? '150,000,000đ (R&D công nghệ mới)' : '150,000,000 VND (Next-Gen Tech R&D)',
-      legal: lang === 'vi' ? '50,000,000đ (Pháp lý quốc tế)' : '50,000,000 VND (International Legal)',
-      server: lang === 'vi' ? '600,000,000đ (Hạ tầng lưu trữ lớn)' : '600,000,000 VND (Big Data Infrastructure)',
-      staff: lang === 'vi' ? '2,500,000,000đ (Ban điều hành & Nghiên cứu)' : '2,500,000,000 VND (Executive Board & R&D)',
-      marketing: lang === 'vi' ? '1,100,000,000đ (Duy trì vị thế)' : '1,100,000,000 VND (Market Position Maintenance)',
-      reserve: lang === 'vi' ? '300,000,000đ (Dự phòng)' : '300,000,000 VND (Reserve)'
+      staff: lang === 'vi' ? '4,800,000,000đ (Nhân sự)' : '4,800,000,000 VND (Staff)',
+      tech: lang === 'vi' ? '900,000,000đ (Hosting/API/Infra)' : '900,000,000 VND (Hosting/API/Infra)',
+      marketing: lang === 'vi' ? '1,800,000,000đ (Marketing & Acquisition)' : '1,800,000,000 VND (Marketing & Acquisition)',
+      operations: lang === 'vi' ? '720,000,000đ (Văn phòng/Pháp lý)' : '720,000,000 VND (Office/Legal)',
+      loan: lang === 'vi' ? '0đ' : '0 VND'
     }
   }
 ];
@@ -98,8 +107,11 @@ const getSections = (lang: 'vi' | 'en') => [
   { id: 'tong-quan', name: lang === 'vi' ? 'Mô tả & Slogan' : 'Description & Slogan', icon: Sparkles },
   { id: 'su-can-thiet', name: lang === 'vi' ? 'Sự cần thiết & Thực trạng' : 'Necessity & Market Status', icon: AlertTriangle },
   { id: 'tinh-kha-thi', name: lang === 'vi' ? 'Tính khả thi & Vận hành' : 'Feasibility & Operations', icon: Target },
+  { id: 'quy-trinh', name: lang === 'vi' ? 'Quy trình vận hành' : 'Operating Flow', icon: GitBranch },
   { id: 'sanh-tao', name: lang === 'vi' ? 'Độc đáo & Sáng tạo' : 'Uniqueness & AI Pricing', icon: Cpu },
+  { id: 'canh-tranh', name: lang === 'vi' ? 'Phân tích cạnh tranh' : 'Competitive Analysis', icon: Swords },
   { id: 'ke-hoach', name: lang === 'vi' ? 'Kế hoạch & Dự phóng' : 'Plan & Projections', icon: LineChart },
+  { id: 'esg', name: lang === 'vi' ? 'Tác động ESG' : 'ESG Impact', icon: LeafyGreen },
   { id: 'nguon-luc', name: lang === 'vi' ? 'Nguồn lực thực hiện' : 'Resources & Partners', icon: Users },
   { id: 'truyen-thong', name: lang === 'vi' ? 'Kênh truyền thông' : 'Marketing Channels', icon: Briefcase }
 ];
@@ -446,22 +458,58 @@ export default function StartupPitchDeck() {
                 {t('feasibility_intro')}
               </p>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-5 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-slate-950/80 border border-amber-500/20 rounded-2xl p-5 space-y-3">
+                  <div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-400 font-black flex items-center justify-center text-xs">0</div>
+                  <h4 className="font-black text-white text-xs uppercase tracking-wider">{t('phase_0_title')}</h4>
+                  <p className="text-xs text-slate-400 leading-relaxed font-semibold">
+                    {t('phase_0_desc')}
+                  </p>
+                </div>
+                <div className="bg-slate-950/80 border border-emerald-500/20 rounded-2xl p-5 space-y-3">
                   <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-400 font-black flex items-center justify-center text-xs">1</div>
                   <h4 className="font-black text-white text-xs uppercase tracking-wider">{t('phase_1_title')}</h4>
                   <p className="text-xs text-slate-400 leading-relaxed font-semibold">
                     {t('phase_1_desc')}
                   </p>
                 </div>
-
-                <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-5 space-y-3">
+                <div className="bg-slate-950/80 border border-blue-500/20 rounded-2xl p-5 space-y-3">
                   <div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-400 font-black flex items-center justify-center text-xs">2</div>
                   <h4 className="font-black text-white text-xs uppercase tracking-wider">{t('phase_2_title')}</h4>
                   <p className="text-xs text-slate-400 leading-relaxed font-semibold">
                     {t('phase_2_desc')}
                   </p>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          {/* SECTION: QUY TRINH VAN HANH (6-step flow) */}
+          <section id="quy-trinh" className="space-y-6 pt-4">
+            <div className="flex items-center gap-3">
+              <span className="w-2.5 h-6 bg-emerald-500 rounded-full" />
+              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">{t('sec_operating')}</h2>
+            </div>
+
+            <div className="bg-slate-900/40 border border-slate-800/60 rounded-3xl p-6 md:p-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[
+                  { num: '1', title: t('op_step1'), desc: t('op_step1_desc') },
+                  { num: '2', title: t('op_step2'), desc: t('op_step2_desc') },
+                  { num: '3', title: t('op_step3'), desc: t('op_step3_desc') },
+                  { num: '4', title: t('op_step4'), desc: t('op_step4_desc') },
+                  { num: '5', title: t('op_step5'), desc: t('op_step5_desc') },
+                  { num: '6', title: t('op_step6'), desc: t('op_step6_desc') },
+                ].map((step, idx) => (
+                  <div key={idx} className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-5 space-y-2 relative overflow-hidden group hover:border-emerald-500/30 transition-all">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-full blur-xl group-hover:bg-emerald-500/10 transition-colors" />
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-white font-black flex items-center justify-center text-xs shadow-lg shadow-emerald-500/20">
+                      {step.num}
+                    </div>
+                    <h4 className="font-black text-white text-xs uppercase tracking-wider mt-2">{step.title}</h4>
+                    <p className="text-xs text-slate-400 leading-relaxed font-semibold">{step.desc}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </section>
@@ -594,6 +642,65 @@ export default function StartupPitchDeck() {
             </div>
           </section>
 
+          {/* SECTION: CANH TRANH - Positioning Map */}
+          <section id="canh-tranh" className="space-y-6 pt-4">
+            <div className="flex items-center gap-3">
+              <span className="w-2.5 h-6 bg-emerald-500 rounded-full" />
+              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">{t('comp_vs')}</h2>
+            </div>
+
+            <div className="bg-slate-900/40 border border-slate-800/60 rounded-3xl p-6 md:p-8 overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-slate-800">
+                    <th className="text-left py-3 px-3 text-slate-400 font-bold uppercase text-[10px]">{t('comp_vs')}</th>
+                    <th className="text-center py-3 px-3 text-emerald-400 font-black text-[10px] uppercase">{t('comp_transparency')}</th>
+                    <th className="text-center py-3 px-3 text-emerald-400 font-black text-[10px] uppercase">{t('comp_vn_fit')}</th>
+                    <th className="text-center py-3 px-3 text-emerald-400 font-black text-[10px] uppercase">{t('comp_longtail')}</th>
+                    <th className="text-center py-3 px-3 text-emerald-400 font-black text-[10px] uppercase">{t('comp_gamification')}</th>
+                    <th className="text-center py-3 px-3 text-emerald-400 font-black text-[10px] uppercase">{t('comp_ai')}</th>
+                    <th className="text-center py-3 px-2 text-emerald-400 font-black text-[10px] uppercase w-12">{t('comp_total')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { name: t('comp_fresh'), scores: [10, 10, 10, 9, 9], isFresh: true },
+                    { name: t('comp_tgtg'), scores: [2, 1, 3, 5, 6], isFresh: false },
+                    { name: t('comp_flash'), scores: [6, 1, 2, 2, 5], isFresh: false },
+                    { name: t('comp_olio'), scores: [8, 1, 1, 4, 2], isFresh: false },
+                    { name: t('comp_grab'), scores: [7, 9, 1, 2, 8], isFresh: false },
+                    { name: t('comp_fb'), scores: [5, 8, 6, 1, 1], isFresh: false },
+                  ].map((row, idx) => {
+                    const total = row.scores.reduce((a, b) => a + b, 0);
+                    return (
+                      <tr key={idx} className={`border-b border-slate-800/60 ${row.isFresh ? 'bg-emerald-500/5' : ''} hover:bg-slate-800/30 transition-colors`}>
+                        <td className={`py-3 px-3 font-bold ${row.isFresh ? 'text-emerald-400' : 'text-slate-300'}`}>
+                          {row.isFresh && <Leaf className="w-3 h-3 inline mr-1 text-emerald-400" />}
+                          {row.name}
+                        </td>
+                        {row.scores.map((score, si) => (
+                          <td key={si} className={`text-center py-3 px-3 ${row.isFresh ? 'font-bold' : 'text-slate-400'}`}>
+                            <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold ${
+                              score >= 8 ? 'bg-emerald-500/20 text-emerald-400' :
+                              score >= 5 ? 'bg-amber-500/20 text-amber-400' :
+                              'bg-red-500/20 text-red-400'
+                            }`}>{score}</span>
+                          </td>
+                        ))}
+                        <td className="text-center py-3 px-2">
+                          <span className="font-black text-white">{total}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <div className="text-[9px] text-slate-500 italic mt-3 text-center">
+                {lang === 'vi' ? 'Thang điểm /10 cho từng tiêu chí. F.R.E.S.H dẫn đầu 48/50 điểm.' : 'Score /10 per criterion. F.R.E.S.H leads at 48/50.'}
+              </div>
+            </div>
+          </section>
+
           {/* SECTION: KE HOACH & DU PHONG FINANCE */}
           <section id="ke-hoach" className="space-y-6 pt-4">
             <div className="flex items-center gap-3">
@@ -640,17 +747,23 @@ export default function StartupPitchDeck() {
                     
                     <div className="space-y-2">
                       <div>
-                        <span className="text-[9px] text-slate-400 font-semibold uppercase">{t('capex')}</span>
-                        <p className="text-xl font-black text-white">{selectedYearData.capex.toLocaleString()}đ</p>
+                        <span className="text-[9px] text-slate-400 font-semibold uppercase">{t('revenue_label')}</span>
+                        <p className="text-xl font-black text-emerald-400">{selectedYearData.revenue.toLocaleString()}đ</p>
                       </div>
                       <div>
-                        <span className="text-[9px] text-slate-400 font-semibold uppercase">{t('opex')}</span>
-                        <p className="text-xl font-black text-white">{selectedYearData.opex.toLocaleString()}đ</p>
+                        <span className="text-[9px] text-slate-400 font-semibold uppercase">{t('expenses_label')}</span>
+                        <p className="text-xl font-black text-orange-400">{selectedYearData.expenses.toLocaleString()}đ</p>
                       </div>
                       <div className="h-px bg-slate-900" />
                       <div>
-                        <span className="text-[9px] text-emerald-400 font-bold uppercase">{t('total_cost')}</span>
-                        <p className="text-2xl font-black text-emerald-400">{selectedYearData.total.toLocaleString()}đ</p>
+                        <span className="text-[9px] text-emerald-400 font-bold uppercase">{t('net_profit_label')}</span>
+                        <p className={`text-2xl font-black ${selectedYearData.netProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {selectedYearData.netProfit >= 0 ? '' : '-'}{Math.abs(selectedYearData.netProfit).toLocaleString()}đ
+                        </p>
+                      </div>
+                      <div className="flex justify-between text-[10px] text-slate-500 font-bold mt-2 pt-2 border-t border-slate-900">
+                        <span>{t('milestones_title')} m_{selectedYear}_partners: {selectedYearData.partners} {(lang === 'vi' ? 'tiệm' : 'stores')}</span>
+                        <span>MAU: {selectedYearData.mau.toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
@@ -662,12 +775,11 @@ export default function StartupPitchDeck() {
                       {Object.entries(selectedYearData.details).map(([key, val]) => (
                         <div key={key} className="bg-slate-900/80 border border-slate-800/60 rounded-xl p-3">
                           <span className="text-[9px] text-slate-500 font-bold uppercase block mb-1">
-                            {key === 'dev' && 'R&D/App/AI'}
-                            {key === 'legal' && (lang === 'vi' ? 'Pháp lý & Thương hiệu' : 'Legal & Brand')}
-                            {key === 'server' && 'IT & Cloud Server'}
-                            {key === 'staff' && (lang === 'vi' ? 'Nhân sự & CSKH' : 'Staff & Support')}
-                            {key === 'marketing' && (lang === 'vi' ? 'Marketing & Cộng đồng' : 'Marketing & Community')}
-                            {key === 'reserve' && (lang === 'vi' ? 'Dự phòng rủi ro' : 'Financial Reserve')}
+                            {key === 'staff' && (lang === 'vi' ? 'Nhân sự' : 'Staff')}
+                            {key === 'tech' && 'IT & Cloud Infrastructure'}
+                            {key === 'marketing' && (lang === 'vi' ? 'Marketing & Acquisition' : 'Marketing & Acquisition')}
+                            {key === 'operations' && (lang === 'vi' ? 'Vận hành & Pháp lý' : 'Operations & Legal')}
+                            {key === 'loan' && (lang === 'vi' ? 'Lãi vay' : 'Loan Interest')}
                           </span>
                           <span className="font-bold text-slate-300">{val}</span>
                         </div>
@@ -677,32 +789,36 @@ export default function StartupPitchDeck() {
                 </motion.div>
               </AnimatePresence>
 
-              {/* PILOT YEAR REVENUE MILESTONES */}
+              {/* 5-YEAR GROWTH ROADMAP */}
               <div className="space-y-4 pt-4">
                 <h4 className="font-black text-white text-xs uppercase tracking-wider">{t('milestones_title')}</h4>
                 
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                  {[
-                    { label: t('m_month_1_3'), shops: lang === 'vi' ? '5 điểm' : '5 stores', revenue: '24.000.000đ', active: false },
-                    { label: t('m_month_4_6'), shops: lang === 'vi' ? '15 điểm' : '15 stores', revenue: '72.000.000đ', active: false },
-                    { label: t('m_month_7_9'), shops: lang === 'vi' ? '30 điểm' : '30 stores', revenue: '144.000.000đ', active: false },
-                    { label: t('m_month_10'), shops: lang === 'vi' ? '50 điểm' : '50 stores', revenue: '240.000.000đ', active: true, desc: t('breakeven') },
-                    { label: t('m_month_11_12'), shops: lang === 'vi' ? '70 điểm' : '70 stores', revenue: '336.000.000đ', active: false }
-                  ].map((milestone, idx) => (
-                    <div
-                      key={idx}
-                      className={`rounded-xl p-3.5 border transition-all text-center relative ${milestone.active ? 'bg-emerald-500/10 border-emerald-500' : 'bg-slate-950/80 border-slate-850'}`}
-                    >
-                      {milestone.active && (
-                        <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-emerald-500 text-[#0b0f19] text-[8px] font-black uppercase px-2 py-0.5 rounded-full">
-                          {milestone.desc}
-                        </span>
-                      )}
-                      <p className="text-[10px] text-slate-500 font-bold uppercase">{milestone.label}</p>
-                      <p className="text-sm font-black text-white mt-1">{milestone.shops}</p>
-                      <p className="text-xs font-bold text-emerald-400 mt-1">{milestone.revenue}</p>
-                    </div>
-                  ))}
+                  {financialProjects.map((fp) => {
+                    const isBreakeven = fp.year === '2027';
+                    return (
+                      <div
+                        key={fp.year}
+                        className={`rounded-xl p-3.5 border transition-all text-center relative ${isBreakeven ? 'bg-emerald-500/10 border-emerald-500' : 'bg-slate-950/80 border-slate-850'}`}
+                      >
+                        {isBreakeven && (
+                          <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-emerald-500 text-[#0b0f19] text-[8px] font-black uppercase px-2 py-0.5 rounded-full whitespace-nowrap">
+                            {t('breakeven')}
+                          </span>
+                        )}
+                        <p className="text-[10px] text-slate-500 font-bold uppercase">{fp.year}</p>
+                        <p className="text-sm font-black text-white mt-1">
+                          {lang === 'vi' ? fp.partners.toLocaleString() + ' tiệm' : fp.partners.toLocaleString() + ' stores'}
+                        </p>
+                        <p className="text-[10px] text-emerald-400 font-bold mt-1">
+                          {(fp.revenue / 1000000).toFixed(0)} {(lang === 'vi' ? 'tr' : 'M')}đ
+                        </p>
+                        <p className={`text-[9px] font-bold mt-0.5 ${fp.netProfit >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>
+                          {fp.netProfit >= 0 ? '+' : ''}{(fp.netProfit / 1000000).toFixed(0)}{(lang === 'vi' ? 'tr' : 'M')}đ
+                        </p>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -769,6 +885,91 @@ export default function StartupPitchDeck() {
                     <li className="flex items-center gap-2">
                       <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
                       {t('c_leaderboard')}
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* SECTION: ESG Impact */}
+          <section id="tac-dong" className="space-y-6 pt-4">
+            <div className="flex items-center gap-3">
+              <span className="w-2.5 h-6 bg-emerald-500 rounded-full" />
+              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">{t('esg_section')}</h2>
+            </div>
+
+            <div className="bg-slate-900/40 border border-slate-800/60 rounded-3xl p-6 md:p-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="bg-slate-950/80 border border-emerald-800/40 rounded-2xl p-5 space-y-3">
+                  <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                    <Leaf className="w-5 h-5" />
+                  </div>
+                  <h4 className="font-black text-white text-xs uppercase tracking-wider">{t('esg_e_title')}</h4>
+                  <ul className="space-y-2 text-xs text-slate-400 font-medium">
+                    <li className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1 shrink-0" />
+                      {t('esg_e_1')}
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1 shrink-0" />
+                      {t('esg_e_2')}
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1 shrink-0" />
+                      {t('esg_e_3')}
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1 shrink-0" />
+                      {t('esg_e_4')}
+                    </li>
+                  </ul>
+                </div>
+                <div className="bg-slate-950/80 border border-blue-800/40 rounded-2xl p-5 space-y-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                    <Users className="w-5 h-5" />
+                  </div>
+                  <h4 className="font-black text-white text-xs uppercase tracking-wider">{t('esg_s_title')}</h4>
+                  <ul className="space-y-2 text-xs text-slate-400 font-medium">
+                    <li className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1 shrink-0" />
+                      {t('esg_s_1')}
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1 shrink-0" />
+                      {t('esg_s_2')}
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1 shrink-0" />
+                      {t('esg_s_3')}
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1 shrink-0" />
+                      {t('esg_s_4')}
+                    </li>
+                  </ul>
+                </div>
+                <div className="bg-slate-950/80 border border-amber-800/40 rounded-2xl p-5 space-y-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <h4 className="font-black text-white text-xs uppercase tracking-wider">{t('esg_g_title')}</h4>
+                  <ul className="space-y-2 text-xs text-slate-400 font-medium">
+                    <li className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mt-1 shrink-0" />
+                      {t('esg_g_1')}
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mt-1 shrink-0" />
+                      {t('esg_g_2')}
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mt-1 shrink-0" />
+                      {t('esg_g_3')}
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mt-1 shrink-0" />
+                      {t('esg_g_4')}
                     </li>
                   </ul>
                 </div>

@@ -62,7 +62,7 @@ export async function GET(req: Request) {
 
         // Gửi email nếu chưa từng gửi hoặc đã gửi cách đây hơn 7 ngày
         if (!lastSent || lastSent <= oneWeekAgo) {
-          const verificationUrl = 'http://localhost:3001/customer/profile';
+          const verificationUrl = 'https://f-r-e-s-h.vercel.app/customer/profile';
           
           // Gửi email nhắc nhở xác minh
           const emailResult = await sendVerificationReminderEmail(

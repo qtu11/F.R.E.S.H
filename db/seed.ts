@@ -2,6 +2,11 @@ import { readFileSync } from 'fs';
 import path from 'path';
 import { loadConfig, getConnectionString } from '../lib/supabase/config';
 import postgres from 'postgres';
+import bcrypt from 'bcryptjs';
+
+async function hash(password: string): Promise<string> {
+  return bcrypt.hash(password, 12);
+}
 
 async function run() {
   const config = loadConfig();
@@ -16,16 +21,16 @@ async function run() {
     await sql.unsafe(readFileSync(migrationPath2, 'utf-8'));
 
     const users = [
-      { id: 'u1', email: 'customer@fresh.com', password: '123456', name: 'John Doe', role: 'customer', avatar: 'JD', phone: '+84 90 123 4567', address: '123 Nguyen Hue, D1, HCMC', join_date: '2025-01-15', last_active: '2026-05-15', status: 'active', green_points: 1250, food_rescued: 12.5, co2_reduced: 45.2, total_orders: 28, total_spent: 850000, wallet_balance: 1500000 },
-      { id: 'u2', email: 'partner@fresh.com', password: '123456', name: 'WinMart+ D1', role: 'partner', avatar: 'W', phone: '028 3822 1234', address: '123 Nguyen Hue, D1, HCMC', join_date: '2024-06-01', last_active: '2026-05-15', status: 'active', wallet_balance: 5000000 },
-      { id: 'u3', email: 'freshadmin@gmail.com', password: 'AdminFresh@', name: 'Super Admin', role: 'admin', avatar: 'SA', join_date: '2024-01-01', last_active: '2026-05-16', status: 'active' },
-      { id: 'u4', email: 'jane@fresh.com', password: '123456', name: 'Jane Smith', role: 'customer', avatar: 'JS', phone: '+84 91 234 5678', join_date: '2025-03-20', last_active: '2026-05-14', status: 'active', green_points: 890, food_rescued: 8.3, co2_reduced: 32.1, total_orders: 15, total_spent: 420000, wallet_balance: 300000 },
-      { id: 'u5', email: 'circlek@fresh.com', password: '123456', name: 'Circle K D3', role: 'partner', avatar: 'CK', phone: '028 3930 5678', join_date: '2024-08-15', last_active: '2026-05-15', status: 'active', wallet_balance: 2000000 },
-      { id: 'u6', email: 'bob@fresh.com', password: '123456', name: 'Bob Wilson', role: 'customer', avatar: 'BW', phone: '+84 92 345 6789', join_date: '2025-06-10', last_active: '2026-05-10', status: 'suspended', green_points: 120, food_rescued: 1.2, co2_reduced: 4.5, total_orders: 3, total_spent: 85000, wallet_balance: 50000 },
-      { id: 'u7', email: 'aeon@fresh.com', password: '123456', name: 'AEON Mall Binh Tan', role: 'partner', avatar: 'AE', phone: '028 3756 7890', join_date: '2024-03-01', last_active: '2026-05-15', status: 'active', wallet_balance: 8000000 },
-      { id: 'u8', email: 'alice@fresh.com', password: '123456', name: 'Alice Chen', role: 'customer', avatar: 'AC', phone: '+84 93 456 7890', join_date: '2025-09-01', last_active: '2026-05-13', status: 'active', green_points: 2100, food_rescued: 25.8, co2_reduced: 98.5, total_orders: 52, total_spent: 1500000, wallet_balance: 2500000 },
-      { id: 'u9', email: 'spammer@fresh.com', password: '123456', name: 'Spam Account', role: 'customer', avatar: 'SP', join_date: '2026-05-10', last_active: '2026-05-10', status: 'banned', wallet_balance: 0 },
-      { id: 'u10', email: 'coopmart@fresh.com', password: '123456', name: 'Co.opmart D7', role: 'partner', avatar: 'CM', phone: '028 5412 3456', join_date: '2024-01-15', last_active: '2026-05-15', status: 'active', wallet_balance: 3500000 },
+      { id: 'u1', email: 'customer@fresh.com', password: await hash('123456'), name: 'John Doe', role: 'customer', avatar: 'JD', phone: '+84 90 123 4567', address: '123 Nguyen Hue, D1, HCMC', join_date: '2025-01-15', last_active: '2026-05-15', status: 'active', green_points: 1250, food_rescued: 12.5, co2_reduced: 45.2, total_orders: 28, total_spent: 850000, wallet_balance: 1500000 },
+      { id: 'u2', email: 'partner@fresh.com', password: await hash('123456'), name: 'WinMart+ D1', role: 'partner', avatar: 'W', phone: '028 3822 1234', address: '123 Nguyen Hue, D1, HCMC', join_date: '2024-06-01', last_active: '2026-05-15', status: 'active', wallet_balance: 5000000 },
+      { id: 'u3', email: 'freshadmin@gmail.com', password: await hash('AdminFresh@'), name: 'Super Admin', role: 'admin', avatar: 'SA', join_date: '2024-01-01', last_active: '2026-05-16', status: 'active' },
+      { id: 'u4', email: 'jane@fresh.com', password: await hash('123456'), name: 'Jane Smith', role: 'customer', avatar: 'JS', phone: '+84 91 234 5678', join_date: '2025-03-20', last_active: '2026-05-14', status: 'active', green_points: 890, food_rescued: 8.3, co2_reduced: 32.1, total_orders: 15, total_spent: 420000, wallet_balance: 300000 },
+      { id: 'u5', email: 'circlek@fresh.com', password: await hash('123456'), name: 'Circle K D3', role: 'partner', avatar: 'CK', phone: '028 3930 5678', join_date: '2024-08-15', last_active: '2026-05-15', status: 'active', wallet_balance: 2000000 },
+      { id: 'u6', email: 'bob@fresh.com', password: await hash('123456'), name: 'Bob Wilson', role: 'customer', avatar: 'BW', phone: '+84 92 345 6789', join_date: '2025-06-10', last_active: '2026-05-10', status: 'suspended', green_points: 120, food_rescued: 1.2, co2_reduced: 4.5, total_orders: 3, total_spent: 85000, wallet_balance: 50000 },
+      { id: 'u7', email: 'aeon@fresh.com', password: await hash('123456'), name: 'AEON Mall Binh Tan', role: 'partner', avatar: 'AE', phone: '028 3756 7890', join_date: '2024-03-01', last_active: '2026-05-15', status: 'active', wallet_balance: 8000000 },
+      { id: 'u8', email: 'alice@fresh.com', password: await hash('123456'), name: 'Alice Chen', role: 'customer', avatar: 'AC', phone: '+84 93 456 7890', join_date: '2025-09-01', last_active: '2026-05-13', status: 'active', green_points: 2100, food_rescued: 25.8, co2_reduced: 98.5, total_orders: 52, total_spent: 1500000, wallet_balance: 2500000 },
+      { id: 'u9', email: 'spammer@fresh.com', password: await hash('123456'), name: 'Spam Account', role: 'customer', avatar: 'SP', join_date: '2026-05-10', last_active: '2026-05-10', status: 'banned', wallet_balance: 0 },
+      { id: 'u10', email: 'coopmart@fresh.com', password: await hash('123456'), name: 'Co.opmart D7', role: 'partner', avatar: 'CM', phone: '028 5412 3456', join_date: '2024-01-15', last_active: '2026-05-15', status: 'active', wallet_balance: 3500000 },
     ];
     for (const u of users) await sql`INSERT INTO users ${sql(u)} ON CONFLICT (id) DO NOTHING`;
 

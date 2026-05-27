@@ -41,12 +41,12 @@ export async function GET() {
     const { password: _, ...user } = toCamelCase(data);
 
     if (user.role === 'partner') {
-      const { data: partner } = await supabase
-        .from('partners')
+      const { data: branch } = await supabase
+        .from('organization_branches')
         .select('store_id')
-        .eq('user_id', user.id)
+        .eq('organization_id', user.organizationId)
         .maybeSingle();
-      if (partner) user.storeId = partner.store_id;
+      if (branch) user.storeId = branch.store_id;
     }
 
     return NextResponse.json({ user, token });

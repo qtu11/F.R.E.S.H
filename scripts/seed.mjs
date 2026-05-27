@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import bcrypt from 'bcryptjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rescueData = JSON.parse(readFileSync(join(__dirname, '../lib/data/rescue-products-db.json'), 'utf-8'));
@@ -179,7 +180,11 @@ async function insert(table, rows) {
 
 async function seed() {
   console.log('Seeding data...');
-  await insert('users', USERS);
+  const USERS_HASHED = await Promise.all(USERS.map(async u => ({
+    ...u,
+    password: await bcrypt.hash(u.password, 12),
+  })));
+  await insert('users', USERS_HASHED);
   await insert('stores', STORES);
   await insert('products', PRODUCTS);
   await insert('partners', PARTNERS);

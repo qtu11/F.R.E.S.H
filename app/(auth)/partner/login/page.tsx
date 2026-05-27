@@ -164,8 +164,14 @@ function LoginForm() {
 
           <div className="mt-8 pt-8 border-t border-gray-100 dark:border-slate-800 text-center">
             <p className="text-gray-500 dark:text-slate-400 text-xs mb-4">
-              Contact admin to get a partner account
+              Chưa có tài khoản đối tác?
             </p>
+            <Link
+              href="/partner/register"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-xs rounded-2xl shadow-lg hover:shadow-emerald-500/20 transition-all hover:scale-105 uppercase tracking-wider mb-4"
+            >
+              <Store className="w-4 h-4" /> Đăng ký làm đối tác
+            </Link>
             <div className="flex justify-center gap-4 text-[10px] text-gray-400 dark:text-slate-500 uppercase tracking-widest font-bold">
               <Link href="/terms" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Điều khoản</Link>
               <span>&middot;</span>

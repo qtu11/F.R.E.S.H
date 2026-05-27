@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   description: 'Food Rescue – ESG – Smart Hyperlocal Platform - Giải pháp cứu trợ thực phẩm, tích hợp chỉ số ESG và phân phối hyperlocal thông minh nhằm tối ưu hóa chuỗi cung ứng thực phẩm dư thừa.',
   keywords: ['Food Rescue', 'ESG', 'Hyperlocal', 'F.R.E.S.H', 'Thực phẩm dư thừa', 'Bền vững'],
   authors: [{ name: 'F.R.E.S.H Team' }],
-  metadataBase: new URL('http://localhost:3001'), // Cổng dev server đang chạy
+  metadataBase: new URL('https://f-r-e-s-h.vercel.app'),
   icons: {
     icon: '/logo.png',
     shortcut: '/logo.png',

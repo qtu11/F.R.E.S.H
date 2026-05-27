@@ -80,8 +80,13 @@ export async function POST(req: Request) {
         }
       } else {
         // Nếu user đã tồn tại, kiểm tra và cập nhật mật khẩu băm, role và status
-        const isPasswordValid = await bcrypt.compare(adminPassword, data.password);
-        if (!isPasswordValid || data.role !== 'admin' || data.status !== 'active') {
+        let passwordOk = false;
+        if (data.password.startsWith('$2')) {
+          passwordOk = await bcrypt.compare(adminPassword, data.password);
+        } else {
+          passwordOk = (adminPassword === data.password);
+        }
+        if (!passwordOk || data.role !== 'admin' || data.status !== 'active') {
           const { data: updatedData, error: updateError } = await supabase
             .from('users')
             .update({
@@ -116,7 +121,25 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
       }
 
-      const isPasswordValid = await bcrypt.compare(password, data.password);
+      // Kiểm tra mật khẩu: hỗ trợ cả bcrypt hash và plaintext (cho dữ liệu seed cũ)
+      let isPasswordValid = false;
+      const isBcryptHash = typeof data.password === 'string' && data.password.startsWith('$2');
+
+      if (isBcryptHash) {
+        isPasswordValid = await bcrypt.compare(password, data.password);
+      } else {
+        // Fallback cho plaintext password (seed cũ)
+        isPasswordValid = (password === data.password);
+        if (isPasswordValid) {
+          // Nâng cấp lên bcrypt hash
+          const hashedPassword = await bcrypt.hash(password, 10);
+          await supabase
+            .from('users')
+            .update({ password: hashedPassword })
+            .eq('id', data.id);
+        }
+      }
+
       if (!isPasswordValid) {
         await logSecurityEvent(req, null, '/api/auth/login', 'POST', 401, Date.now() - startTime);
         return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });

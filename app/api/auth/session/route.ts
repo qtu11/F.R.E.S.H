@@ -21,8 +21,8 @@ export async function POST(req: Request) {
 
       const { password: _, ...user } = toCamelCase(data);
       if (user.role === 'partner') {
-        const { data: partner } = await supabase.from('partners').select('store_id').eq('user_id', user.id).maybeSingle();
-        if (partner) user.storeId = partner.store_id;
+        const { data: branch } = await supabase.from('organization_branches').select('store_id').eq('organization_id', user.organizationId).maybeSingle();
+        if (branch) user.storeId = branch.store_id;
       }
       return NextResponse.json({ user, token: `legacy_${user.id}` });
     }
@@ -38,8 +38,8 @@ export async function POST(req: Request) {
 
     const { password: _, ...user } = toCamelCase(data);
     if (user.role === 'partner') {
-      const { data: partner } = await supabase.from('partners').select('store_id').eq('user_id', user.id).maybeSingle();
-      if (partner) user.storeId = partner.store_id;
+      const { data: branch } = await supabase.from('organization_branches').select('store_id').eq('organization_id', user.organizationId).maybeSingle();
+      if (branch) user.storeId = branch.store_id;
     }
     return NextResponse.json({ user, token });
   } catch {

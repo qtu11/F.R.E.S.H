@@ -454,3 +454,85 @@ export async function sendBiometricSuccessEmail(to: string, name: string) {
     html: getEmailLayout(viContent, enContent, 'Hồ sơ quét Face ID của bạn đã được duyệt thành công. Tài khoản đã ở trạng thái xác minh.')
   });
 }
+
+// 8. Email thông báo đối tác được duyệt / Partner KYB Approved
+export async function sendPartnerApprovalEmail(to: string, name: string, orgName: string, loginUrl: string) {
+  const viContent = `
+    <h2>Hồ sơ đối tác đã được duyệt!</h2>
+    <p>Xin chào <strong>${name}</strong>,</p>
+    <div class="highlight-box">
+      <strong>🎉 CHÚC MỪNG:</strong> Hồ sơ đăng ký đối tác của doanh nghiệp <strong>${orgName}</strong> đã được phê duyệt thành công.
+    </div>
+    <p>Tài khoản đối tác của bạn đã được kích hoạt. Bạn có thể bắt đầu:</p>
+    <ul>
+      <li>Quản lý kho hàng và đăng sản phẩm giải cứu</li>
+      <li>Theo dõi đơn hàng và doanh thu thời gian thực</li>
+      <li>Quản lý chi nhánh và nhân sự</li>
+      <li>Xem báo cáo tài chính, hoa hồng và hóa đơn</li>
+    </ul>
+    <p>Hãy nhấp vào nút bên dưới để truy cập Cổng Đối Tác:</p>
+    <div style="text-align: center;">
+      <a href="${loginUrl}" class="button">Vào Cổng Đối Tác</a>
+    </div>
+  `;
+
+  const enContent = `
+    <h2>Partner Application Approved!</h2>
+    <p>Hello <strong>${name}</strong>,</p>
+    <div class="highlight-box" style="border-left-color: #84cc16; background-color: #f7fee7; border-color: #d9f99d; color: #3f6212;">
+      <strong>🎉 CONGRATULATIONS:</strong> Your partner application for <strong>${orgName}</strong> has been approved!
+    </div>
+    <p>Your partner account is now active. You can start:</p>
+    <ul>
+      <li>Managing inventory and listing rescue products</li>
+      <li>Tracking orders and real-time revenue</li>
+      <li>Managing branches and team members</li>
+      <li>Viewing financial reports, commissions, and invoices</li>
+    </ul>
+    <p>Click the button below to access the Partner Portal:</p>
+    <div style="text-align: center;">
+      <a href="${loginUrl}" class="button">Enter Partner Portal</a>
+    </div>
+  `;
+
+  return sendEmail({
+    to,
+    subject: '🎉 [F.R.E.S.H] Hồ sơ đối tác đã được duyệt / Partner Application Approved!',
+    html: getEmailLayout(viContent, enContent, `Hồ sơ của ${orgName} đã được duyệt. Bạn có thể bắt đầu sử dụng hệ thống ngay!`)
+  });
+}
+
+// 9. Email thông báo đối tác bị từ chối / Partner KYB Rejected
+export async function sendPartnerRejectionEmail(to: string, name: string, orgName: string, reason: string) {
+  const viContent = `
+    <h2>Hồ sơ đối tác chưa được duyệt</h2>
+    <p>Xin chào <strong>${name}</strong>,</p>
+    <div class="alert-box">
+      <strong>⚠️ THÔNG BÁO:</strong> Hồ sơ đăng ký đối tác của doanh nghiệp <strong>${orgName}</strong> hiện chưa được phê duyệt.
+    </div>
+    <p><strong>Lý do:</strong> ${reason}</p>
+    <p>Vui lòng cập nhật hồ sơ và gửi lại để được thẩm định. Nếu cần hỗ trợ, vui lòng liên hệ đội ngũ F.R.E.S.H qua email support@fresh-platform.com.</p>
+    <div style="text-align: center;">
+      <a href="${process.env.APP_URL || 'http://localhost:3001'}/partner/login" class="button">Cập nhật hồ sơ</a>
+    </div>
+  `;
+
+  const enContent = `
+    <h2>Partner Application Not Approved</h2>
+    <p>Hello <strong>${name}</strong>,</p>
+    <div class="alert-box" style="border-left-color: #ef4444; background-color: #fef2f2; border-color: #fca5a5; color: #991b1b;">
+      <strong>⚠️ NOTICE:</strong> Your partner application for <strong>${orgName}</strong> has not been approved at this time.
+    </div>
+    <p><strong>Reason:</strong> ${reason}</p>
+    <p>Please update your application and resubmit for review. For support, contact F.R.E.S.H team at support@fresh-platform.com.</p>
+    <div style="text-align: center;">
+      <a href="${process.env.APP_URL || 'http://localhost:3001'}/partner/login" class="button">Update Application</a>
+    </div>
+  `;
+
+  return sendEmail({
+    to,
+    subject: '📋 [F.R.E.S.H] Cập nhật hồ sơ đối tác / Partner Application Update',
+    html: getEmailLayout(viContent, enContent, `Hồ sơ của ${orgName} cần được cập nhật.`)
+  });
+}

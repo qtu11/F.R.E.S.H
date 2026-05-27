@@ -71,17 +71,27 @@ export async function POST(req: Request) {
 
     // Nếu là partner, voucher tạo ra phải gắn với store của họ
     if (auth.user.role === 'partner') {
-      const { data: partner } = await supabase
-        .from('partners')
-        .select('store_id')
-        .eq('user_id', auth.user.userId)
+      const { data: user } = await supabase
+        .from('users')
+        .select('organization_id')
+        .eq('id', auth.user.userId)
         .maybeSingle();
 
-      if (!partner || !partner.store_id) {
+      if (!user?.organization_id) {
         return NextResponse.json({ error: 'Partner store not configured' }, { status: 400 });
       }
 
-      body.store_id = partner.store_id;
+      const { data: branch } = await supabase
+        .from('organization_branches')
+        .select('store_id')
+        .eq('organization_id', user.organization_id)
+        .maybeSingle();
+
+      if (!branch?.store_id) {
+        return NextResponse.json({ error: 'Partner store not configured' }, { status: 400 });
+      }
+
+      body.store_id = branch.store_id;
     }
 
     const newVoucher = { ...body, id: crypto.randomUUID(), created_at: new Date().toISOString() };
