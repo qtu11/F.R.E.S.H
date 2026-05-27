@@ -132,26 +132,7 @@ export default function StartupPitchDeck() {
   const financialProjects = useMemo(() => getFinancialProjects(lang), [lang]);
   const sections = useMemo(() => getSections(lang), [lang]);
 
-  // Interactive Pricing Simulator States
-  const [originalPrice, setOriginalPrice] = useState(100000);
-  const [hoursLeft, setHoursLeft] = useState(24);
-  const [totalHours, setTotalHours] = useState(48);
-  const [demandFactor, setDemandFactor] = useState(1.0); // 0.5 to 1.5
-  const [weatherFactor, setWeatherFactor] = useState(1.0); // 0.8 to 1.2
 
-  // Formula Calculation
-  // Pd = P0 * (hoursLeft / totalHours) ^ 0.7 * demandFactor * weatherFactor
-  const simulatedPrice = useMemo(() => {
-    const ratio = hoursLeft / totalHours;
-    const decay = Math.pow(ratio, 0.65);
-    const calculated = originalPrice * decay * demandFactor * weatherFactor;
-    return Math.max(originalPrice * 0.3, Math.min(originalPrice, Math.round(calculated / 1000) * 1000));
-  }, [originalPrice, hoursLeft, totalHours, demandFactor, weatherFactor]);
-
-  const co2SavedSimulated = useMemo(() => {
-    // 1 unit of food saved approx 2.5kg CO2
-    return (2.5 * (1 + (originalPrice / 200000))).toFixed(2);
-  }, [originalPrice]);
 
   const selectedYearData = useMemo(() => {
     return financialProjects.find(f => f.year === selectedYear) || financialProjects[0];
@@ -458,6 +439,139 @@ export default function StartupPitchDeck() {
                 </p>
               </div>
             </div>
+
+            {/* PESTEL ANALYSIS */}
+            <div className="bg-slate-900/40 border border-slate-800/60 rounded-3xl p-6 md:p-8 space-y-4">
+              <div className="flex items-center gap-2">
+                <Globe className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-black text-white text-sm uppercase tracking-wider">
+                  {lang === 'vi' ? 'Phân tích PESTEL' : 'PESTEL Analysis'}
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {[
+                  { letter: 'P', label: lang === 'vi' ? 'Chính trị' : 'Political', color: 'text-blue-400 border-blue-500/20 bg-blue-500/5', desc: lang === 'vi' ? 'Chính phủ ban hành Luật Bảo vệ Môi trường 2022, Nghị định 08/2022 về giảm phát thải. Chiến lược Quốc gia về Kinh tế Tuần hoàn đến 2045 hỗ trợ mạnh các doanh nghiệp xanh.' : 'Government issued Environmental Protection Law 2022, Decree 08/2022 on emission reduction. National Circular Economy Strategy to 2045 supports green businesses.' },
+                  { letter: 'E', label: lang === 'vi' ? 'Kinh tế' : 'Economic', color: 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5', desc: lang === 'vi' ? 'Lạm phát khiến nhu cầu tiết kiệm tăng cao, đặc biệt ở Gen Z. GDP bình quân đầu người tăng nhưng chi tiêu F&B vẫn chiếm 35% thu nhập. Giảm giá 30-70% là lợi thế cạnh tranh cốt lõi.' : 'Inflation drives demand for savings, especially among Gen Z. Per capita GDP rises but F&B spending remains 35% of income. 30-70% discounts are core competitive advantage.' },
+                  { letter: 'S', label: lang === 'vi' ? 'Xã hội' : 'Social', color: 'text-orange-400 border-orange-500/20 bg-orange-500/5', desc: lang === 'vi' ? '25,4 triệu Gen Z tại Việt Nam (26% dân số). 73% sẵn sàng chi thêm cho sản phẩm bền vững (Nielsen 2023). Xu hướng "sống xanh" và tiêu dùng có trách nhiệm đang lan rộng.' : '25.4M Gen Z in Vietnam (26% population). 73% willing to pay more for sustainable products (Nielsen 2023). "Green living" and responsible consumption trends expanding.' },
+                  { letter: 'T', label: lang === 'vi' ? 'Công nghệ' : 'Technological', color: 'text-purple-400 border-purple-500/20 bg-purple-500/5', desc: lang === 'vi' ? 'AI/ML phát triển mạnh cho Dynamic Pricing. Mobile-first (78% internet qua smartphone). GS1 QR Code chuẩn quốc tế cho truy xuất nguồn gốc sản phẩm.' : 'AI/ML advancing rapidly for Dynamic Pricing. Mobile-first (78% internet via smartphone). GS1 QR Code international standard for product traceability.' },
+                  { letter: 'E', label: lang === 'vi' ? 'Môi trường' : 'Environmental', color: 'text-green-400 border-green-500/20 bg-green-500/5', desc: lang === 'vi' ? 'Việt Nam xếp hạng 6 thế giới về ô nhiễm nhựa đại dương. 8,85 triệu tấn thực phẩm bị lãng phí/năm, tạo 6% tổng phát thải CO2 toàn cầu. Áp lực ESG ngày càng tăng.' : 'Vietnam ranks 6th globally for ocean plastic pollution. 8.85M tons of food wasted/year, causing 6% of global CO2 emissions. ESG pressure increasing.' },
+                  { letter: 'L', label: lang === 'vi' ? 'Pháp lý' : 'Legal', color: 'text-red-400 border-red-500/20 bg-red-500/5', desc: lang === 'vi' ? 'Luật An toàn Thực phẩm cho phép bán sản phẩm cận HSD nếu còn trong hạn. Luật Bảo vệ Dữ liệu Cá nhân 2023 yêu cầu bảo mật thông tin người dùng. Không có rào cản pháp lý đáng kể.' : 'Food Safety Law allows selling near-expiry products while still within date. Personal Data Protection Law 2023 requires user data security. No significant legal barriers.' }
+                ].map((item, idx) => (
+                  <div key={idx} className={`${item.color} border rounded-2xl p-4 space-y-2`}>
+                    <div className="flex items-center gap-2">
+                      <span className="w-7 h-7 rounded-full bg-slate-950 flex items-center justify-center font-black text-xs">{item.letter}</span>
+                      <span className="font-black text-xs uppercase">{item.label}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed font-semibold">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* CUSTOMER PERSONAS */}
+            <div className="bg-slate-900/40 border border-slate-800/60 rounded-3xl p-6 md:p-8 space-y-4">
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-black text-white text-sm uppercase tracking-wider">
+                  {lang === 'vi' ? 'Chân dung Khách hàng (Personas)' : 'Customer Personas'}
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-slate-950/80 border border-blue-500/20 rounded-2xl p-5 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl">🎓</span>
+                    <div>
+                      <h4 className="font-black text-blue-400 text-sm">{lang === 'vi' ? 'An — Sinh viên' : 'An — Student'}</h4>
+                      <span className="text-[10px] text-slate-500 font-bold">{lang === 'vi' ? '20 tuổi · SV năm 3 · TP.HCM' : '20 y/o · 3rd year · HCMC'}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5 text-[11px] text-slate-400 font-semibold">
+                    <p>💰 {lang === 'vi' ? 'Thu nhập: 3-5 triệu/tháng (bố mẹ + part-time)' : 'Income: 3-5M/month (family + part-time)'}</p>
+                    <p>😤 {lang === 'vi' ? 'Pain: Cuối tháng hết tiền, muốn ăn ngon giá rẻ' : 'Pain: End of month broke, wants good food cheap'}</p>
+                    <p>🎯 {lang === 'vi' ? 'Mong muốn: Ăn ngon, tiết kiệm, sống xanh để flex' : 'Want: Good food, savings, green living to flex'}</p>
+                    <p>📱 {lang === 'vi' ? 'Hành vi: Dùng app 2-3 lần/tuần, thích gamification' : 'Behavior: Uses app 2-3x/week, loves gamification'}</p>
+                  </div>
+                </div>
+                <div className="bg-slate-950/80 border border-emerald-500/20 rounded-2xl p-5 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl">🏪</span>
+                    <div>
+                      <h4 className="font-black text-emerald-400 text-sm">{lang === 'vi' ? 'Chị Lan — Chủ tiệm bánh' : 'Ms. Lan — Bakery Owner'}</h4>
+                      <span className="text-[10px] text-slate-500 font-bold">{lang === 'vi' ? '35 tuổi · Quận 3 · 2 nhân viên' : '35 y/o · District 3 · 2 staff'}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5 text-[11px] text-slate-400 font-semibold">
+                    <p>💰 {lang === 'vi' ? 'Doanh thu: 30-50 triệu/tháng' : 'Revenue: 30-50M/month'}</p>
+                    <p>😤 {lang === 'vi' ? 'Pain: Cuối ngày vứt 15-20% NVL, xót tiền' : 'Pain: Throws away 15-20% materials daily, wasteful'}</p>
+                    <p>🎯 {lang === 'vi' ? 'Mong muốn: Thu hồi chi phí, thêm khách mới' : 'Want: Recover costs, attract new customers'}</p>
+                    <p>📱 {lang === 'vi' ? 'Hành vi: Đăng hàng cuối ngày từ điện thoại' : 'Behavior: Lists items end of day from phone'}</p>
+                  </div>
+                </div>
+                <div className="bg-slate-950/80 border border-orange-500/20 rounded-2xl p-5 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl">👩‍💼</span>
+                    <div>
+                      <h4 className="font-black text-orange-400 text-sm">{lang === 'vi' ? 'Minh — Nhân viên VP' : 'Minh — Office Worker'}</h4>
+                      <span className="text-[10px] text-slate-500 font-bold">{lang === 'vi' ? '28 tuổi · Quận 1 · Lương 12-15tr' : '28 y/o · District 1 · Salary 12-15M'}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5 text-[11px] text-slate-400 font-semibold">
+                    <p>💰 {lang === 'vi' ? 'Chi tiêu F&B: 4-6 triệu/tháng' : 'F&B spending: 4-6M/month'}</p>
+                    <p>😤 {lang === 'vi' ? 'Pain: Quan tâm môi trường nhưng không biết bắt đầu từ đâu' : 'Pain: Cares about environment but doesn\'t know where to start'}</p>
+                    <p>🎯 {lang === 'vi' ? 'Mong muốn: Tiện lợi, chất lượng, đóng góp xã hội' : 'Want: Convenience, quality, social contribution'}</p>
+                    <p>📱 {lang === 'vi' ? 'Hành vi: Dùng app trưa/chiều, thích khuyến mãi flash' : 'Behavior: Uses app noon/afternoon, likes flash deals'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* TAM / SAM / SOM */}
+            <div className="bg-gradient-to-br from-slate-950 to-[#0e1628] border border-emerald-500/20 rounded-3xl p-6 md:p-8 space-y-5">
+              <div className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-black text-white text-sm uppercase tracking-wider">
+                  {lang === 'vi' ? 'Quy mô Thị trường — TAM / SAM / SOM' : 'Market Size — TAM / SAM / SOM'}
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-slate-900/60 border border-blue-500/20 rounded-2xl p-5 text-center space-y-3">
+                  <div className="w-20 h-20 mx-auto rounded-full border-4 border-blue-500/30 flex items-center justify-center">
+                    <span className="text-lg font-black text-blue-400">TAM</span>
+                  </div>
+                  <h4 className="font-black text-white text-xs uppercase">{lang === 'vi' ? 'Tổng thị trường' : 'Total Addressable Market'}</h4>
+                  <p className="text-2xl font-black text-blue-400">$2.84B</p>
+                  <p className="text-[10px] text-slate-400 font-semibold">
+                    {lang === 'vi'
+                      ? 'Thị trường F&B Việt Nam 2024: ~640.000 cơ sở F&B. Giá trị hàng tồn cận date ước tính $2,84 tỷ/năm (UNEP, FAO 2023).'
+                      : 'Vietnam F&B market 2024: ~640,000 F&B establishments. Near-expiry inventory value est. $2.84B/year (UNEP, FAO 2023).'}
+                  </p>
+                </div>
+                <div className="bg-slate-900/60 border border-emerald-500/20 rounded-2xl p-5 text-center space-y-3">
+                  <div className="w-20 h-20 mx-auto rounded-full border-4 border-emerald-500/30 flex items-center justify-center">
+                    <span className="text-lg font-black text-emerald-400">SAM</span>
+                  </div>
+                  <h4 className="font-black text-white text-xs uppercase">{lang === 'vi' ? 'Thị trường khả dụng' : 'Serviceable Available Market'}</h4>
+                  <p className="text-2xl font-black text-emerald-400">$320M</p>
+                  <p className="text-[10px] text-slate-400 font-semibold">
+                    {lang === 'vi'
+                      ? 'Long-tail F&B tại TP.HCM & Hà Nội: ~72.000 tiệm nhỏ (bakery, trà sữa, quán ăn). Phân khúc này chiếm 15-20% giá trị tồn kho cận date.'
+                      : 'Long-tail F&B in HCMC & Hanoi: ~72,000 small shops (bakeries, bubble tea, eateries). This segment accounts for 15-20% of near-expiry inventory value.'}
+                  </p>
+                </div>
+                <div className="bg-slate-900/60 border border-orange-500/20 rounded-2xl p-5 text-center space-y-3">
+                  <div className="w-20 h-20 mx-auto rounded-full border-4 border-orange-500/30 flex items-center justify-center">
+                    <span className="text-lg font-black text-orange-400">SOM</span>
+                  </div>
+                  <h4 className="font-black text-white text-xs uppercase">{lang === 'vi' ? 'Thị trường mục tiêu' : 'Serviceable Obtainable Market'}</h4>
+                  <p className="text-2xl font-black text-orange-400">$4.8M</p>
+                  <p className="text-[10px] text-slate-400 font-semibold">
+                    {lang === 'vi'
+                      ? 'Năm 1 (2026): 150 tiệm đối tác × 15 giao dịch/ngày × 40.000đ/đơn × 365 ngày. Hoa hồng 15% = ~$4,8 triệu doanh thu thực.'
+                      : 'Year 1 (2026): 150 partner shops × 15 transactions/day × 40,000 VND/order × 365 days. 15% commission = ~$4.8M actual revenue.'}
+                  </p>
+                </div>
+              </div>
+            </div>
           </section>
 
           {/* SECTION: TINH KHA THI */}
@@ -494,6 +608,43 @@ export default function StartupPitchDeck() {
                     {t('phase_2_desc')}
                   </p>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          {/* BUSINESS MODEL CANVAS */}
+          <section className="space-y-6 pt-4">
+            <div className="bg-gradient-to-br from-slate-950 to-[#0e1628] border border-emerald-500/20 rounded-3xl p-6 md:p-8 space-y-5">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-black text-white text-sm uppercase tracking-wider">
+                  Business Model Canvas
+                </h3>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                {[
+                  { title: lang === 'vi' ? 'Đối tác chính' : 'Key Partners', color: 'border-blue-500/20', items: lang === 'vi' ? ['Long-tail F&B (tiệm bánh, trà sữa, quán ăn)', 'UEF & các trường ĐH', 'GS1 Việt Nam (mã QR)', 'Đối tác thanh toán (MoMo, VNPay)'] : ['Long-tail F&B shops', 'UEF & universities', 'GS1 Vietnam (QR codes)', 'Payment partners (MoMo, VNPay)'] },
+                  { title: lang === 'vi' ? 'Hoạt động chính' : 'Key Activities', color: 'border-emerald-500/20', items: lang === 'vi' ? ['Phát triển AI Dynamic Pricing', 'Onboarding đối tác F&B', 'Vận hành nền tảng & UX', 'Gamification & Green Credit'] : ['AI Dynamic Pricing development', 'F&B partner onboarding', 'Platform operations & UX', 'Gamification & Green Credit'] },
+                  { title: lang === 'vi' ? 'Giải pháp giá trị' : 'Value Proposition', color: 'border-orange-500/20', items: lang === 'vi' ? ['B2B: Thu hồi 30-50% chi phí NVL', 'B2C: Tiết kiệm 30-70% chi tiêu', 'ESG: Giảm CO2 đo lường được', 'Transparent Clearance (không túi mù)'] : ['B2B: Recover 30-50% material costs', 'B2C: Save 30-70% on spending', 'ESG: Measurable CO2 reduction', 'Transparent Clearance (no blind bags)'] },
+                  { title: lang === 'vi' ? 'Quan hệ KH' : 'Customer Relations', color: 'border-purple-500/20', items: lang === 'vi' ? ['App self-service', 'Push notification cá nhân hóa', 'Leaderboard & cộng đồng', 'Dashboard ESG cho B2B'] : ['App self-service', 'Personalized push notifications', 'Leaderboard & community', 'ESG Dashboard for B2B'] },
+                  { title: lang === 'vi' ? 'Phân khúc KH' : 'Customer Segments', color: 'border-red-500/20', items: lang === 'vi' ? ['SV & Gen Z (18-28 tuổi)', 'Nhân viên VP (25-35)', 'Chủ tiệm F&B nhỏ', 'Chuỗi F&B vừa (GĐ2)'] : ['Students & Gen Z (18-28)', 'Office workers (25-35)', 'Small F&B shop owners', 'Mid-size F&B chains (Phase 2)'] },
+                  { title: lang === 'vi' ? 'Nguồn lực chính' : 'Key Resources', color: 'border-cyan-500/20', items: lang === 'vi' ? ['AI/ML engine & data moat', 'Đội ngũ founder UEF', 'Mạng lưới đối tác F&B', 'Hạ tầng cloud (Vercel, Supabase)'] : ['AI/ML engine & data moat', 'UEF founder team', 'F&B partner network', 'Cloud infra (Vercel, Supabase)'] },
+                  { title: lang === 'vi' ? 'Kênh phân phối' : 'Channels', color: 'border-amber-500/20', items: lang === 'vi' ? ['App mobile (iOS/Android)', 'Website PWA', 'TikTok & Instagram', 'KOC/KOL campus'] : ['Mobile app (iOS/Android)', 'PWA website', 'TikTok & Instagram', 'Campus KOC/KOL'] },
+                  { title: lang === 'vi' ? 'Cấu trúc chi phí' : 'Cost Structure', color: 'border-pink-500/20', items: lang === 'vi' ? ['Phát triển công nghệ (40%)', 'Marketing & Acquisition (30%)', 'Nhân sự & vận hành (20%)', 'VP & pháp lý (10%)'] : ['Tech development (40%)', 'Marketing & Acquisition (30%)', 'HR & Operations (20%)', 'Office & Legal (10%)'] },
+                  { title: lang === 'vi' ? 'Dòng doanh thu' : 'Revenue Streams', color: 'border-green-500/20', items: lang === 'vi' ? ['Hoa hồng giao dịch 15%', 'SaaS Insights (B2B)', 'Green Credit sponsorship', 'Quảng cáo vị trí ưu tiên'] : ['15% transaction commission', 'SaaS Insights (B2B)', 'Green Credit sponsorship', 'Priority placement ads'] }
+                ].map((block, idx) => (
+                  <div key={idx} className={`bg-slate-900/60 border ${block.color} rounded-2xl p-4 space-y-2`}>
+                    <h4 className="font-black text-white text-[10px] uppercase tracking-wider">{block.title}</h4>
+                    <ul className="text-[10px] text-slate-400 space-y-1 font-semibold">
+                      {block.items.map((item, i) => (
+                        <li key={i} className="flex items-start gap-1">
+                          <span className="text-emerald-400 mt-0.5">•</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
               </div>
             </div>
           </section>
@@ -561,96 +712,114 @@ export default function StartupPitchDeck() {
               </div>
             </div>
 
-            {/* DYNAMIC PRICING FORMULA PRESENTATION */}
-            <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 text-center space-y-4">
-              <p className="text-[10px] text-emerald-400 font-black uppercase tracking-wider">{t('math_title')}</p>
-              <div className="inline-block bg-slate-900/80 border border-slate-800 rounded-2xl px-6 py-4 font-mono text-emerald-400 text-sm md:text-base">
-                P_d = P_0 &times; (t_left / t_total)<sup>&alpha;</sup> &times; f(demand) &times; f(weather)
+            {/* TRANSPARENT CLEARANCE */}
+            <div className="bg-slate-900/40 border border-slate-800/60 rounded-3xl p-6 md:p-8 space-y-4">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-black text-white text-sm uppercase tracking-wider">
+                  {lang === 'vi' ? 'Transparent Clearance — Lý do không dùng mô hình Túi mù' : 'Transparent Clearance — Why Not Blind Bags'}
+                </h3>
               </div>
-              <p className="text-xs text-slate-500 font-medium max-w-xl mx-auto">
-                {t('math_desc')}
+              <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                {lang === 'vi'
+                  ? 'Nghiên cứu trên nền tảng Wolt (Stockholm) cho thấy minh bạch hóa thông tin thực phẩm cận date giúp giảm tỷ lệ lãng phí từ 33,06% xuống 14,8%. Nghiên cứu của UCSD cũng xác nhận khi người mua biết rõ mình đang mua gì, tỷ lệ thực phẩm bị vứt bỏ sau khi mua về giảm đáng kể so với mô hình túi mù.'
+                  : 'Research on Wolt platform (Stockholm) shows transparent near-expiry food information reduces waste rate from 33.06% to 14.8%. UCSD studies confirm that when buyers know exactly what they are purchasing, post-purchase food waste drops significantly compared to blind bag models.'}
               </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-4 space-y-2">
+                  <h4 className="font-black text-red-400 text-xs uppercase">❌ {lang === 'vi' ? 'Surprise Clearance (Túi mù)' : 'Surprise Clearance (Blind Bags)'}</h4>
+                  <ul className="text-[11px] text-slate-400 space-y-1.5 font-semibold">
+                    <li>• {lang === 'vi' ? 'Không biết sản phẩm trước khi mua' : 'Unknown products before purchase'}</li>
+                    <li>• {lang === 'vi' ? 'Nguy cơ lãng phí thứ cấp tại hộ gia đình' : 'Secondary waste risk at household level'}</li>
+                    <li>• {lang === 'vi' ? 'Dữ liệu nhị phân (bán/không bán) — không đủ cho AI' : 'Binary data (sold/unsold) — insufficient for AI'}</li>
+                    <li>• {lang === 'vi' ? 'Không phù hợp văn hóa tiêu dùng Việt Nam' : 'Not suitable for Vietnamese consumer culture'}</li>
+                  </ul>
+                </div>
+                <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4 space-y-2">
+                  <h4 className="font-black text-emerald-400 text-xs uppercase">✅ {lang === 'vi' ? 'Transparent Clearance (F.R.E.S.H)' : 'Transparent Clearance (F.R.E.S.H)'}</h4>
+                  <ul className="text-[11px] text-slate-400 space-y-1.5 font-semibold">
+                    <li>• {lang === 'vi' ? 'Hiển thị đầy đủ: ảnh thực, thành phần, HSD, mức giảm' : 'Full display: real photos, ingredients, expiry, discount'}</li>
+                    <li>• {lang === 'vi' ? 'Người mua chỉ chọn đúng món cần — giảm lãng phí' : 'Buyers choose exactly what they need — reduces waste'}</li>
+                    <li>• {lang === 'vi' ? 'Dữ liệu phong phú theo từng sản phẩm → nuôi AI' : 'Rich per-product data → feeds AI engine'}</li>
+                    <li>• {lang === 'vi' ? 'Phù hợp cao với tâm lý tiêu dùng Việt' : 'Highly compatible with Vietnamese consumer mindset'}</li>
+                  </ul>
+                </div>
+              </div>
             </div>
 
-            {/* INTERACTIVE PRICING SIMULATOR */}
-            <div className="bg-slate-900/40 border border-slate-850 rounded-[2.2rem] p-6 md:p-8 space-y-6">
-              <div className="flex items-center gap-2">
-                <Cpu className="w-5 h-5 text-emerald-400" />
-                <h3 className="font-black text-white text-sm uppercase tracking-wider">{t('sim_title')}</h3>
-              </div>
-              
-              <p className="text-xs text-slate-400 font-medium">
-                {t('sim_desc')}
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
-                {/* Inputs */}
-                <div className="space-y-5">
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs font-bold text-slate-300">
-                      <span>{t('sim_original_price')}</span>
-                      <span className="text-emerald-400">{originalPrice.toLocaleString()} VNĐ</span>
-                    </div>
-                    <input
-                      type="range" min="10000" max="500000" step="5000" value={originalPrice}
-                      onChange={(e) => setOriginalPrice(Number(e.target.value))}
-                      className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs font-bold text-slate-300">
-                      <span>{t('sim_hours_left')}</span>
-                      <span className="text-orange-400">{hoursLeft} / {totalHours} {lang === 'vi' ? 'giờ' : 'hrs'}</span>
-                    </div>
-                    <input
-                      type="range" min="1" max={totalHours} step="1" value={hoursLeft}
-                      onChange={(e) => setHoursLeft(Number(e.target.value))}
-                      className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-orange-500"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs font-bold text-slate-300">
-                      <span>{t('sim_demand')}</span>
-                      <span className="text-blue-400">x{demandFactor.toFixed(1)}</span>
-                    </div>
-                    <input
-                      type="range" min="0.5" max="1.5" step="0.1" value={demandFactor}
-                      onChange={(e) => setDemandFactor(Number(e.target.value))}
-                      className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                    />
-                  </div>
+            {/* VALUE PROPOSITION */}
+            <div className="bg-slate-900/40 border border-slate-800/60 rounded-3xl p-6 md:p-8 space-y-4">
+              <h3 className="font-black text-white text-sm uppercase tracking-wider">
+                {lang === 'vi' ? 'Đề xuất Giá trị theo từng Phân khúc' : 'Value Proposition by Segment'}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-slate-950/80 border border-emerald-500/20 rounded-2xl p-5 space-y-2">
+                  <span className="text-2xl">🏪</span>
+                  <h4 className="font-black text-emerald-400 text-xs uppercase">{lang === 'vi' ? 'Long-tail F&B (B2B)' : 'Long-tail F&B (B2B)'}</h4>
+                  <p className="text-[11px] text-slate-400 leading-relaxed font-semibold">
+                    {lang === 'vi'
+                      ? 'Thu hồi 30-50% chi phí NVL từ hàng sẽ bỏ đi. Marketing zero-cost đến tệp Gen Z. Báo cáo tồn kho & ESG. Đăng hàng dưới 2 phút từ điện thoại.'
+                      : 'Recover 30-50% material costs from would-be waste. Zero-cost Gen Z marketing. Inventory & ESG reports. List products in under 2 mins from phone.'}
+                  </p>
                 </div>
+                <div className="bg-slate-950/80 border border-blue-500/20 rounded-2xl p-5 space-y-2">
+                  <span className="text-2xl">🎓</span>
+                  <h4 className="font-black text-blue-400 text-xs uppercase">{lang === 'vi' ? 'Sinh viên & Gen Z (B2C)' : 'Students & Gen Z (B2C)'}</h4>
+                  <p className="text-[11px] text-slate-400 leading-relaxed font-semibold">
+                    {lang === 'vi'
+                      ? 'Tiết kiệm 30-70% so với giá gốc. Sản phẩm minh bạch (ảnh thật, HSD rõ). Hyper-local bán kính 500m. Green Credit & Waste Warriors Leaderboard.'
+                      : 'Save 30-70% off original price. Transparent products (real photos, clear expiry). Hyper-local 500m radius. Green Credit & Waste Warriors Leaderboard.'}
+                  </p>
+                </div>
+                <div className="bg-slate-950/80 border border-orange-500/20 rounded-2xl p-5 space-y-2">
+                  <span className="text-2xl">☕</span>
+                  <h4 className="font-black text-orange-400 text-xs uppercase">{lang === 'vi' ? 'Chuỗi F&B vừa (B2B – GĐ2)' : 'Mid-size F&B Chains (B2B – Phase 2)'}</h4>
+                  <p className="text-[11px] text-slate-400 leading-relaxed font-semibold">
+                    {lang === 'vi'
+                      ? 'SaaS Insights: báo cáo tồn kho nâng cao, dự báo nhu cầu theo mùa, phân tích chiến lược markdown. Tích hợp POS API tự động.'
+                      : 'SaaS Insights: advanced inventory reports, seasonal demand forecasting, markdown strategy analysis. Automated POS API integration.'}
+                  </p>
+                </div>
+              </div>
+            </div>
 
-                {/* AI Outputs */}
-                <div className="bg-slate-950 rounded-2xl p-6 flex flex-col justify-between border border-slate-800 relative overflow-hidden">
-                  <div className="absolute top-[-20%] right-[-20%] w-24 h-24 bg-emerald-500/5 rounded-full blur-xl" />
-                  
-                  <div className="space-y-4">
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t('sim_output_title')}</p>
-                    
-                    <div className="space-y-1">
-                      <span className="text-[10px] text-slate-400 font-semibold uppercase">{t('sim_rescue_price')}</span>
-                      <p className="text-3xl font-black text-emerald-400">{simulatedPrice.toLocaleString()} VNĐ</p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-900">
-                      <div>
-                        <span className="text-[9px] text-slate-500 font-semibold uppercase">{t('sim_discount')}</span>
-                        <p className="text-sm font-black text-orange-400">-{Math.round((1 - (simulatedPrice / originalPrice)) * 100)}%</p>
-                      </div>
-                      <div>
-                        <span className="text-[9px] text-slate-500 font-semibold uppercase">{t('sim_co2')}</span>
-                        <p className="text-sm font-black text-blue-400">~{co2SavedSimulated} kg</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-slate-900 text-[10px] text-slate-500 font-bold flex items-center gap-2">
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>{t('sim_running')}</span>
-                  </div>
+            {/* GREEN CREDIT SYSTEM */}
+            <div className="bg-gradient-to-br from-slate-950 to-[#0e1628] border border-emerald-500/20 rounded-3xl p-6 md:p-8 space-y-5">
+              <div className="flex items-center gap-2">
+                <Award className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-black text-white text-sm uppercase tracking-wider">
+                  {lang === 'vi' ? 'Hệ thống Green Credit — Gamification' : 'Green Credit System — Gamification'}
+                </h3>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                {lang === 'vi'
+                  ? 'Mỗi giao dịch hoàn tất được tự động quy đổi thành điểm Green Credit dựa trên lượng CO2 tiết kiệm (theo hệ số UNEP). Điểm tích lũy xác định cấp bậc: Đồng → Bạc → Vàng → Kim Cương.'
+                  : 'Each completed transaction is automatically converted to Green Credit points based on CO2 saved (using UNEP coefficients). Points determine tier: Bronze → Silver → Gold → Diamond.'}
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-slate-900/60 border border-slate-800/60 rounded-2xl p-4 space-y-2">
+                  <span className="text-[10px] text-amber-400 font-black uppercase tracking-wider">{lang === 'vi' ? 'Giai đoạn 1 (2026)' : 'Phase 1 (2026)'}</span>
+                  <p className="text-[11px] text-slate-400 font-semibold leading-relaxed">
+                    {lang === 'vi'
+                      ? 'Đổi điểm lấy voucher tại các tiệm đối tác trong hệ sinh thái F.R.E.S.H. Vòng lặp giá trị khép kín.'
+                      : 'Redeem points for vouchers at F.R.E.S.H partner stores. Closed-loop value cycle.'}
+                  </p>
+                </div>
+                <div className="bg-slate-900/60 border border-slate-800/60 rounded-2xl p-4 space-y-2">
+                  <span className="text-[10px] text-emerald-400 font-black uppercase tracking-wider">{lang === 'vi' ? 'Giai đoạn 2 (2027)' : 'Phase 2 (2027)'}</span>
+                  <p className="text-[11px] text-slate-400 font-semibold leading-relaxed">
+                    {lang === 'vi'
+                      ? 'MOU với UEF & các trường ĐH: đổi điểm thành ưu đãi học phí, điểm cộng hoạt động xã hội, quyền ưu tiên sự kiện.'
+                      : 'MOU with UEF & universities: redeem for tuition discounts, social activity credits, event priority access.'}
+                  </p>
+                </div>
+                <div className="bg-slate-900/60 border border-slate-800/60 rounded-2xl p-4 space-y-2">
+                  <span className="text-[10px] text-blue-400 font-black uppercase tracking-wider">{lang === 'vi' ? 'Giai đoạn 3 (2028+)' : 'Phase 3 (2028+)'}</span>
+                  <p className="text-[11px] text-slate-400 font-semibold leading-relaxed">
+                    {lang === 'vi'
+                      ? 'Chứng nhận ESG cá nhân được FMCG Brands và tổ chức xanh công nhận trong tuyển dụng & đánh giá ứng viên.'
+                      : 'Personal ESG certification recognized by FMCG Brands and green organizations in recruitment & candidate evaluation.'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -711,6 +880,41 @@ export default function StartupPitchDeck() {
               </table>
               <div className="text-[9px] text-slate-500 italic mt-3 text-center">
                 {lang === 'vi' ? 'Thang điểm /10 cho từng tiêu chí. F.R.E.S.H dẫn đầu 48/50 điểm.' : 'Score /10 per criterion. F.R.E.S.H leads at 48/50.'}
+              </div>
+            </div>
+
+            {/* COMPETITOR CLASSIFICATION */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Swords className="w-4 h-4 text-red-400" />
+                  <h4 className="font-black text-red-400 text-xs uppercase">{lang === 'vi' ? 'Đối thủ Trực tiếp' : 'Direct Competitors'}</h4>
+                </div>
+                <ul className="text-[11px] text-slate-400 space-y-2 font-semibold">
+                  <li><span className="text-red-400 font-bold">Too Good To Go</span> — {lang === 'vi' ? 'Mô hình Surprise Bag (túi mù). Chưa vào VN. Không phù hợp văn hóa Á Đông.' : 'Surprise Bag model. Not in Vietnam. Doesn\'t fit Asian culture.'}</li>
+                  <li><span className="text-red-400 font-bold">Flashfood</span> — {lang === 'vi' ? 'Chỉ hợp tác siêu thị lớn (Bắc Mỹ). Không có long-tail F&B.' : 'Only partners with large supermarkets (North America). No long-tail F&B.'}</li>
+                  <li><span className="text-red-400 font-bold">OLIO</span> — {lang === 'vi' ? 'P2P sharing. Không có AI pricing. Tập trung UK.' : 'P2P sharing. No AI pricing. UK-focused.'}</li>
+                </ul>
+              </div>
+              <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-amber-400" />
+                  <h4 className="font-black text-amber-400 text-xs uppercase">{lang === 'vi' ? 'Đối thủ Gián tiếp' : 'Indirect Competitors'}</h4>
+                </div>
+                <ul className="text-[11px] text-slate-400 space-y-2 font-semibold">
+                  <li><span className="text-amber-400 font-bold">GrabFood / ShopeeFood</span> — {lang === 'vi' ? 'Có deal giảm giá nhưng không chuyên cận date. Phí hoa hồng 25-30%.' : 'Has discount deals but not near-expiry focused. 25-30% commission.'}</li>
+                  <li><span className="text-amber-400 font-bold">Facebook Groups</span> — {lang === 'vi' ? 'Cộng đồng tự phát nhưng thiếu AI, thanh toán, tracking.' : 'Organic communities but lacks AI, payments, tracking.'}</li>
+                </ul>
+              </div>
+              <div className="bg-purple-500/5 border border-purple-500/20 rounded-2xl p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-purple-400" />
+                  <h4 className="font-black text-purple-400 text-xs uppercase">{lang === 'vi' ? 'Đối thủ Tiềm ẩn' : 'Potential Competitors'}</h4>
+                </div>
+                <ul className="text-[11px] text-slate-400 space-y-2 font-semibold">
+                  <li><span className="text-purple-400 font-bold">{lang === 'vi' ? 'Siêu thị tự làm' : 'Supermarket Self-Service'}</span> — {lang === 'vi' ? 'Co.opmart, Bách Hóa Xanh có thể tự tạo kênh giảm giá cận date riêng.' : 'Co.opmart, Bach Hoa Xanh may create own near-expiry discount channels.'}</li>
+                  <li><span className="text-purple-400 font-bold">{lang === 'vi' ? 'Clone startup' : 'Clone Startups'}</span> — {lang === 'vi' ? 'Rào cản: data moat + network effect sau 6-12 tháng hoạt động.' : 'Barrier: data moat + network effect after 6-12 months operation.'}</li>
+                </ul>
               </div>
             </div>
           </section>
@@ -993,7 +1197,7 @@ export default function StartupPitchDeck() {
                       const labelKey = 'esg_' + row.key;
                       return (
                         <tr key={idx} className="border-b border-slate-800/60 hover:bg-slate-800/30 transition-colors">
-                          <td className="py-2.5 px-2 text-slate-300 font-bold">{t(labelKey)}</td>
+                          <td className="py-2.5 px-2 text-slate-300 font-bold">{t(labelKey as any)}</td>
                           {row.values.map((v, vi) => (
                             <td key={vi} className="text-center py-2.5 px-2 text-white font-bold">{v}</td>
                           ))}
