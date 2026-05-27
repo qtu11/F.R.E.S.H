@@ -45,6 +45,24 @@ export async function POST(req: Request) {
     // Đảm bảo user_id luôn khớp với phiên đăng nhập để tránh IDOR nạp/rút tiền của tài khoản khác
     const targetUserId = auth.user.role === 'admin' ? (body.user_id || auth.user.userId) : auth.user.userId;
     
+    // Kiểm tra an toàn tài chính ví
+    if (body.type === 'topup' && body.amount <= 0) {
+      return NextResponse.json({ error: 'Số tiền nạp phải lớn hơn 0' }, { status: 400 });
+    }
+
+    // Lấy số dư ví hiện tại
+    const { data: user, error: userErr } = await supabase.from('users').select('wallet_balance, name, email').eq('id', targetUserId).single();
+    if (userErr) return handleError(userErr);
+
+    if (body.type === 'withdrawal') {
+      const withdrawAmount = Math.abs(body.amount);
+      if ((user?.wallet_balance || 0) < withdrawAmount) {
+        return NextResponse.json({ error: 'Số dư ví FRESH không đủ để thực hiện rút tiền' }, { status: 400 });
+      }
+      // Đảm bảo amount lưu vào db luôn là số âm cho withdrawal
+      body.amount = -withdrawAmount;
+    }
+
     const newTx = { 
       ...body, 
       id: crypto.randomUUID(),
@@ -54,10 +72,6 @@ export async function POST(req: Request) {
     const { error: txErr } = await supabase.from('transactions').insert(newTx);
     if (txErr) return handleError(txErr);
 
-    // Cập nhật số dư ví, lấy thêm name và email để gửi thư
-    const { data: user, error: userErr } = await supabase.from('users').select('wallet_balance, name, email').eq('id', targetUserId).single();
-    if (userErr) return handleError(userErr);
-    
     if (user) {
       const newBalance = (user.wallet_balance || 0) + body.amount;
       const { error: updateErr } = await supabase.from('users').update({ wallet_balance: newBalance }).eq('id', targetUserId);
@@ -86,6 +100,11 @@ export async function DELETE(req: Request) {
     const auth = await requireAuth();
     if ('status' in auth) return auth;
 
+    // Chỉ admin mới có quyền xóa giao dịch ví (đề phòng khách hàng tự xóa thanh toán để hoàn tiền)
+    if (auth.user.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized: Only admins can delete transactions' }, { status: 403 });
+    }
+
     const supabase = getServerClient();
     if (!supabase) return NextResponse.json({ error: 'Not configured' }, { status: 503 });
 
@@ -94,11 +113,6 @@ export async function DELETE(req: Request) {
     
     if (!tx) {
       return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
-    }
-
-    // IDOR check: Chỉ admin hoặc chủ giao dịch mới được xoá
-    if (auth.user.role !== 'admin' && tx.user_id !== auth.user.userId) {
-      return NextResponse.json({ error: 'Unauthorized: IDOR detected' }, { status: 403 });
     }
 
     if (tx.user_id) {

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { handleError } from '@/lib/supabase/helpers';
 import { toCamelCase, toSnakeCase } from '@/lib/supabase/transform';
-import { requireAnyRole } from '@/lib/auth/middleware';
+import { requireAnyRole, checkStoreAccess } from '@/lib/auth/middleware';
 import { applyRescueCatalogImages } from '@/lib/data/rescue-products';
 
 function withCatalogImages<T>(data: T): T {
@@ -94,6 +94,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'storeId is required' }, { status: 400 });
     }
 
+    // Kiểm tra quyền hạn Store Access (IDOR check)
+    const hasAccess = await checkStoreAccess(auth.user.userId, auth.user.role, storeId);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'Unauthorized: You do not have access to this store' }, { status: 403 });
+    }
+
     const cleanBody = {
       ...rawBody,
       store_id: storeId,
@@ -122,9 +128,44 @@ export async function PATCH(req: Request) {
     if (!supabase) return NextResponse.json({ error: 'Not configured' }, { status: 503 });
 
     const rawBody = await req.json();
-    
-    // Đóng gói update vào nutrition
-    const nutrition = typeof rawBody.nutrition === 'object' ? { ...rawBody.nutrition } : {};
+    const id = rawBody.id;
+    if (!id) {
+      return NextResponse.json({ error: 'id is required' }, { status: 400 });
+    }
+
+    // Lấy thông tin store_id và nutrition hiện tại của sản phẩm
+    const { data: existingProduct, error: getErr } = await supabase
+      .from('products')
+      .select('store_id, nutrition')
+      .eq('id', id)
+      .single();
+
+    if (getErr || !existingProduct) {
+      return NextResponse.json({ error: 'Không tìm thấy sản phẩm' }, { status: 404 });
+    }
+
+    // Kiểm tra quyền hạn Store Access (IDOR check)
+    const hasAccess = await checkStoreAccess(auth.user.userId, auth.user.role, existingProduct.store_id);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'Unauthorized: You do not have access to this store' }, { status: 403 });
+    }
+
+    // Phục hồi và merge nutrition cũ để tránh mất mát dữ liệu
+    let existingNutrition = {};
+    if (existingProduct.nutrition) {
+      try {
+        existingNutrition = typeof existingProduct.nutrition === 'string'
+          ? JSON.parse(existingProduct.nutrition)
+          : existingProduct.nutrition;
+      } catch {
+        existingNutrition = {};
+      }
+    }
+
+    const nutrition = {
+      ...existingNutrition,
+      ...(typeof rawBody.nutrition === 'object' ? rawBody.nutrition : {})
+    };
     if (rawBody.description !== undefined) nutrition.description = rawBody.description;
     if (rawBody.details !== undefined) nutrition.details = rawBody.details;
     if (rawBody.mfgDate !== undefined) nutrition.mfgDate = rawBody.mfgDate;
@@ -140,13 +181,12 @@ export async function PATCH(req: Request) {
     delete cleanBody.expiryDate;
 
     const body = toSnakeCase(cleanBody);
-    const { id, ...updates } = body;
+    const { id: _, ...updates } = body;
     const { data, error } = await supabase.from('products').update(updates).eq('id', id).select().single();
     if (error) return handleError(error);
     return NextResponse.json(toCamelCase(data));
   } catch (err) { return handleError(err); }
 }
-
 
 export async function DELETE(req: Request) {
   try {
@@ -157,6 +197,27 @@ export async function DELETE(req: Request) {
     if (!supabase) return NextResponse.json({ error: 'Not configured' }, { status: 503 });
 
     const { id } = await req.json();
+    if (!id) {
+      return NextResponse.json({ error: 'id is required' }, { status: 400 });
+    }
+
+    // Lấy thông tin sản phẩm để kiểm tra store_id
+    const { data: product, error: getErr } = await supabase
+      .from('products')
+      .select('store_id')
+      .eq('id', id)
+      .single();
+
+    if (getErr || !product) {
+      return NextResponse.json({ error: 'Không tìm thấy sản phẩm' }, { status: 404 });
+    }
+
+    // Kiểm tra quyền hạn Store Access (IDOR check)
+    const hasAccess = await checkStoreAccess(auth.user.userId, auth.user.role, product.store_id);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'Unauthorized: You do not have access to this store' }, { status: 403 });
+    }
+
     const { error } = await supabase.from('products').delete().eq('id', id);
     if (error) return handleError(error);
     return NextResponse.json({ success: true });
