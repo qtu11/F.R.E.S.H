@@ -51,8 +51,18 @@ export async function POST(req: Request) {
 
       const { data: voucher, error: voucherErr } = await supabase.from('vouchers').select('*').eq('id', body.voucher_id).single();
       if (voucherErr) return handleError(voucherErr);
-      if (voucher && voucher.used_count >= voucher.usage_limit) return NextResponse.json({ error: 'Voucher exhausted' }, { status: 400 });
-
+      
+      if (voucher) {
+        if (voucher.used_count >= voucher.usage_limit) {
+          return NextResponse.json({ error: 'Voucher exhausted' }, { status: 400 });
+        }
+        if (voucher.valid_until && new Date(voucher.valid_until).getTime() < Date.now()) {
+          return NextResponse.json({ error: 'Voucher has expired' }, { status: 400 });
+        }
+        if (voucher.valid_from && new Date(voucher.valid_from).getTime() > Date.now()) {
+          return NextResponse.json({ error: 'Voucher is not active yet' }, { status: 400 });
+        }
+      }
       const { error: claimErr } = await supabase.from('user_vouchers').insert({
         user_id: body.user_id, voucher_id: body.voucher_id, claimed_at: new Date().toISOString(),
       });

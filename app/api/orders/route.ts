@@ -76,15 +76,15 @@ export async function POST(req: Request) {
     const statusFlow = ['pending', 'confirmed', 'preparing', 'ready', 'in_transit', 'delivered'];
 
     const userId = auth.user.userId;
-    const total = orderData.total;
     const paymentMethod = orderData.payment_method;
 
-    // 1. Kiểm tra tồn kho sản phẩm
+    // 1. Tính toán lại subtotal từ database và kiểm tra tồn kho sản phẩm
+    let computedSubtotal = 0;
     if (orderItemData && orderItemData.length > 0) {
       for (const item of orderItemData) {
         const { data: product, error: prodErr } = await supabase
           .from('products')
-          .select('name, stock, status')
+          .select('name, stock, status, ai_price')
           .eq('id', item.product_id)
           .single();
 
@@ -95,10 +95,84 @@ export async function POST(req: Request) {
         if (product.stock < item.quantity || product.status === 'out_of_stock') {
           return NextResponse.json({ error: `Sản phẩm "${product.name}" đã hết hàng hoặc không đủ tồn kho` }, { status: 400 });
         }
+
+        // Ghi đè đơn giá từ database để chống Client tự thay đổi giá sản phẩm
+        item.unit_price = product.ai_price;
+        computedSubtotal += product.ai_price * item.quantity;
       }
+    } else {
+      return NextResponse.json({ error: 'Đơn hàng phải chứa ít nhất 1 sản phẩm' }, { status: 400 });
     }
 
-    // 2. Nếu thanh toán qua ví, kiểm tra số dư ví khách hàng
+    // 2. Xác thực Voucher (nếu có voucher_id) và tính toán discount
+    let discount = 0;
+    const voucherId = orderData.voucher_id || data.voucher_id;
+
+    if (voucherId) {
+      // Kiểm tra xem khách hàng có sở hữu voucher này và chưa sử dụng không
+      const { data: userVoucher, error: uvErr } = await supabase
+        .from('user_vouchers')
+        .select('*, voucher:vouchers(*)')
+        .eq('user_id', userId)
+        .eq('voucher_id', voucherId)
+        .maybeSingle();
+
+      if (uvErr || !userVoucher) {
+        return NextResponse.json({ error: 'Bạn không sở hữu voucher này hoặc voucher không hợp lệ' }, { status: 400 });
+      }
+
+      if (userVoucher.used_at) {
+        return NextResponse.json({ error: 'Voucher này đã được sử dụng trước đó' }, { status: 400 });
+      }
+
+      const voucher = userVoucher.voucher;
+      if (!voucher) {
+        return NextResponse.json({ error: 'Thông tin voucher không tồn tại trên hệ thống' }, { status: 400 });
+      }
+
+      // Kiểm tra hạn sử dụng của voucher
+      if (voucher.valid_until && new Date(voucher.valid_until).getTime() < Date.now()) {
+        return NextResponse.json({ error: 'Voucher này đã hết hạn sử dụng' }, { status: 400 });
+      }
+      if (voucher.valid_from && new Date(voucher.valid_from).getTime() > Date.now()) {
+        return NextResponse.json({ error: 'Voucher chưa đến thời gian áp dụng' }, { status: 400 });
+      }
+
+      // Kiểm tra điều kiện đơn hàng tối thiểu
+      const minOrder = voucher.min_order || 0;
+      if (computedSubtotal < minOrder) {
+        return NextResponse.json({ error: `Đơn hàng tối thiểu để dùng voucher này là ${minOrder.toLocaleString('vi-VN')}đ` }, { status: 400 });
+      }
+
+      // Kiểm tra xem voucher có áp dụng cho đúng store của đơn hàng không
+      if (voucher.store_id && voucher.store_id !== orderData.store_id) {
+        return NextResponse.json({ error: 'Voucher không áp dụng cho cửa hàng này' }, { status: 400 });
+      }
+
+      // Tính toán giá trị giảm giá thực tế
+      if (voucher.discount_type === 'percentage') {
+        const pctDiscount = Math.round((computedSubtotal * voucher.discount_value) / 100);
+        discount = voucher.max_discount ? Math.min(pctDiscount, voucher.max_discount) : pctDiscount;
+      } else if (voucher.discount_type === 'fixed') {
+        discount = voucher.discount_value;
+      }
+
+      discount = Math.min(discount, computedSubtotal); // Giới hạn discount không vượt quá subtotal
+    }
+
+    // Thiết lập các chi phí cố định và tổng tiền thanh toán an toàn
+    const deliveryFee = orderData.delivery_method === 'pickup' ? 0 : 5000;
+    const serviceFee = 2000;
+    const total = Math.max(0, computedSubtotal + deliveryFee + serviceFee - discount);
+
+    // Ghi đè dữ liệu tính toán từ Backend để lưu vào database
+    orderData.subtotal = computedSubtotal;
+    orderData.delivery_fee = deliveryFee;
+    orderData.service_fee = serviceFee;
+    orderData.discount = discount;
+    orderData.total = total;
+
+    // 3. Nếu thanh toán qua ví, kiểm tra số dư ví khách hàng
     if (paymentMethod === 'wallet') {
       const { data: user, error: userErr } = await supabase
         .from('users')
@@ -138,7 +212,7 @@ export async function POST(req: Request) {
       if (txErr) return handleError(txErr);
     }
 
-    // 3. Cập nhật số lượng sản phẩm (stock) trong kho
+    // 4. Cập nhật số lượng sản phẩm (stock) trong kho
     if (orderItemData && orderItemData.length > 0) {
       for (const item of orderItemData) {
         const { data: product } = await supabase
@@ -160,7 +234,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 4. Tạo đơn hàng (Order)
+    // 5. Tạo đơn hàng (Order)
     const { error: orderErr } = await supabase.from('orders').insert({
       ...orderData,
       id,
@@ -171,7 +245,7 @@ export async function POST(req: Request) {
     });
     if (orderErr) return handleError(orderErr);
 
-    // 5. Tạo các sản phẩm trong đơn hàng (Order Items)
+    // 6. Tạo các sản phẩm trong đơn hàng (Order Items)
     if (orderItemData?.length) {
       const { error: itemsErr } = await supabase.from('order_items').insert(
         orderItemData.map((item: any) => ({ ...item, order_id: id }))
@@ -179,7 +253,18 @@ export async function POST(req: Request) {
       if (itemsErr) return handleError(itemsErr);
     }
 
-    // 6. Tạo tracking steps
+    // 7. Cập nhật trạng thái voucher đã sử dụng trong user_vouchers (Đề phòng Double Spending)
+    if (voucherId) {
+      const { error: uvUpdErr } = await supabase
+        .from('user_vouchers')
+        .update({ used_at: now, order_id: id })
+        .eq('user_id', userId)
+        .eq('voucher_id', voucherId);
+
+      if (uvUpdErr) return handleError(uvUpdErr);
+    }
+
+    // 8. Tạo tracking steps
     const time = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     const { error: stepsErr } = await supabase.from('tracking_steps').insert([
       { order_id: id, status: 'pending', time, completed: true },
@@ -197,7 +282,7 @@ export async function POST(req: Request) {
       const emailItems = (items || []).map((it: any) => ({
         name: it.product_name || 'Sản phẩm giải cứu',
         quantity: it.quantity,
-        price: it.price
+        price: it.unit_price || it.price
       }));
       
       const co2Saved = orderData.co2_saved || (3.6 * (items?.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0) || 1));
