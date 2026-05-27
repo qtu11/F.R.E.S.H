@@ -6,6 +6,7 @@ import postgres from 'postgres';
 import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcryptjs';
+import { rescueProductsToDbRows } from '@/lib/data/rescue-products';
 
 async function requireAdmin() {
   const cookieStore = await cookies();
@@ -53,6 +54,10 @@ async function seedData(sql: postgres.Sql) {
     { id: 's6', name: 'FamilyMart D2', address: '200 Thao Dien, D2, HCMC', phone: '028 3519 1234', rating: 4.1, review_count: 98, is_open: false, open_hours: '7:00 - 22:00', distance: 1.5, deals_count: 5, image: '🏪', since: '2022' },
     { id: 's7', name: 'Lotte Mart D7', address: '469 Nguyen Huu Tho, D7, HCMC', phone: '028 5412 5678', rating: 4.4, review_count: 432, is_open: true, open_hours: '8:00 - 22:00', distance: 3.2, deals_count: 18, image: '🏬', since: '2016' },
     { id: 's8', name: 'MM Mega Market', address: '151 Dong Khoi, D1, HCMC', phone: '028 3822 9012', rating: 4.0, review_count: 145, is_open: true, open_hours: '6:00 - 21:00', distance: 0.7, deals_count: 10, image: '🏪', since: '2020' },
+    { id: 's9', name: 'Bách Hóa Xanh', address: 'Quận 2, HCM', phone: '02837445566', rating: 4.2, review_count: 3200, is_open: true, open_hours: '07:00-22:00', distance: 1.2, deals_count: 22, image: '🏪', since: '2019' },
+    { id: 's10', name: 'Tops Market', address: 'Quận 10, HCM', phone: '02838667788', rating: 4.3, review_count: 890, is_open: true, open_hours: '08:00-22:00', distance: 3.7, deals_count: 14, image: '🏬', since: '2020' },
+    { id: 's11', name: 'Kingfood Mart', address: 'Quận Phú Nhuận, HCM', phone: '02839998877', rating: 4.1, review_count: 420, is_open: true, open_hours: '07:00-21:30', distance: 3.1, deals_count: 9, image: '🏪', since: '2021' },
+    { id: 's12', name: 'Farmers Market', address: 'Quận 1, HCM', phone: '02838112233', rating: 4.6, review_count: 210, is_open: true, open_hours: '06:00-20:00', distance: 1.8, deals_count: 7, image: '🏬', since: '2023' },
   ];
   for (const s of stores) {
     await sql`INSERT INTO stores ${sql(s)} ON CONFLICT (id) DO NOTHING`;
@@ -71,6 +76,12 @@ async function seedData(sql: postgres.Sql) {
   ];
   for (const p of products) {
     await sql`INSERT INTO products ${sql(p)} ON CONFLICT (id) DO NOTHING`;
+  }
+
+  // Seed rescue products (rp01-rp30) with local images
+  const rescueRows = rescueProductsToDbRows();
+  for (const r of rescueRows) {
+    await sql`INSERT INTO products ${sql(r)} ON CONFLICT (id) DO NOTHING`;
   }
 
   const vouchers = [
