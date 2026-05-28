@@ -62,7 +62,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         deals_count: 0,
         image: `https://ui-avatars.com/api/?name=${encodeURIComponent(org.name)}&background=057A42&color=fff&size=200`,
         since: new Date().toISOString().split('T')[0],
-      }).select().single();
+      });
 
       // Link the store to the organization
       await supabase.from('organization_branches').upsert({
@@ -76,6 +76,29 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         created_at: new Date().toISOString(),
       });
 
+      // Cập nhật người sở hữu tổ chức (owner_id) thành vai trò partner và gán tổ chức
+      if (org.owner_id) {
+        await supabase
+          .from('users')
+          .update({
+            role: 'partner',
+            organization_id: id
+          })
+          .eq('id', org.owner_id);
+
+        // Thêm chủ sở hữu làm quản trị viên (admin) của tổ chức đối tác
+        await supabase.from('organization_members').upsert({
+          id: `OM_${Date.now()}`,
+          organization_id: id,
+          user_id: org.owner_id,
+          role: 'admin',
+          joined_at: new Date().toISOString(),
+          status: 'active',
+          permissions: ['all']
+        }, {
+          onConflict: 'organization_id,user_id'
+        });
+      }
     }
 
     return NextResponse.json(toCamelCase(data));

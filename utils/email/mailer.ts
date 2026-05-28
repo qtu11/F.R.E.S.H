@@ -1,5 +1,5 @@
 const RESEND_API_KEY = 're_D3XRMD2j_EeNXg4GFDWmbdnH2ec2Z7nw7';
-const FROM_EMAIL = 'F.R.E.S.H Platform <f.r.e.s.h@gmail.com.vn>';
+const FROM_EMAIL = 'F.R.E.S.H Platform <onboarding@resend.dev>';
 
 // Hàm gửi email cốt lõi qua REST API của Resend
 export async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {

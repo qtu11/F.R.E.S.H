@@ -48,7 +48,7 @@ function LoginForm() {
       } else {
         localStorage.removeItem('remember_email');
       }
-      router.push(redirect);
+      window.location.href = redirect;
     } else {
       setError(result.error || 'Invalid email or password.');
     }

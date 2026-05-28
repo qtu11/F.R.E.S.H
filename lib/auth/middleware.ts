@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyToken, COOKIE_NAME } from '@/lib/auth/jwt';
 import { cookies } from 'next/headers';
+import { getServerClient } from '@/lib/supabase/server';
 
 export async function getAuthenticatedUser() {
   const cookieStore = await cookies();
@@ -35,4 +36,42 @@ export async function requireAnyRole(roles: string[]) {
     return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
   }
   return auth;
+}
+
+export async function checkStoreAccess(userId: string, role: string, storeId: string): Promise<boolean> {
+  if (role === 'admin') return true;
+  if (role !== 'partner') return false;
+
+  const supabase = getServerClient();
+  if (!supabase) return false;
+
+  const { data: branch } = await supabase
+    .from('organization_branches')
+    .select('organization_id')
+    .eq('store_id', storeId)
+    .maybeSingle();
+
+  if (!branch) return false;
+
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('id')
+    .eq('id', branch.organization_id)
+    .eq('owner_id', userId)
+    .maybeSingle();
+
+  if (org) return true;
+
+  const { data: member } = await supabase
+    .from('organization_members')
+    .select('id')
+    .eq('organization_id', branch.organization_id)
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .in('role', ['admin', 'manager'])
+    .maybeSingle();
+
+  if (member) return true;
+
+  return false;
 }

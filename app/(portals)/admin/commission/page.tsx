@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { DollarSign, CreditCard, TrendingUp, Percent, Download, CheckCircle, Filter, BarChart3, FileText, Loader2 } from 'lucide-react';
 import { useGlobal } from '@/app/providers';
 import { adminService } from '@/lib/data/admin';
+import { showToast } from '@/lib/data/notifications';
 
 const MONTHS = ['Dec', 'Nov', 'Oct', 'Sep', 'Aug', 'Jul'];
 
@@ -72,9 +73,15 @@ export default function AdminCommission() {
 
   const handleMarkPaid = async (id: string) => {
     try {
-      await adminService.updateInvoice(id, { status: 'Paid' });
+      const invoiceId = id.startsWith('TX-') ? id.slice(3) : id;
+      await adminService.updateInvoice(invoiceId, { status: 'Paid' });
       setTransactions(prev => prev.map(tx => tx.id === id ? { ...tx, status: 'Paid' as const } : tx));
-    } catch { /* ignore */ }
+      setInvoices(prev => prev.map(inv => inv.id === invoiceId ? { ...inv, status: 'Paid' } : inv));
+      showToast('success', 'Đã thanh toán', `Hóa đơn ${invoiceId} đã được đánh dấu là Đã thanh toán.`);
+    } catch (err) {
+      console.error(err);
+      showToast('error', 'Lỗi', 'Không thể cập nhật trạng thái hóa đơn');
+    }
   };
 
   if (!mounted) return null;

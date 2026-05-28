@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { handleError } from '@/lib/supabase/helpers';
 import { toCamelCase, toSnakeCase } from '@/lib/supabase/transform';
-import { requireAnyRole } from '@/lib/auth/middleware';
+import { requireAnyRole, checkStoreAccess } from '@/lib/auth/middleware';
 import { applyRescueCatalogImages } from '@/lib/data/rescue-products';
 
 function withCatalogImages<T>(data: T): T {
@@ -34,32 +34,35 @@ export async function GET(req: Request) {
     const { data, error } = await builder;
     if (error) return handleError(error);
 
-    if (id) return NextResponse.json(withCatalogImages(toCamelCase(data?.[0] || null)));
+    // Filter out old seed trash products starting with 'p' (but keep 'rp' and UUIDs)
+    const filteredData = (data || []).filter((p: any) => !p.id.startsWith('p') || p.id.startsWith('rp'));
+
+    if (id) return NextResponse.json(withCatalogImages(toCamelCase(filteredData?.[0] || null)));
     if (query) {
       const q = query.toLowerCase();
-      const filtered = (data || []).filter((p: any) =>
+      const filtered = filteredData.filter((p: any) =>
         p.name?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q) || p.store_name?.toLowerCase().includes(q)
       );
       return NextResponse.json(withCatalogImages(toCamelCase(filtered)));
     }
     if (nearby) {
       const maxDist = parseFloat(nearby);
-      return NextResponse.json(withCatalogImages(toCamelCase((data || []).filter((p: any) => (p.distance ?? 999) <= maxDist))));
+      return NextResponse.json(withCatalogImages(toCamelCase(filteredData.filter((p: any) => (p.distance ?? 999) <= maxDist))));
     }
     if (topRated) {
-      return NextResponse.json(withCatalogImages(toCamelCase([...(data || [])].sort((a: any, b: any) => (b.rating ?? 0) - (a.rating ?? 0)).slice(0, parseInt(topRated)))));
+      return NextResponse.json(withCatalogImages(toCamelCase([...filteredData].sort((a: any, b: any) => (b.rating ?? 0) - (a.rating ?? 0)).slice(0, parseInt(topRated)))));
     }
     if (endingSoon) {
       const hours = parseInt(endingSoon);
       const now = new Date();
       const threshold = new Date(now.getTime() + hours * 3600000);
-      return NextResponse.json(withCatalogImages(toCamelCase((data || []).filter((p: any) => {
+      return NextResponse.json(withCatalogImages(toCamelCase(filteredData.filter((p: any) => {
         const expiry = new Date(p.expiry);
         return expiry <= threshold && expiry > now;
       }).sort((a: any, b: any) => new Date(a.expiry).getTime() - new Date(b.expiry).getTime()))));
     }
 
-    return NextResponse.json(withCatalogImages(toCamelCase(data || [])));
+    return NextResponse.json(withCatalogImages(toCamelCase(filteredData)));
   } catch (err) { return handleError(err); }
 }
 
@@ -91,6 +94,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'storeId is required' }, { status: 400 });
     }
 
+    // Kiểm tra quyền hạn Store Access (IDOR check)
+    const hasAccess = await checkStoreAccess(auth.user.userId, auth.user.role, storeId);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'Unauthorized: You do not have access to this store' }, { status: 403 });
+    }
+
+    // Lấy store_name chuẩn từ DB để tránh lỗi ràng buộc NOT NULL của bảng products
+    const { data: storeObj, error: storeErr } = await supabase
+      .from('stores')
+      .select('name')
+      .eq('id', storeId)
+      .single();
+
+    if (storeErr || !storeObj) {
+      return NextResponse.json({ error: 'Cửa hàng liên kết không tồn tại hoặc đã bị xóa' }, { status: 404 });
+    }
+    const storeName = storeObj.name;
+
     const cleanBody = {
       ...rawBody,
       store_id: storeId,
@@ -101,9 +122,15 @@ export async function POST(req: Request) {
     delete cleanBody.mfgDate;
     delete cleanBody.expiryDate;
     delete cleanBody.storeId;
+    delete cleanBody.storeName;
 
     const data = toSnakeCase(cleanBody);
-    const newProduct = { ...data, id: crypto.randomUUID(), created_at: new Date().toISOString() };
+    const newProduct = { 
+      ...data, 
+      id: crypto.randomUUID(), 
+      store_name: storeName,
+      created_at: new Date().toISOString() 
+    };
     const { data: result, error } = await supabase.from('products').insert(newProduct).select().single();
     if (error) return handleError(error);
     return NextResponse.json(toCamelCase(result), { status: 201 });
@@ -119,9 +146,44 @@ export async function PATCH(req: Request) {
     if (!supabase) return NextResponse.json({ error: 'Not configured' }, { status: 503 });
 
     const rawBody = await req.json();
-    
-    // Đóng gói update vào nutrition
-    const nutrition = typeof rawBody.nutrition === 'object' ? { ...rawBody.nutrition } : {};
+    const id = rawBody.id;
+    if (!id) {
+      return NextResponse.json({ error: 'id is required' }, { status: 400 });
+    }
+
+    // Lấy thông tin store_id và nutrition hiện tại của sản phẩm
+    const { data: existingProduct, error: getErr } = await supabase
+      .from('products')
+      .select('store_id, nutrition')
+      .eq('id', id)
+      .single();
+
+    if (getErr || !existingProduct) {
+      return NextResponse.json({ error: 'Không tìm thấy sản phẩm' }, { status: 404 });
+    }
+
+    // Kiểm tra quyền hạn Store Access (IDOR check)
+    const hasAccess = await checkStoreAccess(auth.user.userId, auth.user.role, existingProduct.store_id);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'Unauthorized: You do not have access to this store' }, { status: 403 });
+    }
+
+    // Phục hồi và merge nutrition cũ để tránh mất mát dữ liệu
+    let existingNutrition = {};
+    if (existingProduct.nutrition) {
+      try {
+        existingNutrition = typeof existingProduct.nutrition === 'string'
+          ? JSON.parse(existingProduct.nutrition)
+          : existingProduct.nutrition;
+      } catch {
+        existingNutrition = {};
+      }
+    }
+
+    const nutrition = {
+      ...existingNutrition,
+      ...(typeof rawBody.nutrition === 'object' ? rawBody.nutrition : {})
+    };
     if (rawBody.description !== undefined) nutrition.description = rawBody.description;
     if (rawBody.details !== undefined) nutrition.details = rawBody.details;
     if (rawBody.mfgDate !== undefined) nutrition.mfgDate = rawBody.mfgDate;
@@ -137,13 +199,12 @@ export async function PATCH(req: Request) {
     delete cleanBody.expiryDate;
 
     const body = toSnakeCase(cleanBody);
-    const { id, ...updates } = body;
+    const { id: _, ...updates } = body;
     const { data, error } = await supabase.from('products').update(updates).eq('id', id).select().single();
     if (error) return handleError(error);
     return NextResponse.json(toCamelCase(data));
   } catch (err) { return handleError(err); }
 }
-
 
 export async function DELETE(req: Request) {
   try {
@@ -154,6 +215,27 @@ export async function DELETE(req: Request) {
     if (!supabase) return NextResponse.json({ error: 'Not configured' }, { status: 503 });
 
     const { id } = await req.json();
+    if (!id) {
+      return NextResponse.json({ error: 'id is required' }, { status: 400 });
+    }
+
+    // Lấy thông tin sản phẩm để kiểm tra store_id
+    const { data: product, error: getErr } = await supabase
+      .from('products')
+      .select('store_id')
+      .eq('id', id)
+      .single();
+
+    if (getErr || !product) {
+      return NextResponse.json({ error: 'Không tìm thấy sản phẩm' }, { status: 404 });
+    }
+
+    // Kiểm tra quyền hạn Store Access (IDOR check)
+    const hasAccess = await checkStoreAccess(auth.user.userId, auth.user.role, product.store_id);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'Unauthorized: You do not have access to this store' }, { status: 403 });
+    }
+
     const { error } = await supabase.from('products').delete().eq('id', id);
     if (error) return handleError(error);
     return NextResponse.json({ success: true });

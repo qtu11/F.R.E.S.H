@@ -339,7 +339,8 @@ export function FloatingAIAssistant() {
             messages: [
               ...messages,
               userMessage
-            ]
+            ],
+            lang: lang || 'vi'
           })
         });
 

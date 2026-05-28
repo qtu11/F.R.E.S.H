@@ -10,7 +10,9 @@ export async function POST(req: Request) {
   let userIdForLog: string | null = null;
   
   try {
-    const { email, password } = await req.json();
+    const body = await req.json();
+    const { password } = body;
+    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
 
     if (!email || !password) {
       await logSecurityEvent(req, null, '/api/auth/login', 'POST', 400, Date.now() - startTime);
@@ -161,8 +163,21 @@ export async function POST(req: Request) {
     }
 
     const { password: _, ...user } = toCamelCase(dbUser);
-    const token = signToken(dbUser.id, dbUser.role);
 
+    if (user.role === 'partner') {
+      const { data: branch } = await supabase
+        .from('organization_branches')
+        .select('store_id')
+        .eq('organization_id', user.organizationId)
+        .maybeSingle();
+      if (branch) {
+        user.storeId = branch.store_id;
+      } else {
+        user.storeId = null;
+      }
+    }
+
+    const token = signToken(dbUser.id, dbUser.role);
     const response = NextResponse.json({ user, token });
     response.cookies.set(COOKIE_NAME, token, {
       httpOnly: true,

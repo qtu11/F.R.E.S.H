@@ -555,7 +555,10 @@ export default function LandingPage() {
 
   const displayProducts = useMemo(() => {
     const hasRescueCatalog = dbProducts.some((p) => p.id.startsWith('rp'));
-    const baseProducts = hasRescueCatalog ? dbProducts : catalogProducts;
+    // Filter out old seed trash products starting with 'p' (but keep 'rp' and UUIDs)
+    const baseProducts = hasRescueCatalog 
+      ? dbProducts.filter((p) => !p.id.startsWith('p') || p.id.startsWith('rp')) 
+      : catalogProducts;
     const withImages = applyRescueCatalogImages(baseProducts) as typeof baseProducts;
     if (categoryFilter === 'All') return withImages;
     return withImages.filter((p) => p.category === categoryFilter);

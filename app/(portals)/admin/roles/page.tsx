@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Shield, Users, Plus, Settings, ChevronDown, ChevronUp, ToggleLeft, ToggleRight, Loader2 } from 'lucide-react';
 import { useGlobal } from '@/app/providers';
 import { adminService } from '@/lib/data/admin';
+import { showToast } from '@/lib/data/notifications';
 
 const MODULES = ['Dashboard', 'Partners', 'Fraud', 'ESG', 'Users', 'Commission', 'Forecasting', 'Heatmap', 'Marketing', 'Customer Care', 'System'];
 
@@ -28,11 +29,27 @@ export default function AdminRoles() {
     });
   }, []);
 
-  const togglePermission = (roleName: string, module: string) => {
-    setRoles(prev => prev.map(r => {
-      if (r.name !== roleName) return r;
-      return { ...r, permissions: { ...r.permissions, [module]: !r.permissions[module] } };
-    }));
+  const togglePermission = async (roleId: string, roleName: string, module: string) => {
+    const targetRole = roles.find(r => r.id === roleId);
+    if (!targetRole) return;
+    
+    const currentVal = !!targetRole.permissions[module];
+    const nextPerms = { ...targetRole.permissions, [module]: !currentVal };
+
+    // Cập nhật giao diện lập tức (Optimistic UI)
+    setRoles(prev => prev.map(r => r.id === roleId ? { ...r, permissions: nextPerms } : r));
+
+    try {
+      await adminService.updateRole(roleId, {
+        permissions: nextPerms
+      });
+      showToast('success', 'Quyền hạn đã lưu', `Đã cập nhật quyền module ${module} cho vai trò ${roleName}`);
+    } catch (err) {
+      console.error(err);
+      showToast('error', 'Lỗi lưu dữ liệu', 'Không thể lưu cập nhật quyền hạn vào cơ sở dữ liệu');
+      // Rollback
+      setRoles(prev => prev.map(r => r.id === roleId ? { ...r, permissions: { ...r.permissions, [module]: currentVal } } : r));
+    }
   };
 
   const roleAccentColors: Record<string, { bg: string; text: string; border: string; darkBg: string; darkText: string }> = {
@@ -102,7 +119,7 @@ export default function AdminRoles() {
                       <td className={`px-3 py-2.5 font-bold text-xs ${ac.text}`}>{role.name}</td>
                       {MODULES.map(m => (
                         <td key={m} className="px-3 py-2.5 text-center">
-                          <button onClick={() => togglePermission(role.name, m)} className="transition-all hover:scale-110">
+                          <button onClick={() => togglePermission(role.id, role.name, m)} className="transition-all hover:scale-110">
                             {role.permissions[m] ? (
                               <ToggleRight className={`w-4 h-4 ${ac.text} mx-auto`} />
                             ) : (

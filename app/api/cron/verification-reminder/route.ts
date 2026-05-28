@@ -17,8 +17,18 @@ function getBiometricStatusMap() {
   const globalBiometric = global as any;
   return globalBiometric.biometricRecords || {};
 }
-
 export async function GET(req: Request) {
+  const authHeader = req.headers.get('authorization');
+  const isVercelCron = req.headers.get('x-vercel-cron') === 'true';
+  const cronSecret = process.env.CRON_SECRET;
+
+  if (cronSecret && authHeader !== `Bearer ${cronSecret}` && !isVercelCron) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (!cronSecret && process.env.NODE_ENV === 'production' && !isVercelCron) {
+    return NextResponse.json({ error: 'Cron secret is not configured' }, { status: 500 });
+  }
+
   let sql: postgres.Sql | null = null;
   try {
     // 1. Kết nối cơ sở dữ liệu trực tiếp để thêm cột và truy vấn nâng cao

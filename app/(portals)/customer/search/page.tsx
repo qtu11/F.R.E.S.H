@@ -45,7 +45,10 @@ export default function CustomerSearch() {
   useEffect(() => {
     setMounted(true);
     productService.getAll().then(data => {
-      setProducts((data || []).map((p: any) => {
+      const filteredData = (data || []).filter(
+        (p: any) => !p.id.startsWith('p') || p.id.startsWith('rp')
+      );
+      setProducts(filteredData.map((p: any) => {
         const tags: string[] = [];
         if (p.aiPrice < 50000) tags.push('under_50k');
         if (p.discount >= 70) tags.push('over_70');

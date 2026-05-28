@@ -46,7 +46,7 @@ function LoginForm() {
       } else {
         localStorage.removeItem('remember_partner_email');
       }
-      router.push(redirect);
+      window.location.href = redirect;
     } else {
       setError(result.error || 'Invalid email or password. Make sure you have a partner account.');
     }

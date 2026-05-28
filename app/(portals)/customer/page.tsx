@@ -61,7 +61,11 @@ export default function CustomerApp() {
     setLoading(true);
     productService.getLive()
       .then((products) => {
-        setDeals(products || []);
+        // Filter out old seed trash products starting with 'p' (but keep 'rp' and UUIDs)
+        const filteredProducts = (products || []).filter(
+          (p) => !p.id.startsWith('p') || p.id.startsWith('rp')
+        );
+        setDeals(filteredProducts);
         setLoading(false);
       })
       .catch(err => {
@@ -177,17 +181,6 @@ export default function CustomerApp() {
         deliveryMethod: 'delivery',
         paymentMethod: 'wallet',
         address: user.address || 'Hồ Chí Minh, Việt Nam',
-      });
-
-      // 2. Subtract balance on frontend instantly via transaction service callback
-      await transactionService.addTransaction({
-        userId: user.id,
-        amount: -totalCost,
-        type: 'payment',
-        date: new Date().toISOString(),
-        status: 'completed',
-        description: `Thanh toán cứu hộ món ăn: ${product.name}`,
-        paymentMethod: 'wallet'
       });
 
       await refreshUser();
