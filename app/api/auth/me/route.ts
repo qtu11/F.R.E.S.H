@@ -31,6 +31,18 @@ export async function GET() {
       .single();
 
     if (error || !data) {
+      // Nếu DB không có user (chưa seed), dùng mock admin từ token để không block env admin path
+      if (decoded.userId === 'u-admin-fresh4') {
+        const user = {
+          id: 'u-admin-fresh4',
+          email: decoded.role === 'admin' ? process.env.ADMIN_LOGIN || 'admin@fresh.com' : '',
+          name: 'Fresh Admin 4',
+          role: 'admin' as const,
+          avatar: 'FA',
+          status: 'active' as const,
+        };
+        return NextResponse.json({ user, token });
+      }
       return NextResponse.json({ user: null, token: null });
     }
 
