@@ -1,8 +1,52 @@
-const RESEND_API_KEY = 're_D3XRMD2j_EeNXg4GFDWmbdnH2ec2Z7nw7';
-const FROM_EMAIL = 'F.R.E.S.H Platform <onboarding@resend.dev>';
+import nodemailer from 'nodemailer';
 
-// Hàm gửi email cốt lõi qua REST API của Resend
+const RESEND_API_KEY = 're_D3XRMD2j_EeNXg4GFDWmbdnH2ec2Z7nw7';
+
+function getFromEmail() {
+  const driver = process.env.EMAIL_DRIVER || 'resend';
+  if (driver === 'smtp') return process.env.EMAIL_FROM || 'F.R.E.S.H Platform <noreply@fresh.com>';
+  return 'F.R.E.S.H Platform <onboarding@resend.dev>';
+}
+
+let smtpTransporter: nodemailer.Transporter | null = null;
+
+function getSmtpTransporter() {
+  if (smtpTransporter) return smtpTransporter;
+  smtpTransporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER || '',
+      pass: process.env.SMTP_PASS || '',
+    },
+  });
+  return smtpTransporter;
+}
+
 export async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
+  const driver = process.env.EMAIL_DRIVER || 'resend';
+
+  if (driver === 'smtp') {
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      console.error('SMTP driver selected but SMTP_USER / SMTP_PASS not set');
+      return { success: false, error: 'SMTP not configured' };
+    }
+    try {
+      const info = await getSmtpTransporter().sendMail({
+        from: getFromEmail(),
+        to,
+        subject,
+        html,
+      });
+      return { success: true, messageId: info.messageId };
+    } catch (err) {
+      console.error('Failed to send email via SMTP:', err);
+      return { success: false, error: err };
+    }
+  }
+
+  // Fallback: Resend
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -11,7 +55,7 @@ export async function sendEmail({ to, subject, html }: { to: string; subject: st
         'Authorization': `Bearer ${RESEND_API_KEY}`
       },
       body: JSON.stringify({
-        from: FROM_EMAIL,
+        from: getFromEmail(),
         to: [to],
         subject: subject,
         html: html
